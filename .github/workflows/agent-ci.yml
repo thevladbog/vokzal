@@ -27,27 +27,27 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
-          cache-dependency-path: agent/go.sum
+          cache-dependency-path: agent/local-agent/go.sum
 
       - name: Install dependencies
-        working-directory: agent
+        working-directory: agent/local-agent
         run: go mod download
 
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v8
         with:
           version: v2.1.0
-          working-directory: agent
+          working-directory: agent/local-agent
           args: --timeout=5m
 
       - name: Run tests
-        working-directory: agent
+        working-directory: agent/local-agent
         run: go test -v -race -coverprofile=coverage.out -covermode=atomic ./...
 
       - name: Upload coverage
         uses: codecov/codecov-action@v4
         with:
-          file: ./agent/coverage.out
+          file: ./agent/local-agent/coverage.out
           flags: fiscal-agent
           name: fiscal-agent-coverage
           token: ${{ secrets.CODECOV_TOKEN }}
@@ -81,14 +81,14 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
-          cache-dependency-path: agent/go.sum
+          cache-dependency-path: agent/local-agent/go.sum
 
       - name: Install dependencies
-        working-directory: agent
+        working-directory: agent/local-agent
         run: go mod download
 
       - name: Build agent
-        working-directory: agent
+        working-directory: agent/local-agent
         run: |
           go build -o bin/fiscal-agent-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.goos == 'windows' && '.exe' || '' }} cmd/main.go
         env:
@@ -100,7 +100,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: fiscal-agent-${{ matrix.goos }}-${{ matrix.goarch }}
-          path: agent/bin/*
+          path: agent/local-agent/bin/*
           retention-days: 30
 
   release:

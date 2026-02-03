@@ -35,6 +35,8 @@ jobs:
               - 'ui/passenger-portal/**'
             controller-app:
               - 'ui/controller-app/**'
+            pos-app:
+              - 'ui/pos-app/**'
 
   lint-and-test:
     name: Lint & Test
