@@ -77,15 +77,6 @@ jobs:
         env:
           CI: true
 
-      - name: Upload coverage
-        uses: codecov/codecov-action@v4
-        with:
-          file: ./ui/${{ matrix.app }}/coverage/coverage-final.json
-          flags: ${{ matrix.app }}
-          name: ${{ matrix.app }}-coverage
-          token: ${{ secrets.CODECOV_TOKEN }}
-        if: always()
-
   build:
     name: Build Applications
     needs: [detect-changes, lint-and-test]
