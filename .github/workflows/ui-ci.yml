@@ -64,7 +64,7 @@ jobs:
 
       - name: Run ESLint
         working-directory: ui/${{ matrix.app }}
-        run: ./node_modules/.bin/eslint . --max-warnings 0
+        run: node node_modules/eslint/bin/eslint.js . --max-warnings 0
 
       - name: Run TypeScript check
         working-directory: ui/${{ matrix.app }}
