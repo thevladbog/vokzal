@@ -12,7 +12,7 @@ on:
       - "ui/**"
 
 env:
-  NODE_VERSION: "22"
+  NODE_VERSION: "20"
 
 jobs:
   detect-changes:
@@ -56,9 +56,12 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
 
+      - name: Set up npm version
+        run: npm install -g npm@9
+
       - name: Install dependencies
         working-directory: ui/${{ matrix.app }}
-        run: npm ci
+        run: npm install
 
       - name: Run ESLint
         working-directory: ui/${{ matrix.app }}
@@ -92,9 +95,12 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
 
+      - name: Set up npm version
+        run: npm install -g npm@9
+
       - name: Install dependencies
         working-directory: ui/${{ matrix.app }}
-        run: npm ci
+        run: npm install
 
       - name: Build application
         working-directory: ui/${{ matrix.app }}
