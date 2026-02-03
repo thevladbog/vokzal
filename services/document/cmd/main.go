@@ -1,3 +1,4 @@
+// Package main — точка входа Document Service (генерация PDF, MinIO).
 package main
 
 import (
@@ -33,7 +34,7 @@ func main() {
 	} else {
 		logger, _ = zap.NewDevelopment()
 	}
-	defer logger.Sync()
+	defer func() { _ = logger.Sync() }()
 
 	logger.Info("Starting Document Service", zap.String("version", "1.0.0"))
 

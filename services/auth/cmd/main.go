@@ -1,3 +1,4 @@
+// Package main — точка входа Auth Service (аутентификация и авторизация).
 package main
 
 import (
@@ -21,6 +22,8 @@ import (
 	gormLogger "gorm.io/gorm/logger"
 )
 
+const serverModeRelease = "release"
+
 func main() {
 	// Загрузить конфигурацию
 	cfg, err := config.Load()
@@ -30,7 +33,7 @@ func main() {
 
 	// Создать логгер
 	var zapLogger *zap.Logger
-	if cfg.Server.Mode == "release" {
+	if cfg.Server.Mode == serverModeRelease {
 		zapLogger, err = zap.NewProduction()
 	} else {
 		zapLogger, err = zap.NewDevelopment()
@@ -38,7 +41,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to create logger: %v", err)
 	}
-	defer zapLogger.Sync()
+	defer func() { _ = zapLogger.Sync() }()
 
 	zapLogger.Info("Вокзал.ТЕХ Auth Service starting...",
 		zap.String("version", "1.0.0"),
@@ -46,7 +49,7 @@ func main() {
 
 	// Подключиться к базе данных
 	gormConfig := &gorm.Config{}
-	if cfg.Server.Mode == "release" {
+	if cfg.Server.Mode == serverModeRelease {
 		gormConfig.Logger = gormLogger.Default.LogMode(gormLogger.Error)
 	}
 
@@ -59,7 +62,7 @@ func main() {
 	if err != nil {
 		zapLogger.Fatal("Failed to get database instance", zap.Error(err))
 	}
-	defer sqlDB.Close()
+	defer func() { _ = sqlDB.Close() }()
 
 	// Настроить пул соединений
 	sqlDB.SetMaxIdleConns(10)
@@ -82,7 +85,7 @@ func main() {
 	authMiddleware := middleware.NewAuthMiddleware(authService, zapLogger)
 
 	// Настроить Gin
-	if cfg.Server.Mode == "release" {
+	if cfg.Server.Mode == serverModeRelease {
 		gin.SetMode(gin.ReleaseMode)
 	}
 

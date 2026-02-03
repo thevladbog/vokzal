@@ -1,3 +1,4 @@
+// Package repository — слой доступа к данным Document Service.
 package repository
 
 import (
@@ -9,10 +10,13 @@ import (
 )
 
 var (
-	ErrTemplateNotFound  = errors.New("template not found")
-	ErrDocumentNotFound  = errors.New("document not found")
+	// ErrTemplateNotFound возвращается, когда шаблон не найден.
+	ErrTemplateNotFound = errors.New("template not found")
+	// ErrDocumentNotFound возвращается, когда документ не найден.
+	ErrDocumentNotFound = errors.New("document not found")
 )
 
+// DocumentRepository — интерфейс репозитория документов.
 type DocumentRepository interface {
 	CreateTemplate(ctx context.Context, template *models.DocumentTemplate) error
 	FindTemplateByID(ctx context.Context, id string) (*models.DocumentTemplate, error)
@@ -30,6 +34,7 @@ type documentRepository struct {
 	db *gorm.DB
 }
 
+// NewDocumentRepository создаёт новый DocumentRepository.
 func NewDocumentRepository(db *gorm.DB) DocumentRepository {
 	return &documentRepository{db: db}
 }

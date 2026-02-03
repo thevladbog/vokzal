@@ -1,3 +1,4 @@
+// Package telegram предоставляет клиент для Telegram Bot API.
 package telegram
 
 import (
@@ -7,12 +8,15 @@ import (
 	tele "gopkg.in/telebot.v3"
 )
 
-// TelegramClient клиент для Telegram Bot API
+// TelegramClient — клиент для Telegram Bot API.
+//
+//nolint:revive // Имя сохраняем для ясности при использовании (telegram.Client).
 type TelegramClient struct {
 	bot    *tele.Bot
 	logger *zap.Logger
 }
 
+// NewTelegramClient создаёт клиент Telegram-бота.
 func NewTelegramClient(token string, logger *zap.Logger) (*TelegramClient, error) {
 	pref := tele.Settings{
 		Token: token,
@@ -29,7 +33,7 @@ func NewTelegramClient(token string, logger *zap.Logger) (*TelegramClient, error
 	}, nil
 }
 
-// Send отправляет сообщение в Telegram
+// Send отправляет сообщение в Telegram по chatID.
 func (c *TelegramClient) Send(chatID int64, message string) error {
 	recipient := &tele.Chat{ID: chatID}
 
@@ -43,7 +47,7 @@ func (c *TelegramClient) Send(chatID int64, message string) error {
 	return nil
 }
 
-// SetWebhook устанавливает webhook для бота
+// SetWebhook устанавливает webhook для бота.
 func (c *TelegramClient) SetWebhook(webhookURL string) error {
 	_ = &tele.Webhook{
 		Listen: ":8443",

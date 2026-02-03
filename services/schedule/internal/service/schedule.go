@@ -1,3 +1,4 @@
+// Package service содержит бизнес-логику маршрутов, расписаний и рейсов.
 package service
 
 import (
@@ -12,6 +13,7 @@ import (
 	"go.uber.org/zap"
 )
 
+// ScheduleService — интерфейс сервиса расписания (маршруты, расписания, рейсы).
 type ScheduleService interface {
 	// Routes
 	CreateRoute(ctx context.Context, req *CreateRouteRequest) (*models.Route, error)
@@ -43,21 +45,24 @@ type scheduleService struct {
 	logger       *zap.Logger
 }
 
+// CreateRouteRequest — запрос на создание маршрута.
 type CreateRouteRequest struct {
-	Name        string               `json:"name" binding:"required"`
+	Name        string                   `json:"name" binding:"required"`
 	Stops       []map[string]interface{} `json:"stops" binding:"required"`
 	DistanceKm  float64              `json:"distance_km"`
 	DurationMin int                  `json:"duration_min"`
 }
 
+// UpdateRouteRequest — запрос на обновление маршрута.
 type UpdateRouteRequest struct {
-	Name        *string              `json:"name"`
+	Name        *string                 `json:"name"`
 	Stops       []map[string]interface{} `json:"stops"`
 	DistanceKm  *float64             `json:"distance_km"`
 	DurationMin *int                 `json:"duration_min"`
-	IsActive    *bool                `json:"is_active"`
+	IsActive    *bool                  `json:"is_active"`
 }
 
+// CreateScheduleRequest — запрос на создание расписания.
 type CreateScheduleRequest struct {
 	RouteID       string `json:"route_id" binding:"required"`
 	DepartureTime string `json:"departure_time" binding:"required"`
@@ -65,6 +70,7 @@ type CreateScheduleRequest struct {
 	Platform      string `json:"platform"`
 }
 
+// UpdateScheduleRequest — запрос на обновление расписания.
 type UpdateScheduleRequest struct {
 	DepartureTime *string `json:"departure_time"`
 	DaysOfWeek    *[]int  `json:"days_of_week"`
@@ -72,6 +78,7 @@ type UpdateScheduleRequest struct {
 	IsActive      *bool   `json:"is_active"`
 }
 
+// CreateTripRequest — запрос на создание рейса.
 type CreateTripRequest struct {
 	ScheduleID string  `json:"schedule_id" binding:"required"`
 	Date       string  `json:"date" binding:"required"`
@@ -80,6 +87,7 @@ type CreateTripRequest struct {
 	DriverID   *string `json:"driver_id"`
 }
 
+// NewScheduleService создаёт сервис расписания.
 func NewScheduleService(
 	routeRepo repository.RouteRepository,
 	scheduleRepo repository.ScheduleRepository,
@@ -96,7 +104,7 @@ func NewScheduleService(
 	}
 }
 
-// Routes
+// CreateRoute создаёт маршрут.
 func (s *scheduleService) CreateRoute(ctx context.Context, req *CreateRouteRequest) (*models.Route, error) {
 	stopsJSON, err := json.Marshal(req.Stops)
 	if err != nil {
@@ -169,7 +177,7 @@ func (s *scheduleService) DeleteRoute(ctx context.Context, id string) error {
 	return s.routeRepo.Delete(ctx, id)
 }
 
-// Schedules
+// CreateSchedule создаёт расписание.
 func (s *scheduleService) CreateSchedule(ctx context.Context, req *CreateScheduleRequest) (*models.Schedule, error) {
 	daysJSON, err := json.Marshal(req.DaysOfWeek)
 	if err != nil {
@@ -237,7 +245,7 @@ func (s *scheduleService) DeleteSchedule(ctx context.Context, id string) error {
 	return s.scheduleRepo.Delete(ctx, id)
 }
 
-// Trips
+// CreateTrip создаёт рейс.
 func (s *scheduleService) CreateTrip(ctx context.Context, req *CreateTripRequest) (*models.Trip, error) {
 	// Проверить, не существует ли уже рейс
 	existing, err := s.tripRepo.FindByScheduleAndDate(ctx, req.ScheduleID, req.Date)

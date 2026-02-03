@@ -1,3 +1,4 @@
+// Package models содержит модели данных сервиса расписания.
 package models
 
 import (
@@ -10,9 +11,10 @@ import (
 	"gorm.io/gorm"
 )
 
-// JSONB тип для PostgreSQL
+// JSONB — тип для PostgreSQL JSONB.
 type JSONB []byte
 
+// Value реализует driver.Valuer для JSONB.
 func (j JSONB) Value() (driver.Value, error) {
 	if len(j) == 0 {
 		return nil, nil
@@ -20,6 +22,7 @@ func (j JSONB) Value() (driver.Value, error) {
 	return string(j), nil
 }
 
+// Scan реализует sql.Scanner для JSONB.
 func (j *JSONB) Scan(value interface{}) error {
 	if value == nil {
 		*j = nil
@@ -33,7 +36,7 @@ func (j *JSONB) Scan(value interface{}) error {
 	return nil
 }
 
-// Route модель маршрута
+// Route — модель маршрута.
 type Route struct {
 	ID         string    `gorm:"type:uuid;primary_key" json:"id"`
 	Name       string    `gorm:"type:varchar(100);not null" json:"name"`
@@ -45,7 +48,7 @@ type Route struct {
 	UpdatedAt  time.Time `json:"updated_at"`
 }
 
-// Schedule модель расписания
+// Schedule — модель расписания.
 type Schedule struct {
 	ID            string    `gorm:"type:uuid;primary_key" json:"id"`
 	RouteID       string    `gorm:"type:uuid;not null;index" json:"route_id"`
@@ -59,7 +62,7 @@ type Schedule struct {
 	Route Route `gorm:"foreignKey:RouteID" json:"route,omitempty"`
 }
 
-// Trip модель рейса
+// Trip — модель рейса.
 type Trip struct {
 	ID              string     `gorm:"type:uuid;primary_key" json:"id"`
 	ScheduleID      string     `gorm:"type:uuid;not null;index" json:"schedule_id"`
@@ -77,47 +80,53 @@ type Trip struct {
 	Schedule Schedule `gorm:"foreignKey:ScheduleID" json:"schedule,omitempty"`
 }
 
-// Stop информация об остановке
+// Stop — информация об остановке.
 type Stop struct {
 	StationID        string `json:"station_id"`
 	Order            int    `json:"order"`
 	ArrivalOffsetMin int    `json:"arrival_offset_min"`
 }
 
+// TableName возвращает имя таблицы для GORM (Route).
 func (Route) TableName() string {
 	return "routes"
 }
 
+// TableName возвращает имя таблицы для GORM (Schedule).
 func (Schedule) TableName() string {
 	return "schedules"
 }
 
+// TableName возвращает имя таблицы для GORM (Trip).
 func (Trip) TableName() string {
 	return "trips"
 }
 
-func (r *Route) BeforeCreate(tx *gorm.DB) error {
+// BeforeCreate генерирует UUID для новой записи (Route).
+func (r *Route) BeforeCreate(_ *gorm.DB) error {
 	if r.ID == "" {
 		r.ID = uuid.New().String()
 	}
 	return nil
 }
 
-func (s *Schedule) BeforeCreate(tx *gorm.DB) error {
+// BeforeCreate генерирует UUID для новой записи (Schedule).
+func (s *Schedule) BeforeCreate(_ *gorm.DB) error {
 	if s.ID == "" {
 		s.ID = uuid.New().String()
 	}
 	return nil
 }
 
-func (t *Trip) BeforeCreate(tx *gorm.DB) error {
+// BeforeCreate генерирует UUID для новой записи (Trip).
+func (t *Trip) BeforeCreate(_ *gorm.DB) error {
 	if t.ID == "" {
 		t.ID = uuid.New().String()
 	}
 	return nil
 }
 
-// ParseStops парсит JSONB stops в []Stop
+// ParseStops парсит JSONB stops в []Stop.
 func (r *Route) ParseStops() ([]Stop, error) {
 	var stops []Stop
 	if err := json.Unmarshal(r.Stops, &stops); err != nil {
@@ -126,7 +135,7 @@ func (r *Route) ParseStops() ([]Stop, error) {
 	return stops, nil
 }
 
-// ParseDaysOfWeek парсит JSONB days_of_week в []int
+// ParseDaysOfWeek парсит JSONB days_of_week в []int.
 func (s *Schedule) ParseDaysOfWeek() ([]int, error) {
 	var days []int
 	if err := json.Unmarshal(s.DaysOfWeek, &days); err != nil {

@@ -1,3 +1,4 @@
+// Package handlers содержит HTTP-обработчики API уведомлений.
 package handlers
 
 import (
@@ -9,11 +10,13 @@ import (
 	"go.uber.org/zap"
 )
 
+// NotifyHandler — обработчик HTTP-запросов для отправки и получения уведомлений.
 type NotifyHandler struct {
 	service service.NotifyService
 	logger  *zap.Logger
 }
 
+// NewNotifyHandler создаёт обработчик уведомлений.
 func NewNotifyHandler(service service.NotifyService, logger *zap.Logger) *NotifyHandler {
 	return &NotifyHandler{
 		service: service,
@@ -21,6 +24,7 @@ func NewNotifyHandler(service service.NotifyService, logger *zap.Logger) *Notify
 	}
 }
 
+// SendSMS обрабатывает запрос на отправку SMS.
 func (h *NotifyHandler) SendSMS(c *gin.Context) {
 	var req struct {
 		Phone   string `json:"phone" binding:"required"`
@@ -42,6 +46,7 @@ func (h *NotifyHandler) SendSMS(c *gin.Context) {
 	c.JSON(http.StatusCreated, gin.H{"data": notification})
 }
 
+// SendEmail обрабатывает запрос на отправку email.
 func (h *NotifyHandler) SendEmail(c *gin.Context) {
 	var req struct {
 		To      string `json:"to" binding:"required,email"`
@@ -64,6 +69,7 @@ func (h *NotifyHandler) SendEmail(c *gin.Context) {
 	c.JSON(http.StatusCreated, gin.H{"data": notification})
 }
 
+// SendTelegram обрабатывает запрос на отправку сообщения в Telegram.
 func (h *NotifyHandler) SendTelegram(c *gin.Context) {
 	var req struct {
 		ChatID  int64  `json:"chat_id" binding:"required"`
@@ -85,6 +91,7 @@ func (h *NotifyHandler) SendTelegram(c *gin.Context) {
 	c.JSON(http.StatusCreated, gin.H{"data": notification})
 }
 
+// SendTTS обрабатывает запрос на голосовое оповещение (TTS).
 func (h *NotifyHandler) SendTTS(c *gin.Context) {
 	var req struct {
 		Text     string `json:"text" binding:"required"`
@@ -114,6 +121,7 @@ func (h *NotifyHandler) SendTTS(c *gin.Context) {
 	c.JSON(http.StatusCreated, gin.H{"data": notification})
 }
 
+// GetNotification возвращает уведомление по ID.
 func (h *NotifyHandler) GetNotification(c *gin.Context) {
 	id := c.Param("id")
 	notification, err := h.service.GetNotification(c.Request.Context(), id)
@@ -125,6 +133,7 @@ func (h *NotifyHandler) GetNotification(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"data": notification})
 }
 
+// ListNotifications возвращает список уведомлений с пагинацией.
 func (h *NotifyHandler) ListNotifications(c *gin.Context) {
 	limitStr := c.DefaultQuery("limit", "50")
 	limit, _ := strconv.Atoi(limitStr)

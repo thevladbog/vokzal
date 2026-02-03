@@ -1,3 +1,4 @@
+// Package email предоставляет клиент для отправки email по SMTP.
 package email
 
 import (
@@ -7,7 +8,9 @@ import (
 	"go.uber.org/zap"
 )
 
-// EmailClient клиент для отправки email
+// EmailClient — клиент для отправки email.
+//
+//nolint:revive // Имя сохраняем для ясности при использовании из других пакетов (email.Client).
 type EmailClient struct {
 	smtpHost string
 	smtpPort int
@@ -17,6 +20,7 @@ type EmailClient struct {
 	logger   *zap.Logger
 }
 
+// NewEmailClient создаёт клиент для отправки email.
 func NewEmailClient(smtpHost string, smtpPort int, username, password, from string, logger *zap.Logger) *EmailClient {
 	return &EmailClient{
 		smtpHost: smtpHost,
@@ -28,7 +32,7 @@ func NewEmailClient(smtpHost string, smtpPort int, username, password, from stri
 	}
 }
 
-// Send отправляет email
+// Send отправляет email по указанному адресу.
 func (c *EmailClient) Send(to, subject, body string) error {
 	auth := smtp.PlainAuth("", c.username, c.password, c.smtpHost)
 

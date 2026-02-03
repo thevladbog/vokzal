@@ -72,7 +72,7 @@ linters-settings:
     min-complexity: 15
 
   dupl:
-    threshold: 100
+    threshold: 75
 
   goconst:
     min-len: 3

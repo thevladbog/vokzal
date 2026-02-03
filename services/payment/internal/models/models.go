@@ -1,3 +1,4 @@
+// Package models содержит модели данных сервиса платежей.
 package models
 
 import (
@@ -7,7 +8,7 @@ import (
 	"gorm.io/gorm"
 )
 
-// Payment модель платежа
+// Payment — модель платежа (карта, СБП, наличные).
 type Payment struct {
 	ID              string     `gorm:"type:uuid;primary_key" json:"id"`
 	TicketID        *string    `gorm:"type:uuid;index" json:"ticket_id,omitempty"`
@@ -28,11 +29,13 @@ type Payment struct {
 	UpdatedAt       time.Time  `json:"updated_at"`
 }
 
+// TableName возвращает имя таблицы для GORM.
 func (Payment) TableName() string {
 	return "payments"
 }
 
-func (p *Payment) BeforeCreate(tx *gorm.DB) error {
+// BeforeCreate генерирует UUID для новой записи.
+func (p *Payment) BeforeCreate(_ *gorm.DB) error {
 	if p.ID == "" {
 		p.ID = uuid.New().String()
 	}

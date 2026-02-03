@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { Trip, Payment, AuthResponse } from '@/types';
+import type { Trip, Payment, AuthResponse, Ticket } from '@/types';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost/api/v1';
 
@@ -57,6 +57,14 @@ export const tripService = {
   getTrip: async (id: string) => {
     const response = await apiClient.get<Trip>(`/schedule/trips/${id}`);
     return response.data;
+  },
+};
+
+// Tickets
+export const ticketService = {
+  getTicket: async (id: string): Promise<Ticket> => {
+    const response = await apiClient.get<{ data: Ticket }>(`/tickets/${id}`);
+    return response.data.data;
   },
 };
 

@@ -1,3 +1,5 @@
+@import url('../../shared/assets/brand-colors.css');
+
 *,
 *::before,
 *::after {
@@ -20,7 +22,7 @@ body {
 }
 
 a {
-  color: #0078d4;
+  color: var(--color-primary);
   text-decoration: none;
 }
 

@@ -1,3 +1,4 @@
+// Package service содержит бизнес-логику платежей (Tinkoff, СБП, наличные).
 package service
 
 import (
@@ -15,6 +16,12 @@ import (
 	"go.uber.org/zap"
 )
 
+const (
+	statusFailed    = "failed"
+	statusConfirmed = "confirmed"
+)
+
+// PaymentService — интерфейс сервиса платежей (Tinkoff, СБП, наличные).
 type PaymentService interface {
 	// Initialize payments
 	InitTinkoffPayment(ctx context.Context, req *InitPaymentRequest) (*models.Payment, error)
@@ -42,12 +49,14 @@ type paymentService struct {
 	logger         *zap.Logger
 }
 
+// InitPaymentRequest — запрос на инициализацию платежа.
 type InitPaymentRequest struct {
 	TicketID    *string `json:"ticket_id"`
 	Amount      float64 `json:"amount" binding:"required,gt=0"`
 	Description string  `json:"description"`
 }
 
+// NewPaymentService создаёт сервис платежей.
 func NewPaymentService(
 	repo repository.PaymentRepository,
 	tinkoffClient *tinkoff.TinkoffClient,
@@ -66,7 +75,7 @@ func NewPaymentService(
 	}
 }
 
-// InitTinkoffPayment инициализирует платёж через Tinkoff
+// InitTinkoffPayment инициализирует платёж через Tinkoff.
 func (s *paymentService) InitTinkoffPayment(ctx context.Context, req *InitPaymentRequest) (*models.Payment, error) {
 	// Создать запись в БД
 	payment := &models.Payment{
@@ -90,10 +99,10 @@ func (s *paymentService) InitTinkoffPayment(ctx context.Context, req *InitPaymen
 
 	result, err := s.tinkoffClient.Init(payment.ID, req.Amount, description)
 	if err != nil {
-		payment.Status = "failed"
+		payment.Status = statusFailed
 		errMsg := err.Error()
 		payment.ErrorMsg = &errMsg
-		s.repo.Update(ctx, payment)
+		_ = s.repo.Update(ctx, payment)
 		return nil, fmt.Errorf("failed to init tinkoff payment: %w", err)
 	}
 
@@ -113,7 +122,7 @@ func (s *paymentService) InitTinkoffPayment(ctx context.Context, req *InitPaymen
 	return payment, nil
 }
 
-// InitSBPPayment инициализирует платёж через СБП
+// InitSBPPayment инициализирует платёж через СБП.
 func (s *paymentService) InitSBPPayment(ctx context.Context, req *InitPaymentRequest) (*models.Payment, error) {
 	// Создать запись в БД
 	payment := &models.Payment{
@@ -137,10 +146,10 @@ func (s *paymentService) InitSBPPayment(ctx context.Context, req *InitPaymentReq
 
 	result, err := s.sbpClient.GenerateQR(req.Amount, purpose)
 	if err != nil {
-		payment.Status = "failed"
+		payment.Status = statusFailed
 		errMsg := err.Error()
 		payment.ErrorMsg = &errMsg
-		s.repo.Update(ctx, payment)
+		_ = s.repo.Update(ctx, payment)
 		return nil, fmt.Errorf("failed to generate SBP QR: %w", err)
 	}
 
@@ -160,7 +169,7 @@ func (s *paymentService) InitSBPPayment(ctx context.Context, req *InitPaymentReq
 	return payment, nil
 }
 
-// InitCashPayment создаёт запись о наличной оплате
+// InitCashPayment создаёт запись о наличной оплате.
 func (s *paymentService) InitCashPayment(ctx context.Context, req *InitPaymentRequest) (*models.Payment, error) {
 	payment := &models.Payment{
 		TicketID: req.TicketID,
@@ -168,7 +177,7 @@ func (s *paymentService) InitCashPayment(ctx context.Context, req *InitPaymentRe
 		Currency: "RUB",
 		Method:   "cash",
 		Provider: "manual",
-		Status:   "confirmed",
+		Status:   statusConfirmed,
 	}
 
 	now := time.Now()
@@ -179,7 +188,7 @@ func (s *paymentService) InitCashPayment(ctx context.Context, req *InitPaymentRe
 	}
 
 	// Отправить событие подтверждения
-	s.publishPaymentEvent("payment.confirmed", payment)
+	s.publishPaymentEvent(payment)
 
 	s.logger.Info("Cash payment created", zap.String("payment_id", payment.ID))
 
@@ -194,14 +203,14 @@ func (s *paymentService) GetPaymentByTicket(ctx context.Context, ticketID string
 	return s.repo.FindByTicketID(ctx, ticketID)
 }
 
-// CheckPaymentStatus проверяет статус платежа у провайдера
+// CheckPaymentStatus проверяет статус платежа у провайдера.
 func (s *paymentService) CheckPaymentStatus(ctx context.Context, id string) (*models.Payment, error) {
 	payment, err := s.repo.FindByID(ctx, id)
 	if err != nil {
 		return nil, err
 	}
 
-	if payment.Status == "confirmed" || payment.Status == "failed" {
+	if payment.Status == statusConfirmed || payment.Status == statusFailed {
 		return payment, nil
 	}
 
@@ -217,17 +226,17 @@ func (s *paymentService) CheckPaymentStatus(ctx context.Context, id string) (*mo
 			return payment, nil
 		}
 
-		if result.Status == "CONFIRMED" || result.Status == "AUTHORIZED" {
-			payment.Status = "confirmed"
+		switch result.Status {
+		case "CONFIRMED", "AUTHORIZED":
+			payment.Status = statusConfirmed
 			now := time.Now()
 			payment.ConfirmedAt = &now
-			s.publishPaymentEvent("payment.confirmed", payment)
-		} else if result.Status == "REJECTED" {
-			payment.Status = "failed"
+			s.publishPaymentEvent(payment)
+		case "REJECTED":
+			payment.Status = statusFailed
 			errMsg := "Payment rejected"
 			payment.ErrorMsg = &errMsg
 		}
-
 	case "sbp":
 		result, err := s.sbpClient.GetStatus(*payment.ExternalID)
 		if err != nil {
@@ -235,12 +244,13 @@ func (s *paymentService) CheckPaymentStatus(ctx context.Context, id string) (*mo
 			return payment, nil
 		}
 
-		if result.Status == "paid" {
-			payment.Status = "confirmed"
+		switch result.Status {
+		case "paid":
+			payment.Status = statusConfirmed
 			payment.ConfirmedAt = result.PaidAt
-			s.publishPaymentEvent("payment.confirmed", payment)
-		} else if result.Status == "expired" || result.Status == "cancelled" {
-			payment.Status = "failed"
+			s.publishPaymentEvent(payment)
+		case "expired", "cancelled":
+			payment.Status = statusFailed
 			errMsg := fmt.Sprintf("Payment %s", result.Status)
 			payment.ErrorMsg = &errMsg
 		}
@@ -253,7 +263,7 @@ func (s *paymentService) CheckPaymentStatus(ctx context.Context, id string) (*mo
 	return payment, nil
 }
 
-// HandleTinkoffWebhook обрабатывает webhook от Tinkoff
+// HandleTinkoffWebhook обрабатывает webhook от Tinkoff.
 func (s *paymentService) HandleTinkoffWebhook(ctx context.Context, data map[string]interface{}) error {
 	paymentID, ok := data["PaymentId"].(string)
 	if !ok {
@@ -270,13 +280,14 @@ func (s *paymentService) HandleTinkoffWebhook(ctx context.Context, data map[stri
 		return fmt.Errorf("payment not found: %w", err)
 	}
 
-	if status == "CONFIRMED" || status == "AUTHORIZED" {
-		payment.Status = "confirmed"
+	switch status {
+	case "CONFIRMED", "AUTHORIZED":
+		payment.Status = statusConfirmed
 		now := time.Now()
 		payment.ConfirmedAt = &now
-		s.publishPaymentEvent("payment.confirmed", payment)
-	} else if status == "REJECTED" {
-		payment.Status = "failed"
+		s.publishPaymentEvent(payment)
+	case "REJECTED":
+		payment.Status = statusFailed
 		errMsg := "Payment rejected"
 		payment.ErrorMsg = &errMsg
 	}
@@ -296,15 +307,17 @@ func (s *paymentService) ListPayments(ctx context.Context, limit int) ([]*models
 	return s.repo.List(ctx, limit)
 }
 
-// NATS Events
-func (s *paymentService) publishPaymentEvent(subject string, payment *models.Payment) {
+const paymentConfirmedSubject = "payment.confirmed"
+
+// publishPaymentEvent публикует событие подтверждения платежа в NATS.
+func (s *paymentService) publishPaymentEvent(payment *models.Payment) {
 	data, err := json.Marshal(payment)
 	if err != nil {
 		s.logger.Error("Failed to marshal payment event", zap.Error(err))
 		return
 	}
 
-	if err := s.natsConn.Publish(subject, data); err != nil {
-		s.logger.Error("Failed to publish payment event", zap.Error(err), zap.String("subject", subject))
+	if err := s.natsConn.Publish(paymentConfirmedSubject, data); err != nil {
+		s.logger.Error("Failed to publish payment event", zap.Error(err), zap.String("subject", paymentConfirmedSubject))
 	}
 }

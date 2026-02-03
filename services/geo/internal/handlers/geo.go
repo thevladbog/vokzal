@@ -1,3 +1,4 @@
+// Package handlers — HTTP-обработчики Geo Service.
 package handlers
 
 import (
@@ -9,11 +10,13 @@ import (
 	"go.uber.org/zap"
 )
 
+// GeoHandler обрабатывает HTTP-запросы к API геокодирования.
 type GeoHandler struct {
 	service service.GeoService
 	logger  *zap.Logger
 }
 
+// NewGeoHandler создаёт новый GeoHandler.
 func NewGeoHandler(service service.GeoService, logger *zap.Logger) *GeoHandler {
 	return &GeoHandler{
 		service: service,
@@ -21,6 +24,7 @@ func NewGeoHandler(service service.GeoService, logger *zap.Logger) *GeoHandler {
 	}
 }
 
+// Geocode возвращает координаты по адресу.
 func (h *GeoHandler) Geocode(c *gin.Context) {
 	address := c.Query("address")
 	if address == "" {
@@ -38,6 +42,7 @@ func (h *GeoHandler) Geocode(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"data": result})
 }
 
+// ReverseGeocode возвращает адрес по координатам.
 func (h *GeoHandler) ReverseGeocode(c *gin.Context) {
 	latStr := c.Query("lat")
 	lonStr := c.Query("lon")
@@ -69,6 +74,7 @@ func (h *GeoHandler) ReverseGeocode(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"data": result})
 }
 
+// GetDistance возвращает расстояние между двумя точками (км).
 func (h *GeoHandler) GetDistance(c *gin.Context) {
 	lat1Str := c.Query("lat1")
 	lon1Str := c.Query("lon1")

@@ -1,3 +1,4 @@
+// Package sbp предоставляет клиент для СБП (Система быстрых платежей).
 package sbp
 
 import (
@@ -11,7 +12,9 @@ import (
 	"go.uber.org/zap"
 )
 
-// SBPClient клиент для работы с СБП (Система быстрых платежей)
+// SBPClient — клиент для работы с СБП.
+//
+//nolint:revive // Имя сохраняем для ясности (sbp.Client).
 type SBPClient struct {
 	merchantID string
 	apiURL     string
@@ -20,7 +23,7 @@ type SBPClient struct {
 	logger     *zap.Logger
 }
 
-// QRRequest запрос на генерацию QR кода
+// QRRequest — запрос на генерацию QR-кода.
 type QRRequest struct {
 	MerchantID string  `json:"merchantId"`
 	Amount     float64 `json:"amount"`
@@ -29,7 +32,7 @@ type QRRequest struct {
 	QRType     string  `json:"qrType"` // dynamic, static
 }
 
-// QRResponse ответ с QR кодом
+// QRResponse — ответ с QR-кодом.
 type QRResponse struct {
 	Success   bool   `json:"success"`
 	QRCode    string `json:"qrCode"` // base64 или SVG
@@ -38,13 +41,13 @@ type QRResponse struct {
 	ErrorMsg  string `json:"errorMsg,omitempty"`
 }
 
-// StatusRequest запрос статуса платежа
+// StatusRequest — запрос статуса платежа.
 type StatusRequest struct {
 	MerchantID string `json:"merchantId"`
 	PaymentID  string `json:"paymentId"`
 }
 
-// StatusResponse ответ со статусом
+// StatusResponse — ответ со статусом платежа.
 type StatusResponse struct {
 	Success   bool   `json:"success"`
 	Status    string `json:"status"` // pending, paid, expired, cancelled
@@ -54,6 +57,7 @@ type StatusResponse struct {
 	ErrorMsg  string `json:"errorMsg,omitempty"`
 }
 
+// NewSBPClient создаёт клиент СБП.
 func NewSBPClient(merchantID, apiURL, apiKey string, logger *zap.Logger) *SBPClient {
 	return &SBPClient{
 		merchantID: merchantID,
@@ -66,7 +70,7 @@ func NewSBPClient(merchantID, apiURL, apiKey string, logger *zap.Logger) *SBPCli
 	}
 }
 
-// GenerateQR генерирует QR код для оплаты
+// GenerateQR генерирует QR-код для оплаты.
 func (c *SBPClient) GenerateQR(amount float64, purpose string) (*QRResponse, error) {
 	req := &QRRequest{
 		MerchantID: c.merchantID,
@@ -95,7 +99,7 @@ func (c *SBPClient) GenerateQR(amount float64, purpose string) (*QRResponse, err
 	if err != nil {
 		return nil, fmt.Errorf("failed to send request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -114,7 +118,7 @@ func (c *SBPClient) GenerateQR(amount float64, purpose string) (*QRResponse, err
 	return &result, nil
 }
 
-// GetStatus получает статус платежа
+// GetStatus получает статус платежа.
 func (c *SBPClient) GetStatus(paymentID string) (*StatusResponse, error) {
 	req := &StatusRequest{
 		MerchantID: c.merchantID,
@@ -138,7 +142,7 @@ func (c *SBPClient) GetStatus(paymentID string) (*StatusResponse, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to send request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {

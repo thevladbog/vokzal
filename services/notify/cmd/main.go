@@ -1,3 +1,4 @@
+// Package main — точка входа Notify Service (SMS, Email, Telegram, TTS).
 package main
 
 import (
@@ -37,7 +38,7 @@ func main() {
 	} else {
 		logger, _ = zap.NewDevelopment()
 	}
-	defer logger.Sync()
+	defer func() { _ = logger.Sync() }()
 
 	logger.Info("Starting Notify Service", zap.String("version", "1.0.0"))
 

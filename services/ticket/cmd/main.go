@@ -1,3 +1,4 @@
+// Package main — точка входа Ticket Service.
 package main
 
 import (
@@ -35,7 +36,7 @@ func main() {
 	} else {
 		logger, _ = zap.NewDevelopment()
 	}
-	defer logger.Sync()
+	defer func() { _ = logger.Sync() }()
 
 	logger.Info("Starting Ticket Service", zap.String("version", "1.0.0"))
 

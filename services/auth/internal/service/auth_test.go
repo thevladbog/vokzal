@@ -14,7 +14,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-// MockUserRepository - мок репозитория пользователей
+// MockUserRepository — мок репозитория пользователей.
 type MockUserRepository struct {
 	mock.Mock
 }
@@ -50,7 +50,7 @@ func (m *MockUserRepository) Delete(ctx context.Context, id string) error {
 	return args.Error(0)
 }
 
-// MockSessionRepository - мок репозитория сессий
+// MockSessionRepository — мок репозитория сессий.
 type MockSessionRepository struct {
 	mock.Mock
 }
@@ -123,7 +123,7 @@ func TestAuthService_Login(t *testing.T) {
 			username:  "nonexistent",
 			password:  "password123",
 			stationID: "",
-			setupMock: func(userRepo *MockUserRepository, sessionRepo *MockSessionRepository) {
+			setupMock: func(userRepo *MockUserRepository, _ *MockSessionRepository) {
 				userRepo.On("FindByUsername", mock.Anything, "nonexistent").Return(nil, repository.ErrUserNotFound)
 			},
 			expectError: true,

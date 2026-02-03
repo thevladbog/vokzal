@@ -1,3 +1,4 @@
+// Package repository — слой доступа к данным Fiscal Service.
 package repository
 
 import (
@@ -9,10 +10,13 @@ import (
 )
 
 var (
+	// ErrReceiptNotFound возвращается, когда чек не найден.
 	ErrReceiptNotFound = errors.New("receipt not found")
+	// ErrZReportNotFound возвращается, когда Z-отчёт не найден.
 	ErrZReportNotFound = errors.New("z-report not found")
 )
 
+// FiscalRepository — интерфейс репозитория фискальных данных.
 type FiscalRepository interface {
 	// Receipts
 	CreateReceipt(ctx context.Context, receipt *models.FiscalReceipt) error
@@ -31,11 +35,12 @@ type fiscalRepository struct {
 	db *gorm.DB
 }
 
+// NewFiscalRepository создаёт новый FiscalRepository.
 func NewFiscalRepository(db *gorm.DB) FiscalRepository {
 	return &fiscalRepository{db: db}
 }
 
-// Receipts
+// CreateReceipt создаёт запись чека.
 func (r *fiscalRepository) CreateReceipt(ctx context.Context, receipt *models.FiscalReceipt) error {
 	return r.db.WithContext(ctx).Create(receipt).Error
 }
@@ -63,7 +68,7 @@ func (r *fiscalRepository) UpdateReceipt(ctx context.Context, receipt *models.Fi
 	return r.db.WithContext(ctx).Save(receipt).Error
 }
 
-// Z-Reports
+// CreateZReport создаёт запись Z-отчёта.
 func (r *fiscalRepository) CreateZReport(ctx context.Context, report *models.ZReport) error {
 	return r.db.WithContext(ctx).Create(report).Error
 }

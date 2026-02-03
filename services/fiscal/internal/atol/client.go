@@ -1,3 +1,4 @@
+// Package atol — клиент АТОЛ ККТ через локальный агент.
 package atol
 
 import (
@@ -11,14 +12,14 @@ import (
 	"go.uber.org/zap"
 )
 
-// ATOLClient клиент для работы с АТОЛ через локальный агент
-type ATOLClient struct {
+// ATOLClient — клиент для работы с АТОЛ через локальный агент (имя пакета atol, тип Client занят контекстом).
+type ATOLClient struct { //nolint:revive // stutter acceptable: atol.Client would shadow common name
 	agentURL string
 	client   *http.Client
 	logger   *zap.Logger
 }
 
-// ReceiptRequest запрос на печать чека
+// ReceiptRequest — запрос на печать чека.
 type ReceiptRequest struct {
 	Operation string        `json:"operation"` // sell, refund
 	Items     []ReceiptItem `json:"items"`
@@ -26,6 +27,7 @@ type ReceiptRequest struct {
 	Company   Company       `json:"company"`
 }
 
+// ReceiptItem — позиция чека.
 type ReceiptItem struct {
 	Name     string  `json:"name"`
 	Quantity float64 `json:"quantity"`
@@ -33,18 +35,20 @@ type ReceiptItem struct {
 	VAT      string  `json:"vat"` // vat20, vat10, vat0, none
 }
 
+// Payment — платёж в чеке.
 type Payment struct {
 	Type   string  `json:"type"`   // cash, card, online
 	Amount float64 `json:"amount"`
 }
 
+// Company — реквизиты организации для чека.
 type Company struct {
 	INN       string `json:"inn"`
 	Name      string `json:"name"`
 	TaxSystem string `json:"tax_system"`
 }
 
-// ReceiptResponse ответ от ККТ
+// ReceiptResponse — ответ от ККТ.
 type ReceiptResponse struct {
 	Success    bool   `json:"success"`
 	OFDURL     string `json:"ofd_url"`
@@ -53,7 +57,7 @@ type ReceiptResponse struct {
 	ErrorMsg   string `json:"error_msg,omitempty"`
 }
 
-// ZReportResponse ответ на Z-отчёт
+// ZReportResponse — ответ на Z-отчёт.
 type ZReportResponse struct {
 	Success      bool    `json:"success"`
 	ShiftNumber  int     `json:"shift_number"`
@@ -62,9 +66,11 @@ type ZReportResponse struct {
 	SalesCount   int     `json:"sales_count"`
 	RefundsCount int     `json:"refunds_count"`
 	FiscalSign   string  `json:"fiscal_sign"`
+	KKTSerial    string  `json:"kkt_serial,omitempty"`
 	ErrorMsg     string  `json:"error_msg,omitempty"`
 }
 
+// NewATOLClient создаёт новый ATOLClient.
 func NewATOLClient(agentURL string, logger *zap.Logger) *ATOLClient {
 	return &ATOLClient{
 		agentURL: agentURL,
@@ -75,7 +81,7 @@ func NewATOLClient(agentURL string, logger *zap.Logger) *ATOLClient {
 	}
 }
 
-// PrintReceipt отправляет запрос на печать чека через локальный агент
+// PrintReceipt отправляет запрос на печать чека через локальный агент.
 func (c *ATOLClient) PrintReceipt(req *ReceiptRequest) (*ReceiptResponse, error) {
 	jsonData, err := json.Marshal(req)
 	if err != nil {
@@ -95,7 +101,7 @@ func (c *ATOLClient) PrintReceipt(req *ReceiptRequest) (*ReceiptResponse, error)
 	if err != nil {
 		return nil, fmt.Errorf("failed to send request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -114,7 +120,7 @@ func (c *ATOLClient) PrintReceipt(req *ReceiptRequest) (*ReceiptResponse, error)
 	return &result, nil
 }
 
-// CreateZReport формирует Z-отчёт
+// CreateZReport формирует Z-отчёт.
 func (c *ATOLClient) CreateZReport() (*ZReportResponse, error) {
 	url := fmt.Sprintf("%s/kkt/z-report", c.agentURL)
 	httpReq, err := http.NewRequest("POST", url, nil)
@@ -128,7 +134,7 @@ func (c *ATOLClient) CreateZReport() (*ZReportResponse, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to send request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -147,14 +153,14 @@ func (c *ATOLClient) CreateZReport() (*ZReportResponse, error) {
 	return &result, nil
 }
 
-// GetKKTStatus получает статус ККТ
+// GetKKTStatus получает статус ККТ.
 func (c *ATOLClient) GetKKTStatus() (map[string]interface{}, error) {
 	url := fmt.Sprintf("%s/kkt/status", c.agentURL)
 	resp, err := c.client.Get(url)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get status: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {

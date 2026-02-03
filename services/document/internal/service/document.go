@@ -1,3 +1,4 @@
+// Package service — бизнес-логика Document Service.
 package service
 
 import (
@@ -15,6 +16,7 @@ import (
 	"go.uber.org/zap"
 )
 
+// DocumentService — интерфейс сервиса документов.
 type DocumentService interface {
 	GenerateTicket(ctx context.Context, data *pdf.TicketData) (*models.GeneratedDocument, error)
 	GeneratePD2(ctx context.Context, data *pdf.PD2Data) (*models.GeneratedDocument, error)
@@ -30,6 +32,7 @@ type documentService struct {
 	logger    *zap.Logger
 }
 
+// NewDocumentService создаёт новый DocumentService.
 func NewDocumentService(
 	repo repository.DocumentRepository,
 	generator *pdf.Generator,

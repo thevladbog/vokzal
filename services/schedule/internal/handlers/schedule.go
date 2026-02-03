@@ -1,3 +1,4 @@
+// Package handlers содержит HTTP-обработчики API расписания.
 package handlers
 
 import (
@@ -9,11 +10,13 @@ import (
 	"go.uber.org/zap"
 )
 
+// ScheduleHandler — обработчик HTTP-запросов для маршрутов, расписаний и рейсов.
 type ScheduleHandler struct {
 	service service.ScheduleService
 	logger  *zap.Logger
 }
 
+// NewScheduleHandler создаёт обработчик расписания.
 func NewScheduleHandler(service service.ScheduleService, logger *zap.Logger) *ScheduleHandler {
 	return &ScheduleHandler{
 		service: service,
@@ -21,7 +24,7 @@ func NewScheduleHandler(service service.ScheduleService, logger *zap.Logger) *Sc
 	}
 }
 
-// Routes
+// CreateRoute создаёт маршрут.
 func (h *ScheduleHandler) CreateRoute(c *gin.Context) {
 	var req service.CreateRouteRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -39,6 +42,7 @@ func (h *ScheduleHandler) CreateRoute(c *gin.Context) {
 	c.JSON(http.StatusCreated, gin.H{"data": route})
 }
 
+// GetRoute возвращает маршрут по ID.
 func (h *ScheduleHandler) GetRoute(c *gin.Context) {
 	id := c.Param("id")
 	route, err := h.service.GetRoute(c.Request.Context(), id)
@@ -50,6 +54,7 @@ func (h *ScheduleHandler) GetRoute(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"data": route})
 }
 
+// ListRoutes возвращает список маршрутов.
 func (h *ScheduleHandler) ListRoutes(c *gin.Context) {
 	activeOnly := c.DefaultQuery("active", "false") == "true"
 	routes, err := h.service.ListRoutes(c.Request.Context(), activeOnly)
@@ -62,6 +67,7 @@ func (h *ScheduleHandler) ListRoutes(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"data": routes})
 }
 
+// UpdateRoute обновляет маршрут.
 func (h *ScheduleHandler) UpdateRoute(c *gin.Context) {
 	id := c.Param("id")
 	var req service.UpdateRouteRequest
@@ -80,6 +86,7 @@ func (h *ScheduleHandler) UpdateRoute(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"data": route})
 }
 
+// DeleteRoute удаляет маршрут.
 func (h *ScheduleHandler) DeleteRoute(c *gin.Context) {
 	id := c.Param("id")
 	if err := h.service.DeleteRoute(c.Request.Context(), id); err != nil {
@@ -91,7 +98,7 @@ func (h *ScheduleHandler) DeleteRoute(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Route deleted"})
 }
 
-// Schedules
+// CreateSchedule создаёт расписание.
 func (h *ScheduleHandler) CreateSchedule(c *gin.Context) {
 	var req service.CreateScheduleRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -109,6 +116,7 @@ func (h *ScheduleHandler) CreateSchedule(c *gin.Context) {
 	c.JSON(http.StatusCreated, gin.H{"data": schedule})
 }
 
+// GetSchedule возвращает расписание по ID.
 func (h *ScheduleHandler) GetSchedule(c *gin.Context) {
 	id := c.Param("id")
 	schedule, err := h.service.GetSchedule(c.Request.Context(), id)
@@ -120,6 +128,7 @@ func (h *ScheduleHandler) GetSchedule(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"data": schedule})
 }
 
+// ListSchedulesByRoute возвращает расписания по маршруту.
 func (h *ScheduleHandler) ListSchedulesByRoute(c *gin.Context) {
 	routeID := c.Query("route_id")
 	if routeID == "" {
@@ -137,6 +146,7 @@ func (h *ScheduleHandler) ListSchedulesByRoute(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"data": schedules})
 }
 
+// UpdateSchedule обновляет расписание.
 func (h *ScheduleHandler) UpdateSchedule(c *gin.Context) {
 	id := c.Param("id")
 	var req service.UpdateScheduleRequest
@@ -155,6 +165,7 @@ func (h *ScheduleHandler) UpdateSchedule(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"data": schedule})
 }
 
+// DeleteSchedule удаляет расписание.
 func (h *ScheduleHandler) DeleteSchedule(c *gin.Context) {
 	id := c.Param("id")
 	if err := h.service.DeleteSchedule(c.Request.Context(), id); err != nil {
@@ -166,7 +177,7 @@ func (h *ScheduleHandler) DeleteSchedule(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Schedule deleted"})
 }
 
-// Trips
+// CreateTrip создаёт рейс.
 func (h *ScheduleHandler) CreateTrip(c *gin.Context) {
 	var req service.CreateTripRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -184,6 +195,7 @@ func (h *ScheduleHandler) CreateTrip(c *gin.Context) {
 	c.JSON(http.StatusCreated, gin.H{"data": trip})
 }
 
+// GetTrip возвращает рейс по ID.
 func (h *ScheduleHandler) GetTrip(c *gin.Context) {
 	id := c.Param("id")
 	trip, err := h.service.GetTrip(c.Request.Context(), id)
@@ -195,6 +207,7 @@ func (h *ScheduleHandler) GetTrip(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"data": trip})
 }
 
+// ListTripsByDate возвращает рейсы на дату.
 func (h *ScheduleHandler) ListTripsByDate(c *gin.Context) {
 	date := c.Query("date")
 	if date == "" {
@@ -212,6 +225,7 @@ func (h *ScheduleHandler) ListTripsByDate(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"data": trips})
 }
 
+// UpdateTripStatus обновляет статус рейса.
 func (h *ScheduleHandler) UpdateTripStatus(c *gin.Context) {
 	id := c.Param("id")
 	var req struct {
@@ -234,6 +248,7 @@ func (h *ScheduleHandler) UpdateTripStatus(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"data": trip})
 }
 
+// GenerateTrips генерирует рейсы по расписанию на период.
 func (h *ScheduleHandler) GenerateTrips(c *gin.Context) {
 	var req struct {
 		ScheduleID string `json:"schedule_id" binding:"required"`

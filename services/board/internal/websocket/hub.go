@@ -1,8 +1,8 @@
+// Package websocket — WebSocket hub для табло в реальном времени.
 package websocket
 
 import (
 	"encoding/json"
-	"net/http"
 	"sync"
 	"time"
 
@@ -10,7 +10,7 @@ import (
 	"go.uber.org/zap"
 )
 
-// Hub управляет WebSocket соединениями
+// Hub управляет WebSocket-соединениями.
 type Hub struct {
 	clients    map[*Client]bool
 	broadcast  chan []byte
@@ -20,14 +20,14 @@ type Hub struct {
 	logger     *zap.Logger
 }
 
-// Client представляет WebSocket клиента
+// Client представляет WebSocket-клиента.
 type Client struct {
 	hub  *Hub
 	conn *websocket.Conn
 	send chan []byte
 }
 
-// Message структура сообщения для клиентов
+// Message — структура сообщения для клиентов.
 type Message struct {
 	Type         string                 `json:"type"`
 	TripID       string                 `json:"trip_id,omitempty"`
@@ -37,6 +37,7 @@ type Message struct {
 	Timestamp    time.Time              `json:"timestamp"`
 }
 
+// NewHub создаёт новый Hub.
 func NewHub(logger *zap.Logger) *Hub {
 	return &Hub{
 		clients:    make(map[*Client]bool),
@@ -47,7 +48,7 @@ func NewHub(logger *zap.Logger) *Hub {
 	}
 }
 
-// Run запускает hub
+// Run запускает hub.
 func (h *Hub) Run() {
 	for {
 		select {
@@ -81,7 +82,7 @@ func (h *Hub) Run() {
 	}
 }
 
-// Broadcast отправляет сообщение всем клиентам
+// Broadcast отправляет сообщение всем клиентам.
 func (h *Hub) Broadcast(msg *Message) {
 	msg.Timestamp = time.Now()
 	data, err := json.Marshal(msg)
@@ -92,7 +93,7 @@ func (h *Hub) Broadcast(msg *Message) {
 	h.broadcast <- data
 }
 
-// GetClientCount возвращает количество подключенных клиентов
+// GetClientCount возвращает количество подключенных клиентов.
 func (h *Hub) GetClientCount() int {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
@@ -106,25 +107,17 @@ const (
 	maxMessageSize = 512
 )
 
-var upgrader = websocket.Upgrader{
-	ReadBufferSize:  1024,
-	WriteBufferSize: 1024,
-	CheckOrigin: func(r *http.Request) bool {
-		return true // В production проверять origin
-	},
-}
-
-// readPump читает сообщения от клиента
+// readPump читает сообщения от клиента.
 func (c *Client) readPump() {
 	defer func() {
 		c.hub.unregister <- c
-		c.conn.Close()
+		_ = c.conn.Close()
 	}()
 
 	c.conn.SetReadLimit(maxMessageSize)
-	c.conn.SetReadDeadline(time.Now().Add(pongWait))
+	_ = c.conn.SetReadDeadline(time.Now().Add(pongWait))
 	c.conn.SetPongHandler(func(string) error {
-		c.conn.SetReadDeadline(time.Now().Add(pongWait))
+		_ = c.conn.SetReadDeadline(time.Now().Add(pongWait))
 		return nil
 	})
 
@@ -136,20 +129,20 @@ func (c *Client) readPump() {
 	}
 }
 
-// writePump отправляет сообщения клиенту
+// writePump отправляет сообщения клиенту.
 func (c *Client) writePump() {
 	ticker := time.NewTicker(pingPeriod)
 	defer func() {
 		ticker.Stop()
-		c.conn.Close()
+		_ = c.conn.Close()
 	}()
 
 	for {
 		select {
 		case message, ok := <-c.send:
-			c.conn.SetWriteDeadline(time.Now().Add(writeWait))
+			_ = c.conn.SetWriteDeadline(time.Now().Add(writeWait))
 			if !ok {
-				c.conn.WriteMessage(websocket.CloseMessage, []byte{})
+				_ = c.conn.WriteMessage(websocket.CloseMessage, []byte{})
 				return
 			}
 
@@ -157,14 +150,14 @@ func (c *Client) writePump() {
 			if err != nil {
 				return
 			}
-			w.Write(message)
+			_, _ = w.Write(message)
 
 			if err := w.Close(); err != nil {
 				return
 			}
 
 		case <-ticker.C:
-			c.conn.SetWriteDeadline(time.Now().Add(writeWait))
+			_ = c.conn.SetWriteDeadline(time.Now().Add(writeWait))
 			if err := c.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
 				return
 			}
@@ -172,7 +165,7 @@ func (c *Client) writePump() {
 	}
 }
 
-// ServeWs обрабатывает WebSocket соединение
+// ServeWs обрабатывает WebSocket-соединение.
 func ServeWs(hub *Hub, conn *websocket.Conn) {
 	client := &Client{
 		hub:  hub,

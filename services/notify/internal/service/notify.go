@@ -1,3 +1,4 @@
+// Package service содержит бизнес-логику отправки и хранения уведомлений.
 package service
 
 import (
@@ -15,6 +16,12 @@ import (
 	"go.uber.org/zap"
 )
 
+const (
+	statusFailed = "failed"
+	statusSent   = "sent"
+)
+
+// NotifyService — интерфейс сервиса уведомлений (SMS, email, Telegram, TTS).
 type NotifyService interface {
 	SendSMS(ctx context.Context, phone, message string) (*models.Notification, error)
 	SendEmail(ctx context.Context, to, subject, body string) (*models.Notification, error)
@@ -33,6 +40,7 @@ type notifyService struct {
 	logger         *zap.Logger
 }
 
+// NewNotifyService создаёт сервис уведомлений.
 func NewNotifyService(
 	repo repository.NotificationRepository,
 	smsClient *sms.SMSRuClient,
@@ -65,15 +73,15 @@ func (s *notifyService) SendSMS(ctx context.Context, phone, message string) (*mo
 
 	// Отправить SMS
 	if err := s.smsClient.Send(phone, message); err != nil {
-		notification.Status = "failed"
+		notification.Status = statusFailed
 		errMsg := err.Error()
 		notification.ErrorMsg = &errMsg
-		s.repo.Update(ctx, notification)
+		_ = s.repo.Update(ctx, notification)
 		return nil, err
 	}
 
 	now := time.Now()
-	notification.Status = "sent"
+	notification.Status = statusSent
 	notification.SentAt = &now
 
 	if err := s.repo.Update(ctx, notification); err != nil {
@@ -98,15 +106,15 @@ func (s *notifyService) SendEmail(ctx context.Context, to, subject, body string)
 
 	// Отправить Email
 	if err := s.emailClient.Send(to, subject, body); err != nil {
-		notification.Status = "failed"
+		notification.Status = statusFailed
 		errMsg := err.Error()
 		notification.ErrorMsg = &errMsg
-		s.repo.Update(ctx, notification)
+		_ = s.repo.Update(ctx, notification)
 		return nil, err
 	}
 
 	now := time.Now()
-	notification.Status = "sent"
+	notification.Status = statusSent
 	notification.SentAt = &now
 
 	if err := s.repo.Update(ctx, notification); err != nil {
@@ -130,15 +138,15 @@ func (s *notifyService) SendTelegram(ctx context.Context, chatID int64, message 
 
 	// Отправить Telegram
 	if err := s.telegramClient.Send(chatID, message); err != nil {
-		notification.Status = "failed"
+		notification.Status = statusFailed
 		errMsg := err.Error()
 		notification.ErrorMsg = &errMsg
-		s.repo.Update(ctx, notification)
+		_ = s.repo.Update(ctx, notification)
 		return nil, err
 	}
 
 	now := time.Now()
-	notification.Status = "sent"
+	notification.Status = statusSent
 	notification.SentAt = &now
 
 	if err := s.repo.Update(ctx, notification); err != nil {
@@ -162,15 +170,15 @@ func (s *notifyService) SendTTS(ctx context.Context, text, language, priority st
 
 	// Отправить TTS
 	if err := s.ttsClient.Announce(text, language, priority); err != nil {
-		notification.Status = "failed"
+		notification.Status = statusFailed
 		errMsg := err.Error()
 		notification.ErrorMsg = &errMsg
-		s.repo.Update(ctx, notification)
+		_ = s.repo.Update(ctx, notification)
 		return nil, err
 	}
 
 	now := time.Now()
-	notification.Status = "sent"
+	notification.Status = statusSent
 	notification.SentAt = &now
 
 	if err := s.repo.Update(ctx, notification); err != nil {

@@ -1,3 +1,4 @@
+// Package repository содержит слой доступа к данным платежей.
 package repository
 
 import (
@@ -8,10 +9,10 @@ import (
 	"gorm.io/gorm"
 )
 
-var (
-	ErrPaymentNotFound = errors.New("payment not found")
-)
+// ErrPaymentNotFound возвращается, когда платёж не найден.
+var ErrPaymentNotFound = errors.New("payment not found")
 
+// PaymentRepository — интерфейс репозитория платежей.
 type PaymentRepository interface {
 	Create(ctx context.Context, payment *models.Payment) error
 	FindByID(ctx context.Context, id string) (*models.Payment, error)
@@ -25,6 +26,7 @@ type paymentRepository struct {
 	db *gorm.DB
 }
 
+// NewPaymentRepository создаёт репозиторий платежей.
 func NewPaymentRepository(db *gorm.DB) PaymentRepository {
 	return &paymentRepository{db: db}
 }

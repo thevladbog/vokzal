@@ -1,3 +1,4 @@
+// Package models — доменные модели Fiscal Service.
 package models
 
 import (
@@ -7,7 +8,7 @@ import (
 	"gorm.io/gorm"
 )
 
-// FiscalReceipt модель фискального чека
+// FiscalReceipt — модель фискального чека.
 type FiscalReceipt struct {
 	ID         string    `gorm:"type:uuid;primary_key" json:"id"`
 	TicketID   string    `gorm:"type:uuid;not null;index" json:"ticket_id"`
@@ -22,7 +23,7 @@ type FiscalReceipt struct {
 	UpdatedAt  time.Time `json:"updated_at"`
 }
 
-// ZReport модель Z-отчёта
+// ZReport — модель Z-отчёта.
 type ZReport struct {
 	ID           string    `gorm:"type:uuid;primary_key" json:"id"`
 	Date         string    `gorm:"type:date;not null;index" json:"date"`
@@ -38,22 +39,26 @@ type ZReport struct {
 	UpdatedAt    time.Time `json:"updated_at"`
 }
 
+// TableName возвращает имя таблицы чеков.
 func (FiscalReceipt) TableName() string {
 	return "fiscal_receipts"
 }
 
+// TableName возвращает имя таблицы Z-отчётов.
 func (ZReport) TableName() string {
 	return "z_reports"
 }
 
-func (f *FiscalReceipt) BeforeCreate(tx *gorm.DB) error {
+// BeforeCreate заполняет ID перед созданием записи.
+func (f *FiscalReceipt) BeforeCreate(_ *gorm.DB) error {
 	if f.ID == "" {
 		f.ID = uuid.New().String()
 	}
 	return nil
 }
 
-func (z *ZReport) BeforeCreate(tx *gorm.DB) error {
+// BeforeCreate заполняет ID перед созданием записи.
+func (z *ZReport) BeforeCreate(_ *gorm.DB) error {
 	if z.ID == "" {
 		z.ID = uuid.New().String()
 	}

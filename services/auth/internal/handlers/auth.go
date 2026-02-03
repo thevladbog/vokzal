@@ -1,6 +1,8 @@
+// Package handlers — HTTP-обработчики Auth Service.
 package handlers
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -8,11 +10,13 @@ import (
 	"go.uber.org/zap"
 )
 
+// AuthHandler обрабатывает HTTP-запросы к API аутентификации.
 type AuthHandler struct {
 	authService service.AuthService
 	logger      *zap.Logger
 }
 
+// NewAuthHandler создаёт новый AuthHandler.
 func NewAuthHandler(authService service.AuthService, logger *zap.Logger) *AuthHandler {
 	return &AuthHandler{
 		authService: authService,
@@ -20,17 +24,19 @@ func NewAuthHandler(authService service.AuthService, logger *zap.Logger) *AuthHa
 	}
 }
 
+// LoginRequest — запрос на вход.
 type LoginRequest struct {
 	Username  string `json:"username" binding:"required"`
 	Password  string `json:"password" binding:"required"`
 	StationID string `json:"station_id"`
 }
 
+// RefreshRequest — запрос на обновление токена.
 type RefreshRequest struct {
 	RefreshToken string `json:"refresh_token" binding:"required"`
 }
 
-// Login обработчик входа
+// Login — обработчик входа.
 func (h *AuthHandler) Login(c *gin.Context) {
 	var req LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -50,7 +56,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		statusCode := http.StatusUnauthorized
 		message := "Invalid credentials"
 
-		if err == service.ErrUserInactive {
+		if errors.Is(err, service.ErrUserInactive) {
 			statusCode = http.StatusForbidden
 			message = "User is inactive"
 		}
@@ -68,7 +74,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	})
 }
 
-// Refresh обработчик обновления токена
+// Refresh — обработчик обновления токена.
 func (h *AuthHandler) Refresh(c *gin.Context) {
 	var req RefreshRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -96,7 +102,7 @@ func (h *AuthHandler) Refresh(c *gin.Context) {
 	})
 }
 
-// Logout обработчик выхода
+// Logout — обработчик выхода.
 func (h *AuthHandler) Logout(c *gin.Context) {
 	refreshToken := c.GetHeader("X-Refresh-Token")
 	if refreshToken == "" {
@@ -122,7 +128,7 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 	})
 }
 
-// Me получить информацию о текущем пользователе
+// Me — возвращает информацию о текущем пользователе.
 func (h *AuthHandler) Me(c *gin.Context) {
 	userID, exists := c.Get("user_id")
 	if !exists {

@@ -1,3 +1,4 @@
+// Package service — бизнес-логика Geo Service.
 package service
 
 import (
@@ -11,6 +12,7 @@ import (
 	"go.uber.org/zap"
 )
 
+// GeoService — интерфейс сервиса геокодирования.
 type GeoService interface {
 	Geocode(ctx context.Context, address string) (*yandex.GeocodeResult, error)
 	ReverseGeocode(ctx context.Context, lat, lon float64) (*yandex.GeocodeResult, error)
@@ -23,6 +25,7 @@ type geoService struct {
 	logger       *zap.Logger
 }
 
+// NewGeoService создаёт новый GeoService.
 func NewGeoService(yandexClient *yandex.Client, redisClient *redis.Client, logger *zap.Logger) GeoService {
 	return &geoService{
 		yandexClient: yandexClient,
@@ -81,8 +84,8 @@ func (s *geoService) ReverseGeocode(ctx context.Context, lat, lon float64) (*yan
 	return result, nil
 }
 
-// GetDistance вычисляет расстояние между двумя точками (Haversine formula)
-func (s *geoService) GetDistance(ctx context.Context, lat1, lon1, lat2, lon2 float64) float64 {
+// GetDistance вычисляет расстояние между двумя точками (формула Haversine).
+func (s *geoService) GetDistance(_ context.Context, lat1, lon1, lat2, lon2 float64) float64 {
 	const earthRadius = 6371.0 // km
 
 	dLat := (lat2 - lat1) * (3.141592653589793 / 180.0)

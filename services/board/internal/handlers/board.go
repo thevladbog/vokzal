@@ -1,3 +1,4 @@
+// Package handlers — HTTP-обработчики Board Service.
 package handlers
 
 import (
@@ -11,12 +12,14 @@ import (
 	"gorm.io/gorm"
 )
 
+// BoardHandler обрабатывает HTTP-запросы к API табло.
 type BoardHandler struct {
 	db     *gorm.DB
 	hub    *ws.Hub
 	logger *zap.Logger
 }
 
+// NewBoardHandler создаёт новый BoardHandler.
 func NewBoardHandler(db *gorm.DB, hub *ws.Hub, logger *zap.Logger) *BoardHandler {
 	return &BoardHandler{
 		db:     db,
@@ -25,15 +28,15 @@ func NewBoardHandler(db *gorm.DB, hub *ws.Hub, logger *zap.Logger) *BoardHandler
 	}
 }
 
-var upgrader = websocket.Upgrader{
-	CheckOrigin: func(r *http.Request) bool {
+var wsUpgrader = websocket.Upgrader{
+	CheckOrigin: func(_ *http.Request) bool {
 		return true
 	},
 }
 
-// WebSocket handler
+// HandleWebSocket обрабатывает WebSocket-подключение для табло.
 func (h *BoardHandler) HandleWebSocket(c *gin.Context) {
-	conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
+	conn, err := wsUpgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
 		h.logger.Error("Failed to upgrade to WebSocket", zap.Error(err))
 		return
@@ -42,7 +45,7 @@ func (h *BoardHandler) HandleWebSocket(c *gin.Context) {
 	ws.ServeWs(h.hub, conn)
 }
 
-// Получить данные для общего табло
+// GetPublicBoard возвращает данные для общего табло.
 func (h *BoardHandler) GetPublicBoard(c *gin.Context) {
 	date := c.DefaultQuery("date", time.Now().Format("2006-01-02"))
 
@@ -65,18 +68,18 @@ func (h *BoardHandler) GetPublicBoard(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get trips"})
 		return
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	for rows.Next() {
 		var trip map[string]interface{}
-		h.db.ScanRows(rows, &trip)
+		_ = h.db.ScanRows(rows, &trip)
 		trips = append(trips, trip)
 	}
 
 	c.JSON(http.StatusOK, gin.H{"data": trips})
 }
 
-// Получить данные для перронного табло
+// GetPlatformBoard возвращает данные для перронного табло.
 func (h *BoardHandler) GetPlatformBoard(c *gin.Context) {
 	platform := c.Param("platform")
 	date := c.DefaultQuery("date", time.Now().Format("2006-01-02"))
@@ -104,18 +107,18 @@ func (h *BoardHandler) GetPlatformBoard(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get trips"})
 		return
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	for rows.Next() {
 		var trip map[string]interface{}
-		h.db.ScanRows(rows, &trip)
+		_ = h.db.ScanRows(rows, &trip)
 		trips = append(trips, trip)
 	}
 
 	c.JSON(http.StatusOK, gin.H{"data": trips})
 }
 
-// Статистика WebSocket соединений
+// GetWebSocketStats возвращает статистику WebSocket-соединений.
 func (h *BoardHandler) GetWebSocketStats(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"connected_clients": h.hub.GetClientCount(),

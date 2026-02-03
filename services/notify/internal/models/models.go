@@ -1,3 +1,4 @@
+// Package models содержит модели данных сервиса уведомлений.
 package models
 
 import (
@@ -7,7 +8,7 @@ import (
 	"gorm.io/gorm"
 )
 
-// Notification модель уведомления
+// Notification — модель уведомления (SMS, email, Telegram, TTS).
 type Notification struct {
 	ID        string     `gorm:"type:uuid;primary_key" json:"id"`
 	Type      string     `gorm:"type:varchar(20);not null;index" json:"type"` // sms, email, telegram, tts
@@ -22,11 +23,13 @@ type Notification struct {
 	UpdatedAt time.Time  `json:"updated_at"`
 }
 
+// TableName возвращает имя таблицы для GORM.
 func (Notification) TableName() string {
 	return "notifications"
 }
 
-func (n *Notification) BeforeCreate(tx *gorm.DB) error {
+// BeforeCreate генерирует UUID для новой записи.
+func (n *Notification) BeforeCreate(_ *gorm.DB) error {
 	if n.ID == "" {
 		n.ID = uuid.New().String()
 	}

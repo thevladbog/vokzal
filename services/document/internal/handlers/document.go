@@ -1,3 +1,4 @@
+// Package handlers — HTTP-обработчики Document Service.
 package handlers
 
 import (
@@ -10,11 +11,13 @@ import (
 	"go.uber.org/zap"
 )
 
+// DocumentHandler обрабатывает HTTP-запросы к API документов.
 type DocumentHandler struct {
 	service service.DocumentService
 	logger  *zap.Logger
 }
 
+// NewDocumentHandler создаёт новый DocumentHandler.
 func NewDocumentHandler(service service.DocumentService, logger *zap.Logger) *DocumentHandler {
 	return &DocumentHandler{
 		service: service,
@@ -22,6 +25,7 @@ func NewDocumentHandler(service service.DocumentService, logger *zap.Logger) *Do
 	}
 }
 
+// GenerateTicket генерирует PDF-билет.
 func (h *DocumentHandler) GenerateTicket(c *gin.Context) {
 	var data pdf.TicketData
 	if err := c.ShouldBindJSON(&data); err != nil {
@@ -39,6 +43,7 @@ func (h *DocumentHandler) GenerateTicket(c *gin.Context) {
 	c.JSON(http.StatusCreated, gin.H{"data": doc})
 }
 
+// GeneratePD2 генерирует проездной документ ПД-2.
 func (h *DocumentHandler) GeneratePD2(c *gin.Context) {
 	var data pdf.PD2Data
 	if err := c.ShouldBindJSON(&data); err != nil {
@@ -56,6 +61,7 @@ func (h *DocumentHandler) GeneratePD2(c *gin.Context) {
 	c.JSON(http.StatusCreated, gin.H{"data": doc})
 }
 
+// GetDocument возвращает документ по ID.
 func (h *DocumentHandler) GetDocument(c *gin.Context) {
 	id := c.Param("id")
 	doc, err := h.service.GetDocument(c.Request.Context(), id)
@@ -67,6 +73,7 @@ func (h *DocumentHandler) GetDocument(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"data": doc})
 }
 
+// ListDocuments возвращает список документов.
 func (h *DocumentHandler) ListDocuments(c *gin.Context) {
 	limitStr := c.DefaultQuery("limit", "50")
 	limit, _ := strconv.Atoi(limitStr)

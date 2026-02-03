@@ -1,3 +1,4 @@
+// Package main — точка входа Board Service (табло отправлений, WebSocket).
 package main
 
 import (
@@ -36,7 +37,7 @@ func main() {
 	} else {
 		logger, _ = zap.NewDevelopment()
 	}
-	defer logger.Sync()
+	defer func() { _ = logger.Sync() }()
 
 	logger.Info("Starting Board Service", zap.String("version", "1.0.0"))
 
@@ -86,7 +87,7 @@ func main() {
 	go hub.Run()
 
 	// Подписаться на NATS события
-	natsConn.Subscribe("trip.created", func(msg *nats.Msg) {
+	_, err = natsConn.Subscribe("trip.created", func(msg *nats.Msg) {
 		var data map[string]interface{}
 		if err := json.Unmarshal(msg.Data, &data); err != nil {
 			logger.Error("Failed to unmarshal trip.created", zap.Error(err))
@@ -95,7 +96,7 @@ func main() {
 
 		// Инвалидировать кэш
 		if date, ok := data["date"].(string); ok {
-			redisCache.InvalidateTrips(ctx, date)
+			_ = redisCache.InvalidateTrips(ctx, date)
 		}
 
 		// Отправить обновление через WebSocket
@@ -105,8 +106,11 @@ func main() {
 			Data:   data,
 		})
 	})
+	if err != nil {
+		logger.Error("Failed to subscribe to trip.created", zap.Error(err))
+	}
 
-	natsConn.Subscribe("trip.status_changed", func(msg *nats.Msg) {
+	_, err = natsConn.Subscribe("trip.status_changed", func(msg *nats.Msg) {
 		var data map[string]interface{}
 		if err := json.Unmarshal(msg.Data, &data); err != nil {
 			logger.Error("Failed to unmarshal trip.status_changed", zap.Error(err))
@@ -115,7 +119,7 @@ func main() {
 
 		// Инвалидировать кэш
 		if date, ok := data["date"].(string); ok {
-			redisCache.InvalidateTrips(ctx, date)
+			_ = redisCache.InvalidateTrips(ctx, date)
 		}
 
 		// Отправить обновление через WebSocket
@@ -131,6 +135,9 @@ func main() {
 
 		hub.Broadcast(message)
 	})
+	if err != nil {
+		logger.Error("Failed to subscribe to trip.status_changed", zap.Error(err))
+	}
 
 	logger.Info("Subscribed to NATS events: trip.created, trip.status_changed")
 

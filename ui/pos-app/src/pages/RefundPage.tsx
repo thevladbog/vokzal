@@ -10,6 +10,8 @@ import {
 } from '@fluentui/react-components';
 import { SearchRegular, ArrowUndoRegular } from '@fluentui/react-icons';
 import { posService } from '@/services/pos';
+import { ticketService } from '@/services/api';
+import type { Ticket } from '@/types';
 
 const useStyles = makeStyles({
   container: {
@@ -47,7 +49,7 @@ export const RefundPage: React.FC = () => {
   const styles = useStyles();
 
   const [ticketId, setTicketId] = useState('');
-  const [ticket, setTicket] = useState<any>(null);
+  const [ticket, setTicket] = useState<Ticket | null>(null);
   const [loading, setLoading] = useState(false);
   const [processing, setProcessing] = useState(false);
 
@@ -55,11 +57,17 @@ export const RefundPage: React.FC = () => {
     if (!ticketId.trim()) return;
 
     setLoading(true);
+    setTicket(null);
     try {
-      // TODO: Implement search ticket by ID
-      alert('Функция поиска билета не реализована');
+      const found = await ticketService.getTicket(ticketId.trim());
+      if (found.status !== 'active') {
+        alert(`Билет в статусе «${found.status}», возврат невозможен.`);
+        return;
+      }
+      setTicket(found);
     } catch (err: any) {
-      alert(`Ошибка поиска: ${err}`);
+      const msg = err?.response?.status === 404 ? 'Билет не найден' : err?.message || String(err);
+      alert(`Ошибка поиска: ${msg}`);
     } finally {
       setLoading(false);
     }
@@ -136,9 +144,9 @@ export const RefundPage: React.FC = () => {
             <div className={styles.ticketInfo}>
               <Text weight="bold" block>Информация о билете</Text>
               <Text block>ID: {ticket.id}</Text>
-              <Text block>Маршрут: {ticket.route_name}</Text>
+              <Text block>Рейс: {ticket.trip_id}</Text>
               <Text block>Цена: {ticket.price} ₽</Text>
-              {ticket.refund_penalty && (
+              {ticket.refund_penalty != null && ticket.refund_penalty > 0 && (
                 <Text block className={styles.warning}>
                   Штраф за возврат: {ticket.refund_penalty} ₽
                 </Text>

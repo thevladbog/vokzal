@@ -1,3 +1,4 @@
+// Package handlers — HTTP-обработчики Audit Service.
 package handlers
 
 import (
@@ -9,11 +10,13 @@ import (
 	"go.uber.org/zap"
 )
 
+// AuditHandler обрабатывает HTTP-запросы к API аудита.
 type AuditHandler struct {
 	service service.AuditService
 	logger  *zap.Logger
 }
 
+// NewAuditHandler создаёт новый AuditHandler.
 func NewAuditHandler(service service.AuditService, logger *zap.Logger) *AuditHandler {
 	return &AuditHandler{
 		service: service,
@@ -21,6 +24,7 @@ func NewAuditHandler(service service.AuditService, logger *zap.Logger) *AuditHan
 	}
 }
 
+// CreateLog создаёт запись в журнале аудита.
 func (h *AuditHandler) CreateLog(c *gin.Context) {
 	var req service.CreateLogRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -46,6 +50,7 @@ func (h *AuditHandler) CreateLog(c *gin.Context) {
 	c.JSON(http.StatusCreated, gin.H{"data": log})
 }
 
+// GetLog возвращает запись аудита по ID.
 func (h *AuditHandler) GetLog(c *gin.Context) {
 	id := c.Param("id")
 	log, err := h.service.GetLog(c.Request.Context(), id)
@@ -57,6 +62,7 @@ func (h *AuditHandler) GetLog(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"data": log})
 }
 
+// GetLogsByEntity возвращает записи аудита по типу и ID сущности.
 func (h *AuditHandler) GetLogsByEntity(c *gin.Context) {
 	entityType := c.Query("entity_type")
 	entityID := c.Query("entity_id")
@@ -76,6 +82,7 @@ func (h *AuditHandler) GetLogsByEntity(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"data": logs})
 }
 
+// GetLogsByUser возвращает записи аудита по ID пользователя.
 func (h *AuditHandler) GetLogsByUser(c *gin.Context) {
 	userID := c.Query("user_id")
 	if userID == "" {
@@ -96,6 +103,7 @@ func (h *AuditHandler) GetLogsByUser(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"data": logs})
 }
 
+// GetLogsByDateRange возвращает записи аудита за период дат.
 func (h *AuditHandler) GetLogsByDateRange(c *gin.Context) {
 	from := c.Query("from")
 	to := c.Query("to")
@@ -115,6 +123,7 @@ func (h *AuditHandler) GetLogsByDateRange(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"data": logs})
 }
 
+// ListLogs возвращает список записей аудита с пагинацией.
 func (h *AuditHandler) ListLogs(c *gin.Context) {
 	limitStr := c.DefaultQuery("limit", "100")
 	limit, _ := strconv.Atoi(limitStr)

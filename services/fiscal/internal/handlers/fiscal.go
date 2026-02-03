@@ -1,3 +1,4 @@
+// Package handlers — HTTP-обработчики Fiscal Service.
 package handlers
 
 import (
@@ -9,11 +10,13 @@ import (
 	"go.uber.org/zap"
 )
 
+// FiscalHandler обрабатывает HTTP-запросы к API фискализации.
 type FiscalHandler struct {
 	service service.FiscalService
 	logger  *zap.Logger
 }
 
+// NewFiscalHandler создаёт новый FiscalHandler.
 func NewFiscalHandler(service service.FiscalService, logger *zap.Logger) *FiscalHandler {
 	return &FiscalHandler{
 		service: service,
@@ -21,7 +24,7 @@ func NewFiscalHandler(service service.FiscalService, logger *zap.Logger) *Fiscal
 	}
 }
 
-// Получить чек по ID
+// GetReceipt возвращает чек по ID.
 func (h *FiscalHandler) GetReceipt(c *gin.Context) {
 	id := c.Param("id")
 	receipt, err := h.service.GetReceipt(c.Request.Context(), id)
@@ -33,7 +36,7 @@ func (h *FiscalHandler) GetReceipt(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"data": receipt})
 }
 
-// Получить чеки по билету
+// GetReceiptsByTicket возвращает чеки по билету.
 func (h *FiscalHandler) GetReceiptsByTicket(c *gin.Context) {
 	ticketID := c.Query("ticket_id")
 	if ticketID == "" {
@@ -51,7 +54,7 @@ func (h *FiscalHandler) GetReceiptsByTicket(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"data": receipts})
 }
 
-// Создать Z-отчёт
+// CreateZReport создаёт Z-отчёт за дату.
 func (h *FiscalHandler) CreateZReport(c *gin.Context) {
 	var req struct {
 		Date string `json:"date" binding:"required"`
@@ -72,7 +75,7 @@ func (h *FiscalHandler) CreateZReport(c *gin.Context) {
 	c.JSON(http.StatusCreated, gin.H{"data": report})
 }
 
-// Получить Z-отчёт по дате
+// GetZReport возвращает Z-отчёт по дате.
 func (h *FiscalHandler) GetZReport(c *gin.Context) {
 	date := c.Query("date")
 	if date == "" {
@@ -89,7 +92,7 @@ func (h *FiscalHandler) GetZReport(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"data": report})
 }
 
-// Список Z-отчётов
+// ListZReports возвращает список Z-отчётов.
 func (h *FiscalHandler) ListZReports(c *gin.Context) {
 	limitStr := c.DefaultQuery("limit", "30")
 	limit, _ := strconv.Atoi(limitStr)
@@ -104,7 +107,7 @@ func (h *FiscalHandler) ListZReports(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"data": reports})
 }
 
-// Статус ККТ
+// GetKKTStatus возвращает статус ККТ.
 func (h *FiscalHandler) GetKKTStatus(c *gin.Context) {
 	status, err := h.service.GetKKTStatus(c.Request.Context())
 	if err != nil {

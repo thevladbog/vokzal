@@ -1,3 +1,4 @@
+// Package models — доменные модели Audit Service.
 package models
 
 import (
@@ -10,8 +11,10 @@ import (
 	"gorm.io/gorm"
 )
 
+// JSONB — тип для хранения JSON в PostgreSQL.
 type JSONB []byte
 
+// Value реализует driver.Valuer для записи JSONB в БД.
 func (j JSONB) Value() (driver.Value, error) {
 	if len(j) == 0 {
 		return nil, nil
@@ -19,6 +22,7 @@ func (j JSONB) Value() (driver.Value, error) {
 	return string(j), nil
 }
 
+// Scan реализует sql.Scanner для чтения JSONB из БД.
 func (j *JSONB) Scan(value interface{}) error {
 	if value == nil {
 		*j = nil
@@ -32,7 +36,7 @@ func (j *JSONB) Scan(value interface{}) error {
 	return nil
 }
 
-// AuditLog модель лога аудита
+// AuditLog — модель лога аудита.
 type AuditLog struct {
 	ID         string    `gorm:"type:uuid;primary_key" json:"id"`
 	EntityType string    `gorm:"type:varchar(50);not null;index" json:"entity_type"`
@@ -46,18 +50,20 @@ type AuditLog struct {
 	CreatedAt  time.Time `gorm:"index" json:"created_at"`
 }
 
+// TableName возвращает имя таблицы для GORM.
 func (AuditLog) TableName() string {
 	return "audit_logs"
 }
 
-func (a *AuditLog) BeforeCreate(tx *gorm.DB) error {
+// BeforeCreate заполняет ID перед созданием записи.
+func (a *AuditLog) BeforeCreate(_ *gorm.DB) error {
 	if a.ID == "" {
 		a.ID = uuid.New().String()
 	}
 	return nil
 }
 
-// SetOldValue устанавливает old_value из интерфейса
+// SetOldValue устанавливает old_value из интерфейса.
 func (a *AuditLog) SetOldValue(v interface{}) error {
 	data, err := json.Marshal(v)
 	if err != nil {
@@ -67,7 +73,7 @@ func (a *AuditLog) SetOldValue(v interface{}) error {
 	return nil
 }
 
-// SetNewValue устанавливает new_value из интерфейса
+// SetNewValue устанавливает new_value из интерфейса.
 func (a *AuditLog) SetNewValue(v interface{}) error {
 	data, err := json.Marshal(v)
 	if err != nil {

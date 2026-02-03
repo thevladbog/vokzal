@@ -1,3 +1,4 @@
+// Package handlers содержит HTTP-обработчики API билетов.
 package handlers
 
 import (
@@ -8,11 +9,13 @@ import (
 	"go.uber.org/zap"
 )
 
+// TicketHandler — обработчик HTTP-запросов для билетов и посадки.
 type TicketHandler struct {
 	service service.TicketService
 	logger  *zap.Logger
 }
 
+// NewTicketHandler создаёт обработчик билетов.
 func NewTicketHandler(service service.TicketService, logger *zap.Logger) *TicketHandler {
 	return &TicketHandler{
 		service: service,
@@ -20,7 +23,7 @@ func NewTicketHandler(service service.TicketService, logger *zap.Logger) *Ticket
 	}
 }
 
-// Продажа билета
+// SellTicket продаёт билет.
 func (h *TicketHandler) SellTicket(c *gin.Context) {
 	var req service.SellTicketRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -38,7 +41,7 @@ func (h *TicketHandler) SellTicket(c *gin.Context) {
 	c.JSON(http.StatusCreated, gin.H{"data": ticket})
 }
 
-// Получить билет по ID
+// GetTicket возвращает билет по ID.
 func (h *TicketHandler) GetTicket(c *gin.Context) {
 	id := c.Param("id")
 	ticket, err := h.service.GetTicket(c.Request.Context(), id)
@@ -50,7 +53,7 @@ func (h *TicketHandler) GetTicket(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"data": ticket})
 }
 
-// Получить билет по QR коду
+// GetTicketByQR возвращает билет по QR-коду.
 func (h *TicketHandler) GetTicketByQR(c *gin.Context) {
 	qrCode := c.Query("qr_code")
 	if qrCode == "" {
@@ -67,7 +70,7 @@ func (h *TicketHandler) GetTicketByQR(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"data": ticket})
 }
 
-// Список билетов на рейс
+// ListTicketsByTrip возвращает список билетов на рейс.
 func (h *TicketHandler) ListTicketsByTrip(c *gin.Context) {
 	tripID := c.Query("trip_id")
 	if tripID == "" {
@@ -85,12 +88,15 @@ func (h *TicketHandler) ListTicketsByTrip(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"data": tickets})
 }
 
-// Возврат билета
+// RefundTicket возвращает билет.
 func (h *TicketHandler) RefundTicket(c *gin.Context) {
 	ticketID := c.Param("id")
-	
-	// TODO: получить user_id из JWT токена
+
+	// user_id из контекста (middleware) или заголовка X-User-ID (API Gateway после аутентификации)
 	userID := c.GetString("user_id")
+	if userID == "" {
+		userID = c.GetHeader("X-User-ID")
+	}
 	if userID == "" {
 		userID = "system"
 	}
@@ -108,7 +114,7 @@ func (h *TicketHandler) RefundTicket(c *gin.Context) {
 	})
 }
 
-// Начать посадку
+// StartBoarding начинает посадку.
 func (h *TicketHandler) StartBoarding(c *gin.Context) {
 	var req struct {
 		TripID string `json:"trip_id" binding:"required"`
@@ -119,8 +125,11 @@ func (h *TicketHandler) StartBoarding(c *gin.Context) {
 		return
 	}
 
-	// TODO: получить user_id из JWT токена
+	// user_id из контекста (middleware) или заголовка X-User-ID (API Gateway после аутентификации)
 	userID := c.GetString("user_id")
+	if userID == "" {
+		userID = c.GetHeader("X-User-ID")
+	}
 	if userID == "" {
 		userID = "system"
 	}
@@ -134,7 +143,7 @@ func (h *TicketHandler) StartBoarding(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Boarding started successfully"})
 }
 
-// Отметить посадку
+// MarkBoarding отмечает посадку пассажира.
 func (h *TicketHandler) MarkBoarding(c *gin.Context) {
 	var req service.MarkBoardingRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -151,7 +160,7 @@ func (h *TicketHandler) MarkBoarding(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Boarding marked successfully"})
 }
 
-// Статус посадки
+// GetBoardingStatus возвращает статус посадки по рейсу.
 func (h *TicketHandler) GetBoardingStatus(c *gin.Context) {
 	tripID := c.Query("trip_id")
 	if tripID == "" {

@@ -1,3 +1,4 @@
+// Package handlers содержит HTTP-обработчики API платежей.
 package handlers
 
 import (
@@ -9,11 +10,13 @@ import (
 	"go.uber.org/zap"
 )
 
+// PaymentHandler — обработчик HTTP-запросов для платежей.
 type PaymentHandler struct {
 	service service.PaymentService
 	logger  *zap.Logger
 }
 
+// NewPaymentHandler создаёт обработчик платежей.
 func NewPaymentHandler(service service.PaymentService, logger *zap.Logger) *PaymentHandler {
 	return &PaymentHandler{
 		service: service,
@@ -21,7 +24,7 @@ func NewPaymentHandler(service service.PaymentService, logger *zap.Logger) *Paym
 	}
 }
 
-// Инициализировать Tinkoff платёж
+// InitTinkoff инициализирует платёж через Tinkoff.
 func (h *PaymentHandler) InitTinkoff(c *gin.Context) {
 	var req service.InitPaymentRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -39,7 +42,7 @@ func (h *PaymentHandler) InitTinkoff(c *gin.Context) {
 	c.JSON(http.StatusCreated, gin.H{"data": payment})
 }
 
-// Инициализировать СБП платёж
+// InitSBP инициализирует платёж через СБП.
 func (h *PaymentHandler) InitSBP(c *gin.Context) {
 	var req service.InitPaymentRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -57,7 +60,7 @@ func (h *PaymentHandler) InitSBP(c *gin.Context) {
 	c.JSON(http.StatusCreated, gin.H{"data": payment})
 }
 
-// Создать наличную оплату
+// InitCash создаёт запись о наличной оплате.
 func (h *PaymentHandler) InitCash(c *gin.Context) {
 	var req service.InitPaymentRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -75,7 +78,7 @@ func (h *PaymentHandler) InitCash(c *gin.Context) {
 	c.JSON(http.StatusCreated, gin.H{"data": payment})
 }
 
-// Получить платёж по ID
+// GetPayment возвращает платёж по ID.
 func (h *PaymentHandler) GetPayment(c *gin.Context) {
 	id := c.Param("id")
 	payment, err := h.service.GetPayment(c.Request.Context(), id)
@@ -87,7 +90,7 @@ func (h *PaymentHandler) GetPayment(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"data": payment})
 }
 
-// Проверить статус платежа
+// CheckStatus проверяет статус платежа у провайдера.
 func (h *PaymentHandler) CheckStatus(c *gin.Context) {
 	id := c.Param("id")
 	payment, err := h.service.CheckPaymentStatus(c.Request.Context(), id)
@@ -100,7 +103,7 @@ func (h *PaymentHandler) CheckStatus(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"data": payment})
 }
 
-// Получить платежи по билету
+// GetPaymentsByTicket возвращает платежи по билету.
 func (h *PaymentHandler) GetPaymentsByTicket(c *gin.Context) {
 	ticketID := c.Query("ticket_id")
 	if ticketID == "" {
@@ -118,7 +121,7 @@ func (h *PaymentHandler) GetPaymentsByTicket(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"data": payments})
 }
 
-// Webhook от Tinkoff
+// TinkoffWebhook обрабатывает webhook от Tinkoff.
 func (h *PaymentHandler) TinkoffWebhook(c *gin.Context) {
 	var data map[string]interface{}
 	if err := c.ShouldBindJSON(&data); err != nil {
@@ -135,7 +138,7 @@ func (h *PaymentHandler) TinkoffWebhook(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"status": "ok"})
 }
 
-// Список платежей
+// ListPayments возвращает список платежей.
 func (h *PaymentHandler) ListPayments(c *gin.Context) {
 	limitStr := c.DefaultQuery("limit", "50")
 	limit, _ := strconv.Atoi(limitStr)

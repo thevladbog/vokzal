@@ -1,11 +1,14 @@
+// Package config загружает конфигурацию Audit Service из YAML и переменных окружения.
 package config
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/spf13/viper"
 )
 
+// Config — корневая конфигурация сервиса.
 type Config struct {
 	Server   ServerConfig   `mapstructure:"server"`
 	Database DatabaseConfig `mapstructure:"database"`
@@ -13,11 +16,13 @@ type Config struct {
 	Logger   LoggerConfig   `mapstructure:"logger"`
 }
 
+// ServerConfig — настройки HTTP-сервера.
 type ServerConfig struct {
 	Port string `mapstructure:"port"`
 	Mode string `mapstructure:"mode"`
 }
 
+// DatabaseConfig — настройки подключения к PostgreSQL.
 type DatabaseConfig struct {
 	Host     string `mapstructure:"host"`
 	Port     int    `mapstructure:"port"`
@@ -27,16 +32,19 @@ type DatabaseConfig struct {
 	SSLMode  string `mapstructure:"sslmode"`
 }
 
+// NATSConfig — настройки подключения к NATS.
 type NATSConfig struct {
 	URL      string `mapstructure:"url"`
 	User     string `mapstructure:"user"`
 	Password string `mapstructure:"password"`
 }
 
+// LoggerConfig — настройки логгера.
 type LoggerConfig struct {
 	Level string `mapstructure:"level"`
 }
 
+// Load читает конфигурацию из файла и переменных окружения.
 func Load() (*Config, error) {
 	viper.SetConfigName("config")
 	viper.SetConfigType("yaml")
@@ -61,7 +69,8 @@ func Load() (*Config, error) {
 	viper.SetDefault("logger.level", "debug")
 
 	if err := viper.ReadInConfig(); err != nil {
-		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
+		var notFound viper.ConfigFileNotFoundError
+		if !errors.As(err, &notFound) {
 			return nil, fmt.Errorf("failed to read config: %w", err)
 		}
 	}
@@ -74,6 +83,7 @@ func Load() (*Config, error) {
 	return &config, nil
 }
 
+// DSN возвращает строку подключения к PostgreSQL.
 func (c *DatabaseConfig) DSN() string {
 	return fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=%s",
 		c.Host, c.Port, c.User, c.Password, c.DBName, c.SSLMode)

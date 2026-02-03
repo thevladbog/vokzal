@@ -1,11 +1,14 @@
+// Package config загружает конфигурацию Notify Service.
 package config
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/spf13/viper"
 )
 
+// Config — корневая конфигурация сервиса.
 type Config struct {
 	Server      ServerConfig      `mapstructure:"server"`
 	Database    DatabaseConfig    `mapstructure:"database"`
@@ -17,11 +20,13 @@ type Config struct {
 	LocalAgent  LocalAgentConfig  `mapstructure:"local_agent"`
 }
 
+// ServerConfig — настройки HTTP-сервера.
 type ServerConfig struct {
 	Port string `mapstructure:"port"`
 	Mode string `mapstructure:"mode"`
 }
 
+// DatabaseConfig — настройки БД.
 type DatabaseConfig struct {
 	Host     string `mapstructure:"host"`
 	Port     int    `mapstructure:"port"`
@@ -31,21 +36,25 @@ type DatabaseConfig struct {
 	SSLMode  string `mapstructure:"sslmode"`
 }
 
+// NATSConfig — настройки подключения к NATS.
 type NATSConfig struct {
 	URL      string `mapstructure:"url"`
 	User     string `mapstructure:"user"`
 	Password string `mapstructure:"password"`
 }
 
+// LoggerConfig — настройки логгера.
 type LoggerConfig struct {
 	Level string `mapstructure:"level"`
 }
 
+// SMSConfig — настройки SMS (SMS.ru).
 type SMSConfig struct {
 	APIID string `mapstructure:"api_id"`
 	URL   string `mapstructure:"url"`
 }
 
+// EmailConfig — настройки SMTP для email.
 type EmailConfig struct {
 	SMTPHost string `mapstructure:"smtp_host"`
 	SMTPPort int    `mapstructure:"smtp_port"`
@@ -54,15 +63,18 @@ type EmailConfig struct {
 	From     string `mapstructure:"from"`
 }
 
+// TelegramConfig — настройки Telegram-бота.
 type TelegramConfig struct {
 	BotToken string `mapstructure:"bot_token"`
 	WebhookURL string `mapstructure:"webhook_url"`
 }
 
+// LocalAgentConfig — настройки локального агента (TTS и т.п.).
 type LocalAgentConfig struct {
 	URL string `mapstructure:"url"`
 }
 
+// Load загружает конфигурацию из файла и переменных окружения.
 func Load() (*Config, error) {
 	viper.SetConfigName("config")
 	viper.SetConfigType("yaml")
@@ -91,7 +103,8 @@ func Load() (*Config, error) {
 	viper.SetDefault("local_agent.url", "http://localhost:8081")
 
 	if err := viper.ReadInConfig(); err != nil {
-		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
+		var notFound viper.ConfigFileNotFoundError
+		if !errors.As(err, &notFound) {
 			return nil, fmt.Errorf("failed to read config: %w", err)
 		}
 	}
@@ -104,6 +117,7 @@ func Load() (*Config, error) {
 	return &config, nil
 }
 
+// DSN возвращает строку подключения к PostgreSQL.
 func (c *DatabaseConfig) DSN() string {
 	return fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=%s",
 		c.Host, c.Port, c.User, c.Password, c.DBName, c.SSLMode)

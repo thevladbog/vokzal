@@ -22,9 +22,9 @@ const useStyles = makeStyles({
     borderBottom: `3px solid ${tokens.colorBrandStroke1}`,
   },
   logo: {
-    fontSize: '48px',
-    fontWeight: 'bold',
-    color: tokens.colorBrandForeground1,
+    height: '56px',
+    width: 'auto',
+    display: 'block',
   },
   clock: {
     fontSize: '36px',
@@ -144,7 +144,7 @@ export const PublicBoardPage: React.FC = () => {
 
       {/* Header */}
       <div className={styles.header}>
-        <div className={styles.logo}>🚌 Вокзал.ТЕХ</div>
+        <img src="/vokzal-logo.svg" alt="Вокзал.ТЕХ" className={styles.logo} />
         <div className={styles.clock}>
           {format(currentTime, 'HH:mm:ss', { locale: ru })}
           <div style={{ fontSize: '24px', opacity: 0.8 }}>

@@ -1,3 +1,4 @@
+// Package tinkoff предоставляет клиент для Tinkoff Acquiring API.
 package tinkoff
 
 import (
@@ -14,7 +15,9 @@ import (
 	"go.uber.org/zap"
 )
 
-// TinkoffClient клиент для работы с Tinkoff Acquiring API
+// TinkoffClient — клиент для работы с Tinkoff Acquiring API.
+//
+//nolint:revive // Имя сохраняем для ясности (tinkoff.Client).
 type TinkoffClient struct {
 	terminalKey string
 	password    string
@@ -23,7 +26,7 @@ type TinkoffClient struct {
 	logger      *zap.Logger
 }
 
-// InitRequest запрос инициализации платежа
+// InitRequest — запрос инициализации платежа.
 type InitRequest struct {
 	TerminalKey string  `json:"TerminalKey"`
 	Amount      int64   `json:"Amount"` // в копейках
@@ -35,7 +38,7 @@ type InitRequest struct {
 	FailURL     string  `json:"FailURL,omitempty"`
 }
 
-// InitResponse ответ на инициализацию
+// InitResponse — ответ на инициализацию платежа.
 type InitResponse struct {
 	Success     bool   `json:"Success"`
 	ErrorCode   string `json:"ErrorCode"`
@@ -44,14 +47,14 @@ type InitResponse struct {
 	PaymentURL  string `json:"PaymentURL"`
 }
 
-// GetStateRequest запрос статуса платежа
+// GetStateRequest — запрос статуса платежа.
 type GetStateRequest struct {
 	TerminalKey string `json:"TerminalKey"`
 	PaymentID   string `json:"PaymentId"`
 	Token       string `json:"Token"`
 }
 
-// GetStateResponse ответ со статусом
+// GetStateResponse — ответ со статусом платежа.
 type GetStateResponse struct {
 	Success   bool   `json:"Success"`
 	ErrorCode string `json:"ErrorCode"`
@@ -62,6 +65,7 @@ type GetStateResponse struct {
 	Amount    int64  `json:"Amount"`
 }
 
+// NewTinkoffClient создаёт клиент Tinkoff Acquiring.
 func NewTinkoffClient(terminalKey, password, apiURL string, logger *zap.Logger) *TinkoffClient {
 	return &TinkoffClient{
 		terminalKey: terminalKey,
@@ -74,7 +78,7 @@ func NewTinkoffClient(terminalKey, password, apiURL string, logger *zap.Logger) 
 	}
 }
 
-// Init инициализирует платеж
+// Init инициализирует платёж.
 func (c *TinkoffClient) Init(orderID string, amount float64, description string) (*InitResponse, error) {
 	amountKopecks := int64(amount * 100)
 
@@ -110,7 +114,7 @@ func (c *TinkoffClient) Init(orderID string, amount float64, description string)
 	if err != nil {
 		return nil, fmt.Errorf("failed to send request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -129,7 +133,7 @@ func (c *TinkoffClient) Init(orderID string, amount float64, description string)
 	return &result, nil
 }
 
-// GetState получает статус платежа
+// GetState получает статус платежа.
 func (c *TinkoffClient) GetState(paymentID string) (*GetStateResponse, error) {
 	req := &GetStateRequest{
 		TerminalKey: c.terminalKey,
@@ -157,7 +161,7 @@ func (c *TinkoffClient) GetState(paymentID string) (*GetStateResponse, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to send request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -172,7 +176,7 @@ func (c *TinkoffClient) GetState(paymentID string) (*GetStateResponse, error) {
 	return &result, nil
 }
 
-// generateToken генерирует токен для подписи запроса
+// generateToken генерирует токен для подписи запроса.
 func (c *TinkoffClient) generateToken(params map[string]interface{}) string {
 	// Добавляем Password к параметрам
 	params["Password"] = c.password
@@ -185,7 +189,7 @@ func (c *TinkoffClient) generateToken(params map[string]interface{}) string {
 	sort.Strings(keys)
 
 	// Формируем строку для хеширования
-	var parts []string
+	parts := make([]string, 0, len(keys))
 	for _, k := range keys {
 		parts = append(parts, fmt.Sprintf("%v", params[k]))
 	}

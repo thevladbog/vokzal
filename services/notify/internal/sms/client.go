@@ -1,3 +1,4 @@
+// Package sms предоставляет клиент для отправки SMS через SMS.ru API.
 package sms
 
 import (
@@ -11,7 +12,9 @@ import (
 	"go.uber.org/zap"
 )
 
-// SMSRuClient клиент для SMS.ru API
+// SMSRuClient — клиент для SMS.ru API.
+//
+//nolint:revive // Имя RuClient сохраняем для однозначности (sms.RuClient).
 type SMSRuClient struct {
 	apiID  string
 	apiURL string
@@ -19,18 +22,25 @@ type SMSRuClient struct {
 	logger *zap.Logger
 }
 
+// SMSResponse — ответ API SMS.ru.
+//
+//nolint:revive // Имя сохраняем для ясности (sms.Response).
 type SMSResponse struct {
-	Status     string `json:"status"`
-	StatusCode int    `json:"status_code"`
-	SMS        map[string]SMSStatus `json:"sms"`
+	Status     string                `json:"status"`
+	StatusCode int                   `json:"status_code"`
+	SMS        map[string]SMSStatus  `json:"sms"`
 }
 
+// SMSStatus — статус одного SMS в ответе.
+//
+//nolint:revive // Имя сохраняем для ясности (sms.Status).
 type SMSStatus struct {
 	Status     string `json:"status"`
 	StatusCode int    `json:"status_code"`
 	SMSID      string `json:"sms_id"`
 }
 
+// NewSMSRuClient создаёт клиент SMS.ru.
 func NewSMSRuClient(apiID, apiURL string, logger *zap.Logger) *SMSRuClient {
 	return &SMSRuClient{
 		apiID:  apiID,
@@ -42,7 +52,7 @@ func NewSMSRuClient(apiID, apiURL string, logger *zap.Logger) *SMSRuClient {
 	}
 }
 
-// Send отправляет SMS
+// Send отправляет SMS на указанный номер.
 func (c *SMSRuClient) Send(phone, message string) error {
 	params := url.Values{}
 	params.Set("api_id", c.apiID)
@@ -58,7 +68,7 @@ func (c *SMSRuClient) Send(phone, message string) error {
 	if err != nil {
 		return fmt.Errorf("failed to send SMS request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {

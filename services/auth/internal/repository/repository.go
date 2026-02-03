@@ -1,3 +1,4 @@
+// Package repository — слой доступа к данным Auth Service.
 package repository
 
 import (
@@ -11,11 +12,15 @@ import (
 )
 
 var (
-	ErrUserNotFound     = errors.New("user not found")
-	ErrUsernameExists   = errors.New("username already exists")
-	ErrSessionNotFound  = errors.New("session not found")
+	// ErrUserNotFound возвращается, когда пользователь не найден.
+	ErrUserNotFound = errors.New("user not found")
+	// ErrUsernameExists возвращается, когда имя пользователя уже занято.
+	ErrUsernameExists = errors.New("username already exists")
+	// ErrSessionNotFound возвращается, когда сессия не найдена.
+	ErrSessionNotFound = errors.New("session not found")
 )
 
+// UserRepository — интерфейс репозитория пользователей.
 type UserRepository interface {
 	Create(ctx context.Context, user *models.User) error
 	FindByID(ctx context.Context, id string) (*models.User, error)
@@ -24,6 +29,7 @@ type UserRepository interface {
 	Delete(ctx context.Context, id string) error
 }
 
+// SessionRepository — интерфейс репозитория сессий.
 type SessionRepository interface {
 	Create(ctx context.Context, session *models.Session) error
 	FindByToken(ctx context.Context, tokenHash string) (*models.Session, error)
@@ -40,10 +46,12 @@ type sessionRepository struct {
 	db *gorm.DB
 }
 
+// NewUserRepository создаёт новый UserRepository.
 func NewUserRepository(db *gorm.DB) UserRepository {
 	return &userRepository{db: db}
 }
 
+// NewSessionRepository создаёт новый SessionRepository.
 func NewSessionRepository(db *gorm.DB) SessionRepository {
 	return &sessionRepository{db: db}
 }

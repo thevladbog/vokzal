@@ -1,3 +1,4 @@
+// Package main — точка входа Geo Service (Yandex Geocoder, расстояния).
 package main
 
 import (
@@ -30,7 +31,7 @@ func main() {
 	} else {
 		logger, _ = zap.NewDevelopment()
 	}
-	defer logger.Sync()
+	defer func() { _ = logger.Sync() }()
 
 	logger.Info("Starting Geo Service", zap.String("version", "1.0.0"))
 

@@ -1,3 +1,4 @@
+// Package models содержит модели данных сервиса билетов.
 package models
 
 import (
@@ -7,7 +8,7 @@ import (
 	"gorm.io/gorm"
 )
 
-// Ticket модель билета
+// Ticket — модель билета.
 type Ticket struct {
 	ID            string     `gorm:"type:uuid;primary_key" json:"id"`
 	TripID        string     `gorm:"type:uuid;not null;index" json:"trip_id"`
@@ -28,7 +29,7 @@ type Ticket struct {
 	UpdatedAt     time.Time  `json:"updated_at"`
 }
 
-// BoardingEvent модель события начала посадки
+// BoardingEvent — модель события начала посадки.
 type BoardingEvent struct {
 	ID        string    `gorm:"type:uuid;primary_key" json:"id"`
 	TripID    string    `gorm:"type:uuid;not null;unique;index" json:"trip_id"`
@@ -37,7 +38,7 @@ type BoardingEvent struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
-// BoardingMark модель отметки посадки
+// BoardingMark — модель отметки посадки.
 type BoardingMark struct {
 	ID         string    `gorm:"type:uuid;primary_key" json:"id"`
 	TicketID   string    `gorm:"type:uuid;not null;index" json:"ticket_id"`
@@ -47,19 +48,23 @@ type BoardingMark struct {
 	CreatedAt  time.Time `json:"created_at"`
 }
 
+// TableName возвращает имя таблицы для GORM (Ticket).
 func (Ticket) TableName() string {
 	return "tickets"
 }
 
+// TableName возвращает имя таблицы для GORM (BoardingEvent).
 func (BoardingEvent) TableName() string {
 	return "boarding_events"
 }
 
+// TableName возвращает имя таблицы для GORM (BoardingMark).
 func (BoardingMark) TableName() string {
 	return "boarding_marks"
 }
 
-func (t *Ticket) BeforeCreate(tx *gorm.DB) error {
+// BeforeCreate генерирует UUID и коды для новой записи (Ticket).
+func (t *Ticket) BeforeCreate(_ *gorm.DB) error {
 	if t.ID == "" {
 		t.ID = uuid.New().String()
 	}
@@ -72,14 +77,16 @@ func (t *Ticket) BeforeCreate(tx *gorm.DB) error {
 	return nil
 }
 
-func (b *BoardingEvent) BeforeCreate(tx *gorm.DB) error {
+// BeforeCreate генерирует UUID для новой записи (BoardingEvent).
+func (b *BoardingEvent) BeforeCreate(_ *gorm.DB) error {
 	if b.ID == "" {
 		b.ID = uuid.New().String()
 	}
 	return nil
 }
 
-func (b *BoardingMark) BeforeCreate(tx *gorm.DB) error {
+// BeforeCreate генерирует UUID для новой записи (BoardingMark).
+func (b *BoardingMark) BeforeCreate(_ *gorm.DB) error {
 	if b.ID == "" {
 		b.ID = uuid.New().String()
 	}

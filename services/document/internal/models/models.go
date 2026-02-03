@@ -1,3 +1,4 @@
+// Package models — доменные модели Document Service.
 package models
 
 import (
@@ -7,7 +8,7 @@ import (
 	"gorm.io/gorm"
 )
 
-// DocumentTemplate шаблон документа
+// DocumentTemplate — шаблон документа.
 type DocumentTemplate struct {
 	ID          string    `gorm:"type:uuid;primary_key" json:"id"`
 	Name        string    `gorm:"type:varchar(100);not null;unique" json:"name"`
@@ -19,18 +20,20 @@ type DocumentTemplate struct {
 	UpdatedAt   time.Time `json:"updated_at"`
 }
 
+// TableName возвращает имя таблицы шаблонов.
 func (DocumentTemplate) TableName() string {
 	return "document_templates"
 }
 
-func (d *DocumentTemplate) BeforeCreate(tx *gorm.DB) error {
+// BeforeCreate заполняет ID перед созданием записи.
+func (d *DocumentTemplate) BeforeCreate(_ *gorm.DB) error {
 	if d.ID == "" {
 		d.ID = uuid.New().String()
 	}
 	return nil
 }
 
-// GeneratedDocument сгенерированный документ
+// GeneratedDocument — сгенерированный документ.
 type GeneratedDocument struct {
 	ID           string    `gorm:"type:uuid;primary_key" json:"id"`
 	TemplateID   *string   `gorm:"type:uuid;index" json:"template_id,omitempty"`
@@ -42,11 +45,13 @@ type GeneratedDocument struct {
 	CreatedAt    time.Time `json:"created_at"`
 }
 
+// TableName возвращает имя таблицы сгенерированных документов.
 func (GeneratedDocument) TableName() string {
 	return "generated_documents"
 }
 
-func (g *GeneratedDocument) BeforeCreate(tx *gorm.DB) error {
+// BeforeCreate заполняет ID перед созданием записи.
+func (g *GeneratedDocument) BeforeCreate(_ *gorm.DB) error {
 	if g.ID == "" {
 		g.ID = uuid.New().String()
 	}

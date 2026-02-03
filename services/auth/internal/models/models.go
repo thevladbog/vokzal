@@ -1,3 +1,4 @@
+// Package models — доменные модели Auth Service.
 package models
 
 import (
@@ -7,7 +8,7 @@ import (
 	"gorm.io/gorm"
 )
 
-// User модель пользователя
+// User — модель пользователя.
 type User struct {
 	ID           string    `gorm:"type:uuid;primary_key" json:"id"`
 	Username     string    `gorm:"type:varchar(50);unique;not null" json:"username"`
@@ -20,7 +21,7 @@ type User struct {
 	UpdatedAt    time.Time `json:"updated_at"`
 }
 
-// Session модель сессии
+// Session — модель сессии.
 type Session struct {
 	ID        string    `gorm:"type:uuid;primary_key" json:"id"`
 	UserID    string    `gorm:"type:uuid;not null;index" json:"user_id"`
@@ -31,22 +32,26 @@ type Session struct {
 	User User `gorm:"foreignKey:UserID" json:"user,omitempty"`
 }
 
+// TableName возвращает имя таблицы users.
 func (User) TableName() string {
 	return "users"
 }
 
+// TableName возвращает имя таблицы sessions.
 func (Session) TableName() string {
 	return "sessions"
 }
 
-func (u *User) BeforeCreate(tx *gorm.DB) error {
+// BeforeCreate заполняет ID перед созданием записи.
+func (u *User) BeforeCreate(_ *gorm.DB) error {
 	if u.ID == "" {
 		u.ID = uuid.New().String()
 	}
 	return nil
 }
 
-func (s *Session) BeforeCreate(tx *gorm.DB) error {
+// BeforeCreate заполняет ID перед созданием записи.
+func (s *Session) BeforeCreate(_ *gorm.DB) error {
 	if s.ID == "" {
 		s.ID = uuid.New().String()
 	}
