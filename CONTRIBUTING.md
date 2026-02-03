@@ -262,15 +262,15 @@ git push origin feature/my-new-feature
 1. **Lint & Type Check**
    - golangci-lint для Go
    - ESLint + TypeScript для UI
-   
+
 2. **Unit Tests**
    - Go tests с coverage
    - Jest tests с coverage
-   
+
 3. **Build**
    - Docker образы для сервисов
    - Production build для UI
-   
+
 4. **Security Scan**
    - Trivy vulnerability scanning
    - CodeQL analysis
@@ -341,7 +341,7 @@ Mockups, примеры из других систем и т.д.
 
 ## 🙏 Благодарности
 
-Спасибо за вклад в Вокзал.ТЕХ! 
+Спасибо за вклад в Вокзал.ТЕХ!
 
 Список всех контрибьюторов: [CONTRIBUTORS.md](./CONTRIBUTORS.md)
 

@@ -64,7 +64,7 @@ docker-compose down -v
 
 ## Переменные окружения
 
-Все пароли и секреты находятся в `docker-compose.yml`. 
+Все пароли и секреты находятся в `docker-compose.yml`.
 
 ⚠️ **Важно:** В production используй `.env` файл и Kubernetes Secrets!
 

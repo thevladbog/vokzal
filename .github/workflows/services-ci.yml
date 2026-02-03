@@ -4,15 +4,15 @@ on:
   push:
     branches: [main, develop]
     paths:
-      - 'services/**'
-      - '.github/workflows/services-ci.yml'
+      - "services/**"
+      - ".github/workflows/services-ci.yml"
   pull_request:
     branches: [main, develop]
     paths:
-      - 'services/**'
+      - "services/**"
 
 env:
-  GO_VERSION: '1.23'
+  GO_VERSION: "1.23"
 
 jobs:
   detect-changes:
@@ -22,7 +22,7 @@ jobs:
       services: ${{ steps.filter.outputs.changes }}
     steps:
       - uses: actions/checkout@v4
-      
+
       - uses: dorny/paths-filter@v3
         id: filter
         with:
@@ -56,7 +56,7 @@ jobs:
     strategy:
       matrix:
         service: ${{ fromJSON(needs.detect-changes.outputs.services) }}
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -74,7 +74,7 @@ jobs:
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v4
         with:
-          version: latest
+          version: v2
           working-directory: services/${{ matrix.service }}
           args: --timeout=5m
 
@@ -99,7 +99,7 @@ jobs:
     strategy:
       matrix:
         service: ${{ fromJSON(needs.detect-changes.outputs.services) }}
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -144,7 +144,7 @@ jobs:
     strategy:
       matrix:
         service: ${{ fromJSON(needs.detect-changes.outputs.services) }}
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -152,12 +152,12 @@ jobs:
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
         with:
-          scan-type: 'fs'
-          scan-ref: 'services/${{ matrix.service }}'
-          format: 'sarif'
-          output: 'trivy-results.sarif'
+          scan-type: "fs"
+          scan-ref: "services/${{ matrix.service }}"
+          format: "sarif"
+          output: "trivy-results.sarif"
 
       - name: Upload Trivy results to GitHub Security
         uses: github/codeql-action/upload-sarif@v3
         with:
-          sarif_file: 'trivy-results.sarif'
+          sarif_file: "trivy-results.sarif"

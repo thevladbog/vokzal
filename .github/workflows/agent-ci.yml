@@ -4,21 +4,21 @@ on:
   push:
     branches: [main, develop]
     paths:
-      - 'agent/**'
-      - '.github/workflows/agent-ci.yml'
+      - "agent/**"
+      - ".github/workflows/agent-ci.yml"
   pull_request:
     branches: [main, develop]
     paths:
-      - 'agent/**'
+      - "agent/**"
 
 env:
-  GO_VERSION: '1.23'
+  GO_VERSION: "1.23"
 
 jobs:
   lint-and-test:
     name: Lint & Test
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -36,7 +36,7 @@ jobs:
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v4
         with:
-          version: latest
+          version: v2
           working-directory: agent
           args: --timeout=5m
 
@@ -72,7 +72,7 @@ jobs:
           - os: macos-latest
             goos: darwin
             goarch: arm64
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -108,7 +108,7 @@ jobs:
     needs: build
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Download all artifacts
         uses: actions/download-artifact@v4
