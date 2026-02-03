@@ -155,9 +155,6 @@ passenger-portal/
 # Unit тесты (Jest)
 npm test
 
-# E2E тесты (Cypress)
-npm run test:e2e
-
 # Coverage
 npm run test:coverage
 ```

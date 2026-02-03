@@ -58,75 +58,7 @@
 
 **Покрытие кода:** Целевое 70% для Frontend приложений
 
-### 3. E2E тесты (Cypress)
-
-**Созданы файлы:**
-- `/tests/e2e/package.json` — зависимости Cypress
-- `/tests/e2e/cypress.config.ts` — конфигурация Cypress
-- `/tests/e2e/tsconfig.json` — TypeScript для тестов
-- `/tests/e2e/cypress/support/e2e.ts` — кастомные команды и setup
-- `/tests/e2e/cypress/e2e/auth.cy.ts` — тесты авторизации
-- `/tests/e2e/cypress/e2e/ticket-sale.cy.ts` — тесты продажи билетов
-- `/tests/e2e/cypress/e2e/ticket-refund.cy.ts` — тесты возврата билетов
-- `/tests/e2e/cypress/e2e/boarding.cy.ts` — тесты посадки пассажиров
-
-**Функциональность:**
-
-**Авторизация (auth.cy.ts):**
-- ✅ Успешная авторизация администратора
-- ✅ Неверный логин/пароль
-- ✅ Пустые поля (валидация)
-- ✅ Выход из системы
-- ✅ Автоматический переход после авторизации
-- ✅ Обновление токена при истечении
-
-**Продажа билетов (ticket-sale.cy.ts):**
-- ✅ Полный цикл: поиск → выбор места → данные пассажира → оплата → фискализация → печать
-- ✅ Продажа с оплатой картой
-- ✅ Отмена продажи
-- ✅ Валидация данных пассажира
-- ✅ Недостаточно мест на рейсе
-- ✅ Экран покупателя
-
-**Возврат билетов (ticket-refund.cy.ts):**
-- ✅ Полный цикл возврата
-- ✅ Возврат невозможен (менее 1 часа до отправления)
-- ✅ Билет уже возвращён
-- ✅ Билет не найден
-- ✅ Расчёт штрафа в зависимости от времени
-- ✅ Печать чека возврата
-
-**Посадка пассажиров (boarding.cy.ts):**
-- ✅ Выбор активного рейса для контроля
-- ✅ Успешное сканирование QR-кода
-- ✅ Повторное сканирование (предупреждение)
-- ✅ Недействительный QR-код
-- ✅ Билет на другой рейс
-- ✅ Возвращённый билет
-- ✅ Статистика посадки
-- ✅ Звуковые и вибро сигналы
-- ✅ История сканирований
-- ✅ Офлайн режим PWA
-
-**Кастомные команды:**
-- `cy.login(username, password)` — авторизация
-- `cy.loginAsAdmin()`, `cy.loginAsCashier()`, `cy.loginAsController()` — быстрая авторизация
-- `cy.logout()` — выход
-- `cy.getAuthToken()` — получение токена
-- `cy.apiRequest(method, url, body)` — API запрос с авторизацией
-
-**Инструменты:**
-- Cypress v13.6.3
-- @cypress/code-coverage v3.12.18
-- TypeScript v5.9.3
-
-**Команды запуска:**
-- `npm run cypress:open` — GUI режим
-- `npm run cypress:run` — headless режим (для CI/CD)
-- `npm run cypress:run:chrome` — в Chrome
-- `npm run cypress:run:firefox` — в Firefox
-
-### 4. Load тесты (k6)
+### 3. Load тесты (k6)
 
 **Созданы файлы:**
 - `/tests/load/scenarios/auth.js` — нагрузочные тесты авторизации
@@ -177,13 +109,13 @@ k6 run --vus 100 --duration 30s scenarios/search-trips.js
 k6 run --stage 2m:100,5m:100,2m:0 scenarios/ticket-purchase.js
 ```
 
-### 5. Makefile команды
+### 4. Makefile команды
 
 Добавлены команды для удобного запуска всех тестов:
 
 **Все тесты:**
 ```bash
-make test                 # unit + e2e + load smoke
+make test                 # unit + load smoke
 make test-unit            # Go + UI unit тесты
 ```
 
@@ -198,13 +130,6 @@ make test-services-coverage  # С покрытием кода
 make test-ui              # Unit тесты всех UI приложений
 ```
 
-**E2E тесты:**
-```bash
-make test-e2e             # Cypress headless
-make test-e2e-open        # Cypress GUI
-make test-e2e-chrome      # В Chrome
-```
-
 **Load тесты:**
 ```bash
 make test-load            # auth + search-trips
@@ -214,7 +139,7 @@ make test-load-search     # Полный тест поиска
 make test-load-stress     # Stress test с пиковой нагрузкой
 ```
 
-### 6. Документация
+### 5. Документация
 
 **Созданы файлы:**
 - `/tests/README.md` — полная документация по тестированию

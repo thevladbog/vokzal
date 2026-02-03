@@ -4,7 +4,6 @@
 
 [![Services CI](https://github.com/thevladbog/vokzal/actions/workflows/services-ci.yml/badge.svg)](https://github.com/vokzal-tech/vokzal/actions/workflows/services-ci.yml)
 [![UI CI](https://github.com/thevladbog/vokzal/actions/workflows/ui-ci.yml/badge.svg)](https://github.com/vokzal-tech/vokzal/actions/workflows/ui-ci.yml)
-[![E2E Tests](https://github.com/thevladbog/vokzal/actions/workflows/e2e-tests.yml/badge.svg)](https://github.com/vokzal-tech/vokzal/actions/workflows/e2e-tests.yml)
 [![codecov](https://codecov.io/gh/thevladbog/vokzal/branch/main/graph/badge.svg)](https://codecov.io/gh/vokzal-tech/vokzal)
 [![Go Report Card](https://goreportcard.com/badge/github.com/thevladbog/vokzal)](https://goreportcard.com/report/github.com/thevladbog/vokzal)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)

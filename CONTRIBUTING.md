@@ -197,14 +197,6 @@ npm test
 npm test -- --coverage
 ```
 
-### E2E тесты
-
-```bash
-cd tests/e2e
-npm install
-npm run test
-```
-
 ### Линтеры
 
 ```bash

@@ -220,7 +220,7 @@
 - ✅ Документация (tests/README.md)
 
 ### CI/CD (100%) ✅
-- ✅ GitHub Actions workflows (services-ci, ui-ci, e2e-tests, deploy)
+- ✅ GitHub Actions workflows (services-ci, ui-ci, load-tests, deploy)
 - ✅ Docker образы для всех сервисов и UI
 - ✅ Заготовка под Kubernetes (deploy.yml)
 

@@ -6,7 +6,6 @@
 
 - [Unit тесты (Go)](#unit-тесты-go)
 - [Unit тесты (Jest)](#unit-тесты-jest)
-- [E2E тесты (Cypress)](#e2e-тесты-cypress)
 - [Load тесты (k6)](#load-тесты-k6)
 - [Запуск тестов](#запуск-тестов)
 - [CI/CD интеграция](#cicd-интеграция)
@@ -138,91 +137,6 @@ make test-pos-app
 - `ui/admin-panel/src/utils/format.test.ts`
 - `ui/passenger-portal/src/components/TripCard.test.tsx`
 
-## E2E тесты (Cypress)
-
-### Структура
-
-E2E тесты находятся в центральной директории `tests/e2e`:
-
-```
-tests/e2e/
-├── cypress/
-│   ├── e2e/
-│   │   ├── auth.cy.ts              # Авторизация
-│   │   ├── ticket-sale.cy.ts        # Продажа билета
-│   │   ├── ticket-refund.cy.ts      # Возврат билета
-│   │   └── boarding.cy.ts           # Посадка пассажиров
-│   ├── fixtures/                    # Тестовые данные
-│   ├── support/                     # Хелперы и команды
-│   └── screenshots/                 # Скриншоты при ошибках
-├── cypress.config.ts
-└── package.json
-```
-
-### Инструменты
-
-- **Cypress** — E2E тестирование
-- **@cypress/code-coverage** — покрытие кода
-
-### Установка
-
-```bash
-cd tests/e2e
-npm install
-```
-
-### Запуск
-
-```bash
-cd tests/e2e
-
-# Интерактивный режим (открывает GUI)
-npm run cypress:open
-
-# Headless режим (для CI/CD)
-npm run cypress:run
-
-# Конкретный тест
-npm run cypress:run -- --spec "cypress/e2e/ticket-sale.cy.ts"
-```
-
-### Makefile команды
-
-```bash
-# Запуск всех E2E тестов
-make test-e2e
-
-# С видео записью
-make test-e2e-record
-```
-
-### Примеры сценариев
-
-1. **Продажа билета**
-   - Авторизация кассира
-   - Выбор рейса
-   - Ввод данных пассажира
-   - Оплата
-   - Фискализация
-   - Печать билета
-
-2. **Возврат билета**
-   - Авторизация кассира
-   - Поиск билета по номеру
-   - Подтверждение возврата
-   - Фискализация
-   - Возврат средств
-
-3. **Посадка пассажиров**
-   - Авторизация контролёра
-   - Выбор рейса
-   - Сканирование QR-кода
-   - Отметка посадки
-
-См. файлы:
-- `tests/e2e/cypress/e2e/ticket-sale.cy.ts`
-- `tests/e2e/cypress/e2e/boarding.cy.ts`
-
 ## Load тесты (k6)
 
 ### Структура
@@ -321,14 +235,11 @@ export const options = {
 ### Через Makefile
 
 ```bash
-# Все тесты (Unit + E2E + Load smoke)
+# Все тесты (Unit + Load smoke)
 make test
 
 # Только unit тесты
 make test-unit
-
-# Только E2E
-make test-e2e
 
 # Только load
 make test-load
@@ -343,9 +254,6 @@ cd services/auth && go test ./...
 # Frontend unit тесты
 cd ui/admin-panel && npm test
 
-# E2E тесты
-cd tests/e2e && npm run cypress:run
-
 # Load тесты
 cd tests/load && k6 run scenarios/auth.js
 ```
@@ -354,12 +262,11 @@ cd tests/load && k6 run scenarios/auth.js
 
 ### GitHub Actions
 
-Файл `.github/workflows/test.yml` запускает все тесты при push и pull request:
+Workflows в `.github/workflows/` запускают тесты при push и pull request:
 
 1. **Unit тесты (Go)** — на каждый commit
 2. **Unit тесты (Jest)** — на каждый commit
-3. **E2E тесты (Cypress)** — на pull request в main
-4. **Load тесты (k6 smoke)** — на pull request в main
+3. **Load тесты (k6)** — по расписанию или вручную (workflow `load-tests.yml`)
 
 ### Покрытие кода
 
@@ -385,14 +292,6 @@ cd tests/load && k6 run scenarios/auth.js
 3. Мокируйте API запросы через MSW
 4. Тестируйте accessibility (a11y)
 5. Snapshot тесты только для критичных компонентов
-
-### E2E тесты
-
-1. Фокусируйтесь на **критических user flows**
-2. Используйте `data-cy` атрибуты для селекторов
-3. Независимые тесты (не зависят друг от друга)
-4. Очистка данных после каждого теста
-5. Retry для flaky тестов
 
 ### Load тесты
 
@@ -427,16 +326,6 @@ npm run test:debug
 npm run test:ui
 ```
 
-### E2E тесты
-
-```bash
-# Открыть Cypress GUI
-npm run cypress:open
-
-# Debug конкретного теста
-npm run cypress:run -- --spec "cypress/e2e/ticket-sale.cy.ts" --headed --browser chrome
-```
-
 ### Load тесты
 
 ```bash
@@ -464,5 +353,4 @@ k6 run scenarios/auth.js --log-output=file=test.log
 4. Обратитесь к документации инструментов:
    - [Go testing](https://golang.org/pkg/testing/)
    - [Vitest](https://vitest.dev/)
-   - [Cypress](https://docs.cypress.io/)
    - [k6](https://k6.io/docs/)

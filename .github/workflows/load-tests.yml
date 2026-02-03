@@ -1,0 +1,30 @@
+name: Load Tests
+
+on:
+  schedule:
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+
+jobs:
+  load-tests:
+    name: Load Tests (k6)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup k6
+        uses: grafana/setup-k6-action@v1
+
+      - name: Run load tests
+        working-directory: tests/load
+        run: |
+          k6 run --out json=results.json scenarios/auth.js
+          k6 run --out json=results.json scenarios/search-trips.js
+
+      - name: Upload results
+        uses: actions/upload-artifact@v4
+        with:
+          name: k6-results
+          path: tests/load/results.json
+          retention-days: 30

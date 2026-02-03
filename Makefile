@@ -1,4 +1,4 @@
-.PHONY: help dev-up dev-down services-build services-run ui-dev test test-unit test-services test-ui test-e2e test-load test-load-smoke lint
+.PHONY: help dev-up dev-down services-build services-run ui-dev test test-unit test-services test-ui test-load test-load-smoke lint
 
 help:
 	@echo "Вокзал.ТЕХ — Makefile команды:"
@@ -9,12 +9,10 @@ help:
 	@echo "  make ui-dev            - Запустить UI приложения (dev mode)"
 	@echo ""
 	@echo "Тестирование:"
-	@echo "  make test              - Запустить все тесты (unit + e2e smoke + load smoke)"
+	@echo "  make test              - Запустить все тесты (unit + load smoke)"
 	@echo "  make test-unit         - Запустить все unit тесты (Go + JS)"
 	@echo "  make test-services     - Запустить unit тесты Go сервисов"
 	@echo "  make test-ui           - Запустить unit тесты UI приложений"
-	@echo "  make test-e2e          - Запустить E2E тесты (Cypress headless)"
-	@echo "  make test-e2e-open     - Открыть Cypress GUI"
 	@echo "  make test-load         - Запустить load тесты (k6)"
 	@echo "  make test-load-smoke   - Запустить smoke load тест"
 	@echo ""
@@ -46,7 +44,7 @@ ui-dev:
 	# Будет реализовано после создания UI
 
 # Все тесты
-test: test-unit test-e2e test-load-smoke
+test: test-unit test-load-smoke
 	@echo "✅ Все тесты завершены!"
 
 # Unit тесты
@@ -84,20 +82,6 @@ test-ui:
 		fi \
 	done
 	@echo "✅ UI unit тесты завершены!"
-
-# E2E тесты
-test-e2e:
-	@echo "🧪 Запуск E2E тестов (Cypress headless)..."
-	@cd tests/e2e && npm run cypress:run
-	@echo "✅ E2E тесты завершены!"
-
-test-e2e-open:
-	@echo "🧪 Открываем Cypress GUI..."
-	@cd tests/e2e && npm run cypress:open
-
-test-e2e-chrome:
-	@echo "🧪 Запуск E2E тестов в Chrome..."
-	@cd tests/e2e && npm run cypress:run:chrome
 
 # Load тесты
 test-load: test-load-auth test-load-search

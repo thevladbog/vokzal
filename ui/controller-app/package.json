@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "lint": "npx eslint . --max-warnings 0",
+    "lint": "node ./node_modules/eslint/bin/eslint.js . --max-warnings 0",
     "preview": "vite preview",
     "test": "vitest",
     "test:watch": "vitest --watch",
