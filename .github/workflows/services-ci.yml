@@ -71,6 +71,10 @@ jobs:
         working-directory: services/${{ matrix.service }}
         run: go mod download
 
+      - name: Verify go.mod and go.sum
+        working-directory: services/${{ matrix.service }}
+        run: go mod tidy && git diff --exit-code go.mod go.sum
+
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v8
         with:
