@@ -58,7 +58,7 @@ jobs:
 
       - name: Install dependencies
         working-directory: ui/${{ matrix.app }}
-        run: npm ci
+        run: npm install
 
       - name: Run ESLint
         working-directory: ui/${{ matrix.app }}
@@ -103,7 +103,7 @@ jobs:
 
       - name: Install dependencies
         working-directory: ui/${{ matrix.app }}
-        run: npm ci
+        run: npm install
 
       - name: Build application
         working-directory: ui/${{ matrix.app }}
