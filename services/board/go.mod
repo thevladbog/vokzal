@@ -1,6 +1,6 @@
 module github.com/vokzal-tech/board-service
 
-go 1.23
+go 1.24
 
 require (
 	github.com/gin-gonic/gin v1.10.0
