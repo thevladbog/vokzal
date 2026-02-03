@@ -1,0 +1,39 @@
+{
+  "nav": {
+    "schedules": "Расписания",
+    "stations": "Станции",
+    "routes": "Маршруты",
+    "trips": "Рейсы",
+    "reports": "Отчёты",
+    "monitoring": "Мониторинг",
+    "users": "Пользователи",
+    "audit": "Журнал аудита"
+  },
+  "common": {
+    "loading": "Загрузка...",
+    "error": "Ошибка",
+    "cancel": "Отмена",
+    "save": "Сохранить",
+    "create": "Создать",
+    "delete": "Удалить",
+    "edit": "Редактировать",
+    "back": "Назад",
+    "next": "Вперёд"
+  },
+  "dashboard": {
+    "welcome": "Добро пожаловать",
+    "role": "Роль",
+    "statsTrips": "Рейсов запланировано",
+    "statsTickets": "Билетов продано",
+    "statsRevenue": "Выручка",
+    "statsOccupancy": "Заполняемость"
+  },
+  "login": {
+    "title": "Вокзал.ТЕХ",
+    "subtitle": "Вход в админ-панель",
+    "username": "Логин",
+    "password": "Пароль",
+    "submit": "Войти",
+    "submitting": "Вход..."
+  }
+}

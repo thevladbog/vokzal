@@ -1,0 +1,39 @@
+{
+  "nav": {
+    "schedules": "Schedules",
+    "stations": "Stations",
+    "routes": "Routes",
+    "trips": "Trips",
+    "reports": "Reports",
+    "monitoring": "Monitoring",
+    "users": "Users",
+    "audit": "Audit log"
+  },
+  "common": {
+    "loading": "Loading...",
+    "error": "Error",
+    "cancel": "Cancel",
+    "save": "Save",
+    "create": "Create",
+    "delete": "Delete",
+    "edit": "Edit",
+    "back": "Back",
+    "next": "Next"
+  },
+  "dashboard": {
+    "welcome": "Welcome",
+    "role": "Role",
+    "statsTrips": "Trips scheduled",
+    "statsTickets": "Tickets sold",
+    "statsRevenue": "Revenue",
+    "statsOccupancy": "Occupancy"
+  },
+  "login": {
+    "title": "Vokzal.TECH",
+    "subtitle": "Admin panel login",
+    "username": "Username",
+    "password": "Password",
+    "submit": "Sign in",
+    "submitting": "Signing in..."
+  }
+}

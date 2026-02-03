@@ -52,6 +52,14 @@ func (m *MockUserRepository) Delete(ctx context.Context, id string) error {
 	return args.Error(0)
 }
 
+func (m *MockUserRepository) List(ctx context.Context, filter repository.ListUsersFilter) ([]*models.User, int64, error) {
+	args := m.Called(ctx, filter)
+	if args.Get(0) == nil {
+		return nil, 0, args.Error(2)
+	}
+	return args.Get(0).([]*models.User), args.Get(1).(int64), args.Error(2)
+}
+
 // MockSessionRepository — мок репозитория сессий.
 type MockSessionRepository struct {
 	mock.Mock

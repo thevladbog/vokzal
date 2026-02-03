@@ -21,11 +21,20 @@ var (
 	ErrSessionNotFound = errors.New("session not found")
 )
 
+// ListUsersFilter — фильтры для списка пользователей.
+type ListUsersFilter struct {
+	Role      *string
+	StationID *string
+	Page      int
+	Limit     int
+}
+
 // UserRepository — интерфейс репозитория пользователей.
 type UserRepository interface {
 	Create(ctx context.Context, user *models.User) error
 	FindByID(ctx context.Context, id string) (*models.User, error)
 	FindByUsername(ctx context.Context, username string) (*models.User, error)
+	List(ctx context.Context, filter ListUsersFilter) ([]*models.User, int64, error)
 	Update(ctx context.Context, user *models.User) error
 	Delete(ctx context.Context, id string) error
 }
@@ -89,6 +98,36 @@ func (r *userRepository) FindByID(ctx context.Context, id string) (*models.User,
 
 func (r *userRepository) FindByUsername(ctx context.Context, username string) (*models.User, error) {
 	return r.findUserBy(ctx, "username", username)
+}
+
+func (r *userRepository) List(ctx context.Context, filter ListUsersFilter) ([]*models.User, int64, error) {
+	if filter.Page < 1 {
+		filter.Page = 1
+	}
+	if filter.Limit < 1 || filter.Limit > 100 {
+		filter.Limit = 20
+	}
+	offset := (filter.Page - 1) * filter.Limit
+
+	query := r.db.WithContext(ctx).Model(&models.User{})
+	if filter.Role != nil && *filter.Role != "" {
+		query = query.Where("role = ?", *filter.Role)
+	}
+	if filter.StationID != nil && *filter.StationID != "" {
+		query = query.Where("station_id = ?", *filter.StationID)
+	}
+
+	var total int64
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, fmt.Errorf("failed to count users: %w", err)
+	}
+
+	var users []*models.User
+	result := query.Offset(offset).Limit(filter.Limit).Order("created_at DESC").Find(&users)
+	if result.Error != nil {
+		return nil, 0, fmt.Errorf("failed to list users: %w", result.Error)
+	}
+	return users, total, nil
 }
 
 func (r *userRepository) Update(ctx context.Context, user *models.User) error {

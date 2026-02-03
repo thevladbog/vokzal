@@ -28,12 +28,46 @@ var (
 	ErrInvalidToken = errors.New("invalid token")
 )
 
+// ListUsersResult — результат списка пользователей.
+type ListUsersResult struct {
+	Users []*models.User `json:"users"`
+	Total int64          `json:"total"`
+	Page  int            `json:"page"`
+	Limit int            `json:"limit"`
+}
+
+// CreateUserInput — входные данные для создания пользователя.
+//
+//nolint:govet // fieldalignment: JSON tags order
+type CreateUserInput struct {
+	Username  string  `json:"username"`
+	Password  string  `json:"password"`
+	FullName  string  `json:"full_name"`
+	Role      string  `json:"role"`
+	StationID *string `json:"station_id,omitempty"`
+}
+
+// UpdateUserInput — входные данные для обновления пользователя.
+type UpdateUserInput struct {
+	FullName  *string `json:"full_name,omitempty"`
+	Password  *string `json:"password,omitempty"`
+	Role      *string `json:"role,omitempty"`
+	StationID *string `json:"station_id,omitempty"`
+	IsActive  *bool   `json:"is_active,omitempty"`
+}
+
 // AuthService — интерфейс сервиса аутентификации.
 type AuthService interface {
 	Login(ctx context.Context, username, password, stationID string) (*LoginResponse, error)
 	Refresh(ctx context.Context, refreshToken string) (*LoginResponse, error)
 	Logout(ctx context.Context, token string) error
 	ValidateToken(ctx context.Context, token string) (*models.User, error)
+	// User CRUD (admin only, enforced by middleware)
+	ListUsers(ctx context.Context, role, stationID *string, page, limit int) (*ListUsersResult, error)
+	CreateUser(ctx context.Context, in *CreateUserInput) (*models.User, error)
+	GetUser(ctx context.Context, id string) (*models.User, error)
+	UpdateUser(ctx context.Context, id string, in *UpdateUserInput) (*models.User, error)
+	DeleteUser(ctx context.Context, id string) error
 }
 
 //
@@ -302,4 +336,94 @@ func (s *authService) verifyToken(tokenString string) (*Claims, error) {
 func hashToken(token string) string {
 	hash := sha256.Sum256([]byte(token))
 	return hex.EncodeToString(hash[:])
+}
+
+func (s *authService) ListUsers(ctx context.Context, role, stationID *string, page, limit int) (*ListUsersResult, error) {
+	filter := repository.ListUsersFilter{
+		Role:      role,
+		StationID: stationID,
+		Page:      page,
+		Limit:     limit,
+	}
+	users, total, err := s.userRepo.List(ctx, filter)
+	if err != nil {
+		return nil, fmt.Errorf("list users: %w", err)
+	}
+	return &ListUsersResult{
+		Users: users,
+		Total: total,
+		Page:  page,
+		Limit: limit,
+	}, nil
+}
+
+func (s *authService) CreateUser(ctx context.Context, in *CreateUserInput) (*models.User, error) {
+	existing, err := s.userRepo.FindByUsername(ctx, in.Username)
+	if err != nil && !errors.Is(err, repository.ErrUserNotFound) {
+		return nil, fmt.Errorf("check username: %w", err)
+	}
+	if existing != nil {
+		return nil, repository.ErrUsernameExists
+	}
+	hash, err := bcrypt.GenerateFromPassword([]byte(in.Password), bcrypt.DefaultCost)
+	if err != nil {
+		return nil, fmt.Errorf("hash password: %w", err)
+	}
+	user := &models.User{
+		Username:     in.Username,
+		PasswordHash: string(hash),
+		FullName:     in.FullName,
+		Role:         in.Role,
+		StationID:    in.StationID,
+		IsActive:     true,
+	}
+	if err := s.userRepo.Create(ctx, user); err != nil {
+		return nil, err
+	}
+	s.logger.Info("User created",
+		zap.String("user_id", user.ID),
+		zap.String("username", user.Username),
+		zap.String("role", user.Role))
+	return user, nil
+}
+
+func (s *authService) GetUser(ctx context.Context, id string) (*models.User, error) {
+	return s.userRepo.FindByID(ctx, id)
+}
+
+func (s *authService) UpdateUser(ctx context.Context, id string, in *UpdateUserInput) (*models.User, error) {
+	user, err := s.userRepo.FindByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	if in.FullName != nil {
+		user.FullName = *in.FullName
+	}
+	if in.Password != nil && *in.Password != "" {
+		hash, err := bcrypt.GenerateFromPassword([]byte(*in.Password), bcrypt.DefaultCost)
+		if err != nil {
+			return nil, fmt.Errorf("hash password: %w", err)
+		}
+		user.PasswordHash = string(hash)
+	}
+	if in.Role != nil {
+		user.Role = *in.Role
+	}
+	if in.StationID != nil {
+		user.StationID = in.StationID
+	}
+	if in.IsActive != nil {
+		user.IsActive = *in.IsActive
+	}
+	if err := s.userRepo.Update(ctx, user); err != nil {
+		return nil, err
+	}
+	s.logger.Info("User updated",
+		zap.String("user_id", user.ID),
+		zap.String("username", user.Username))
+	return user, nil
+}
+
+func (s *authService) DeleteUser(ctx context.Context, id string) error {
+	return s.userRepo.Delete(ctx, id)
 }

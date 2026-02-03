@@ -14,8 +14,15 @@ import (
 	"github.com/vokzal-tech/schedule-service/internal/repository"
 )
 
-// ScheduleService — интерфейс сервиса расписания (маршруты, расписания, рейсы).
+// ScheduleService — интерфейс сервиса расписания (станции, маршруты, расписания, рейсы).
 type ScheduleService interface {
+	// Stations
+	CreateStation(ctx context.Context, req *CreateStationRequest) (*models.Station, error)
+	GetStation(ctx context.Context, id string) (*models.Station, error)
+	ListStations(ctx context.Context, city string) ([]*models.Station, error)
+	UpdateStation(ctx context.Context, id string, req *UpdateStationRequest) (*models.Station, error)
+	DeleteStation(ctx context.Context, id string) error
+
 	// Routes
 	CreateRoute(ctx context.Context, req *CreateRouteRequest) (*models.Route, error)
 	GetRoute(ctx context.Context, id string) (*models.Route, error)
@@ -39,11 +46,28 @@ type ScheduleService interface {
 }
 
 type scheduleService struct {
+	stationRepo  repository.StationRepository
 	routeRepo    repository.RouteRepository
 	scheduleRepo repository.ScheduleRepository
 	tripRepo     repository.TripRepository
 	natsConn     *nats.Conn
 	logger       *zap.Logger
+}
+
+// CreateStationRequest — запрос на создание станции.
+type CreateStationRequest struct {
+	Name     string `json:"name" binding:"required"`
+	Code     string `json:"code" binding:"required"`
+	Address  string `json:"address"`
+	Timezone string `json:"timezone"`
+}
+
+// UpdateStationRequest — запрос на обновление станции.
+type UpdateStationRequest struct {
+	Name     *string `json:"name"`
+	Code     *string `json:"code"`
+	Address  *string `json:"address"`
+	Timezone *string `json:"timezone"`
 }
 
 // CreateRouteRequest — запрос на создание маршрута.
@@ -90,6 +114,7 @@ type CreateTripRequest struct {
 
 // NewScheduleService создаёт сервис расписания.
 func NewScheduleService(
+	stationRepo repository.StationRepository,
 	routeRepo repository.RouteRepository,
 	scheduleRepo repository.ScheduleRepository,
 	tripRepo repository.TripRepository,
@@ -97,12 +122,67 @@ func NewScheduleService(
 	logger *zap.Logger,
 ) ScheduleService {
 	return &scheduleService{
+		stationRepo:  stationRepo,
 		routeRepo:    routeRepo,
 		scheduleRepo: scheduleRepo,
 		tripRepo:     tripRepo,
 		natsConn:     natsConn,
 		logger:       logger,
 	}
+}
+
+// CreateStation создаёт станцию.
+func (s *scheduleService) CreateStation(ctx context.Context, req *CreateStationRequest) (*models.Station, error) {
+	tz := req.Timezone
+	if tz == "" {
+		tz = "Europe/Moscow"
+	}
+	station := &models.Station{
+		Name:     req.Name,
+		Code:     req.Code,
+		Address:  req.Address,
+		Timezone: tz,
+	}
+	if err := s.stationRepo.Create(ctx, station); err != nil {
+		return nil, err
+	}
+	s.logger.Info("Station created", zap.String("station_id", station.ID), zap.String("name", station.Name))
+	return station, nil
+}
+
+func (s *scheduleService) GetStation(ctx context.Context, id string) (*models.Station, error) {
+	return s.stationRepo.FindByID(ctx, id)
+}
+
+func (s *scheduleService) ListStations(ctx context.Context, city string) ([]*models.Station, error) {
+	return s.stationRepo.FindAll(ctx, city, nil)
+}
+
+func (s *scheduleService) UpdateStation(ctx context.Context, id string, req *UpdateStationRequest) (*models.Station, error) {
+	station, err := s.stationRepo.FindByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	if req.Name != nil {
+		station.Name = *req.Name
+	}
+	if req.Code != nil {
+		station.Code = *req.Code
+	}
+	if req.Address != nil {
+		station.Address = *req.Address
+	}
+	if req.Timezone != nil {
+		station.Timezone = *req.Timezone
+	}
+	if err := s.stationRepo.Update(ctx, station); err != nil {
+		return nil, err
+	}
+	return station, nil
+}
+
+func (s *scheduleService) DeleteStation(ctx context.Context, id string) error {
+	return s.stationRepo.Delete(ctx, id)
 }
 
 // CreateRoute создаёт маршрут.

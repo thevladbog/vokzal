@@ -121,6 +121,15 @@ func main() {
 	auth.POST("/logout", authHandler.Logout)
 	auth.GET("/me", authMiddleware.RequireAuth(), authHandler.Me)
 
+	// Users CRUD (admin only)
+	users := v1.Group("/users")
+	users.Use(authMiddleware.RequireAuth(), authMiddleware.RequireRole("admin"))
+	users.GET("", authHandler.ListUsers)
+	users.POST("", authHandler.CreateUser)
+	users.GET("/:id", authHandler.GetUser)
+	users.PUT("/:id", authHandler.UpdateUser)
+	users.DELETE("/:id", authHandler.DeleteUser)
+
 	// Создать сервер
 	server := &http.Server{
 		Addr:         ":" + cfg.Server.Port,

@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import {
   FluentProvider,
   webLightTheme,
@@ -43,6 +44,7 @@ const useStyles = makeStyles({
 
 export const LoginPage: React.FC = () => {
   const styles = useStyles();
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const setUser = useAuthStore((state) => state.setUser);
 
@@ -76,22 +78,22 @@ export const LoginPage: React.FC = () => {
     <FluentProvider theme={webLightTheme}>
       <div className={styles.container}>
         <Card className={styles.card}>
-          <Title2 className={styles.title}>Вокзал.ТЕХ</Title2>
+          <Title2 className={styles.title}>{t('login.title')}</Title2>
           <Text block style={{ textAlign: "center", marginBottom: "24px" }}>
-            Вход в админ-панель
+            {t('login.subtitle')}
           </Text>
 
           <form onSubmit={handleSubmit} className={styles.form}>
             <Input
               type="text"
-              placeholder="Логин"
+              placeholder={t('login.username')}
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               required
             />
             <Input
               type="password"
-              placeholder="Пароль"
+              placeholder={t('login.password')}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
@@ -100,7 +102,7 @@ export const LoginPage: React.FC = () => {
             {error && <Text className={styles.error}>{error}</Text>}
 
             <Button appearance="primary" type="submit" disabled={loading}>
-              {loading ? "Вход..." : "Войти"}
+              {loading ? t('login.submitting') : t('login.submit')}
             </Button>
           </form>
         </Card>

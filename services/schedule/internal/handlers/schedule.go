@@ -27,6 +27,73 @@ func NewScheduleHandler(svc service.ScheduleService, logger *zap.Logger) *Schedu
 	}
 }
 
+// CreateStation создаёт станцию.
+func (h *ScheduleHandler) CreateStation(c *gin.Context) {
+	var req service.CreateStationRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	station, err := h.svc.CreateStation(c.Request.Context(), &req)
+	if err != nil {
+		h.logger.Error("Failed to create station", zap.Error(err))
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create station"})
+		return
+	}
+	c.JSON(http.StatusCreated, gin.H{"data": station})
+}
+
+// GetStation возвращает станцию по ID.
+func (h *ScheduleHandler) GetStation(c *gin.Context) {
+	id := c.Param("id")
+	station, err := h.svc.GetStation(c.Request.Context(), id)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Station not found"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"data": station})
+}
+
+// ListStations возвращает список станций.
+func (h *ScheduleHandler) ListStations(c *gin.Context) {
+	city := c.Query("city")
+	stations, err := h.svc.ListStations(c.Request.Context(), city)
+	if err != nil {
+		h.logger.Error("Failed to list stations", zap.Error(err))
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to list stations"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"data": stations})
+}
+
+// UpdateStation обновляет станцию.
+func (h *ScheduleHandler) UpdateStation(c *gin.Context) {
+	id := c.Param("id")
+	var req service.UpdateStationRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	station, err := h.svc.UpdateStation(c.Request.Context(), id, &req)
+	if err != nil {
+		h.logger.Error("Failed to update station", zap.Error(err))
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update station"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"data": station})
+}
+
+// DeleteStation удаляет станцию.
+func (h *ScheduleHandler) DeleteStation(c *gin.Context) {
+	id := c.Param("id")
+	if err := h.svc.DeleteStation(c.Request.Context(), id); err != nil {
+		h.logger.Error("Failed to delete station", zap.Error(err))
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete station"})
+		return
+	}
+	c.Status(http.StatusNoContent)
+}
+
 // CreateRoute создаёт маршрут.
 func (h *ScheduleHandler) CreateRoute(c *gin.Context) {
 	var req service.CreateRouteRequest

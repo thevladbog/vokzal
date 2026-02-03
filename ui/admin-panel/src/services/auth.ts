@@ -3,17 +3,16 @@ import type { AuthResponse, User } from '@/types';
 
 export const authService = {
   login: async (username: string, password: string): Promise<AuthResponse> => {
-    const response = await apiClient.post<AuthResponse>('/auth/login', {
+    const response = await apiClient.post<{ success: boolean; data: AuthResponse }>('/auth/login', {
       username,
       password,
     });
-    
+    const data = response.data.data ?? response.data;
     // Сохранить токены
-    localStorage.setItem('access_token', response.data.access_token);
-    localStorage.setItem('refresh_token', response.data.refresh_token);
-    localStorage.setItem('user', JSON.stringify(response.data.user));
-    
-    return response.data;
+    localStorage.setItem('access_token', data.access_token);
+    localStorage.setItem('refresh_token', data.refresh_token);
+    localStorage.setItem('user', JSON.stringify(data.user));
+    return data;
   },
 
   logout: async (): Promise<void> => {
