@@ -1,4 +1,6 @@
 // Package handlers содержит HTTP-обработчики API расписания.
+//
+//nolint:dupl // CRUD-обработчики для routes/schedules/trips намеренно однотипны.
 package handlers
 
 import (
@@ -6,21 +8,22 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/vokzal-tech/schedule-service/internal/service"
 	"go.uber.org/zap"
+
+	"github.com/vokzal-tech/schedule-service/internal/service"
 )
 
 // ScheduleHandler — обработчик HTTP-запросов для маршрутов, расписаний и рейсов.
 type ScheduleHandler struct {
-	service service.ScheduleService
-	logger  *zap.Logger
+	svc    service.ScheduleService
+	logger *zap.Logger
 }
 
 // NewScheduleHandler создаёт обработчик расписания.
-func NewScheduleHandler(service service.ScheduleService, logger *zap.Logger) *ScheduleHandler {
+func NewScheduleHandler(svc service.ScheduleService, logger *zap.Logger) *ScheduleHandler {
 	return &ScheduleHandler{
-		service: service,
-		logger:  logger,
+		svc:    svc,
+		logger: logger,
 	}
 }
 
@@ -32,7 +35,7 @@ func (h *ScheduleHandler) CreateRoute(c *gin.Context) {
 		return
 	}
 
-	route, err := h.service.CreateRoute(c.Request.Context(), &req)
+	route, err := h.svc.CreateRoute(c.Request.Context(), &req)
 	if err != nil {
 		h.logger.Error("Failed to create route", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create route"})
@@ -45,7 +48,7 @@ func (h *ScheduleHandler) CreateRoute(c *gin.Context) {
 // GetRoute возвращает маршрут по ID.
 func (h *ScheduleHandler) GetRoute(c *gin.Context) {
 	id := c.Param("id")
-	route, err := h.service.GetRoute(c.Request.Context(), id)
+	route, err := h.svc.GetRoute(c.Request.Context(), id)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Route not found"})
 		return
@@ -57,7 +60,7 @@ func (h *ScheduleHandler) GetRoute(c *gin.Context) {
 // ListRoutes возвращает список маршрутов.
 func (h *ScheduleHandler) ListRoutes(c *gin.Context) {
 	activeOnly := c.DefaultQuery("active", "false") == "true"
-	routes, err := h.service.ListRoutes(c.Request.Context(), activeOnly)
+	routes, err := h.svc.ListRoutes(c.Request.Context(), activeOnly)
 	if err != nil {
 		h.logger.Error("Failed to list routes", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to list routes"})
@@ -76,7 +79,7 @@ func (h *ScheduleHandler) UpdateRoute(c *gin.Context) {
 		return
 	}
 
-	route, err := h.service.UpdateRoute(c.Request.Context(), id, &req)
+	route, err := h.svc.UpdateRoute(c.Request.Context(), id, &req)
 	if err != nil {
 		h.logger.Error("Failed to update route", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update route"})
@@ -89,7 +92,7 @@ func (h *ScheduleHandler) UpdateRoute(c *gin.Context) {
 // DeleteRoute удаляет маршрут.
 func (h *ScheduleHandler) DeleteRoute(c *gin.Context) {
 	id := c.Param("id")
-	if err := h.service.DeleteRoute(c.Request.Context(), id); err != nil {
+	if err := h.svc.DeleteRoute(c.Request.Context(), id); err != nil {
 		h.logger.Error("Failed to delete route", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete route"})
 		return
@@ -106,7 +109,7 @@ func (h *ScheduleHandler) CreateSchedule(c *gin.Context) {
 		return
 	}
 
-	schedule, err := h.service.CreateSchedule(c.Request.Context(), &req)
+	schedule, err := h.svc.CreateSchedule(c.Request.Context(), &req)
 	if err != nil {
 		h.logger.Error("Failed to create schedule", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create schedule"})
@@ -119,7 +122,7 @@ func (h *ScheduleHandler) CreateSchedule(c *gin.Context) {
 // GetSchedule возвращает расписание по ID.
 func (h *ScheduleHandler) GetSchedule(c *gin.Context) {
 	id := c.Param("id")
-	schedule, err := h.service.GetSchedule(c.Request.Context(), id)
+	schedule, err := h.svc.GetSchedule(c.Request.Context(), id)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Schedule not found"})
 		return
@@ -136,7 +139,7 @@ func (h *ScheduleHandler) ListSchedulesByRoute(c *gin.Context) {
 		return
 	}
 
-	schedules, err := h.service.ListSchedulesByRoute(c.Request.Context(), routeID)
+	schedules, err := h.svc.ListSchedulesByRoute(c.Request.Context(), routeID)
 	if err != nil {
 		h.logger.Error("Failed to list schedules", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to list schedules"})
@@ -155,7 +158,7 @@ func (h *ScheduleHandler) UpdateSchedule(c *gin.Context) {
 		return
 	}
 
-	schedule, err := h.service.UpdateSchedule(c.Request.Context(), id, &req)
+	schedule, err := h.svc.UpdateSchedule(c.Request.Context(), id, &req)
 	if err != nil {
 		h.logger.Error("Failed to update schedule", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update schedule"})
@@ -168,7 +171,7 @@ func (h *ScheduleHandler) UpdateSchedule(c *gin.Context) {
 // DeleteSchedule удаляет расписание.
 func (h *ScheduleHandler) DeleteSchedule(c *gin.Context) {
 	id := c.Param("id")
-	if err := h.service.DeleteSchedule(c.Request.Context(), id); err != nil {
+	if err := h.svc.DeleteSchedule(c.Request.Context(), id); err != nil {
 		h.logger.Error("Failed to delete schedule", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete schedule"})
 		return
@@ -185,7 +188,7 @@ func (h *ScheduleHandler) CreateTrip(c *gin.Context) {
 		return
 	}
 
-	trip, err := h.service.CreateTrip(c.Request.Context(), &req)
+	trip, err := h.svc.CreateTrip(c.Request.Context(), &req)
 	if err != nil {
 		h.logger.Error("Failed to create trip", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -198,7 +201,7 @@ func (h *ScheduleHandler) CreateTrip(c *gin.Context) {
 // GetTrip возвращает рейс по ID.
 func (h *ScheduleHandler) GetTrip(c *gin.Context) {
 	id := c.Param("id")
-	trip, err := h.service.GetTrip(c.Request.Context(), id)
+	trip, err := h.svc.GetTrip(c.Request.Context(), id)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Trip not found"})
 		return
@@ -215,7 +218,7 @@ func (h *ScheduleHandler) ListTripsByDate(c *gin.Context) {
 		return
 	}
 
-	trips, err := h.service.ListTripsByDate(c.Request.Context(), date)
+	trips, err := h.svc.ListTripsByDate(c.Request.Context(), date)
 	if err != nil {
 		h.logger.Error("Failed to list trips", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to list trips"})
@@ -238,7 +241,7 @@ func (h *ScheduleHandler) UpdateTripStatus(c *gin.Context) {
 		return
 	}
 
-	trip, err := h.service.UpdateTripStatus(c.Request.Context(), id, req.Status, req.DelayMinutes)
+	trip, err := h.svc.UpdateTripStatus(c.Request.Context(), id, req.Status, req.DelayMinutes)
 	if err != nil {
 		h.logger.Error("Failed to update trip status", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update trip"})
@@ -274,7 +277,7 @@ func (h *ScheduleHandler) GenerateTrips(c *gin.Context) {
 		return
 	}
 
-	if err := h.service.GenerateTripsForSchedule(c.Request.Context(), req.ScheduleID, from, to); err != nil {
+	if err := h.svc.GenerateTripsForSchedule(c.Request.Context(), req.ScheduleID, from, to); err != nil {
 		h.logger.Error("Failed to generate trips", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate trips"})
 		return

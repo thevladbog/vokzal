@@ -11,11 +11,13 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+
 	"github.com/vokzal-tech/auth-service/internal/config"
 	"github.com/vokzal-tech/auth-service/internal/handlers"
 	"github.com/vokzal-tech/auth-service/internal/middleware"
 	"github.com/vokzal-tech/auth-service/internal/repository"
 	"github.com/vokzal-tech/auth-service/internal/service"
+
 	"go.uber.org/zap"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -41,7 +43,11 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to create logger: %v", err)
 	}
-	defer func() { _ = zapLogger.Sync() }()
+	defer func() {
+		if syncErr := zapLogger.Sync(); syncErr != nil {
+			log.Printf("logger sync: %v", syncErr)
+		}
+	}()
 
 	zapLogger.Info("Вокзал.ТЕХ Auth Service starting...",
 		zap.String("version", "1.0.0"),
@@ -62,7 +68,11 @@ func main() {
 	if err != nil {
 		zapLogger.Fatal("Failed to get database instance", zap.Error(err))
 	}
-	defer func() { _ = sqlDB.Close() }()
+	defer func() {
+		if closeErr := sqlDB.Close(); closeErr != nil {
+			zapLogger.Error("failed to close database", zap.Error(closeErr))
+		}
+	}()
 
 	// Настроить пул соединений
 	sqlDB.SetMaxIdleConns(10)
@@ -105,15 +115,11 @@ func main() {
 
 	// API routes
 	v1 := router.Group("/v1")
-	{
-		auth := v1.Group("/auth")
-		{
-			auth.POST("/login", authHandler.Login)
-			auth.POST("/refresh", authHandler.Refresh)
-			auth.POST("/logout", authHandler.Logout)
-			auth.GET("/me", authMiddleware.RequireAuth(), authHandler.Me)
-		}
-	}
+	auth := v1.Group("/auth")
+	auth.POST("/login", authHandler.Login)
+	auth.POST("/refresh", authHandler.Refresh)
+	auth.POST("/logout", authHandler.Logout)
+	auth.GET("/me", authMiddleware.RequireAuth(), authHandler.Me)
 
 	// Создать сервер
 	server := &http.Server{

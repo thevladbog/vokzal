@@ -9,10 +9,12 @@ import (
 )
 
 // Config — корневая конфигурация сервиса.
+//
+//nolint:govet // fieldalignment: keep field order for mapstructure/config clarity
 type Config struct {
+	Logger     LoggerConfig     `mapstructure:"logger"`
+	Redis      RedisConfig      `mapstructure:"redis"`
 	Server     ServerConfig     `mapstructure:"server"`
-	Redis      RedisConfig     `mapstructure:"redis"`
-	Logger     LoggerConfig    `mapstructure:"logger"`
 	YandexMaps YandexMapsConfig `mapstructure:"yandex_maps"`
 }
 
@@ -25,8 +27,8 @@ type ServerConfig struct {
 // RedisConfig — настройки Redis.
 type RedisConfig struct {
 	Host     string `mapstructure:"host"`
-	Port     int    `mapstructure:"port"`
 	Password string `mapstructure:"password"`
+	Port     int    `mapstructure:"port"`
 	DB       int    `mapstructure:"db"`
 }
 

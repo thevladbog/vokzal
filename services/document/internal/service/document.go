@@ -9,11 +9,12 @@ import (
 
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
+	"go.uber.org/zap"
+
 	"github.com/vokzal-tech/document-service/internal/config"
 	"github.com/vokzal-tech/document-service/internal/models"
 	"github.com/vokzal-tech/document-service/internal/pdf"
 	"github.com/vokzal-tech/document-service/internal/repository"
-	"go.uber.org/zap"
 )
 
 // DocumentService — интерфейс сервиса документов.

@@ -5,8 +5,9 @@ import (
 	"context"
 	"errors"
 
-	"github.com/vokzal-tech/schedule-service/internal/models"
 	"gorm.io/gorm"
+
+	"github.com/vokzal-tech/schedule-service/internal/models"
 )
 
 var (
@@ -121,6 +122,7 @@ func (r *scheduleRepository) Create(ctx context.Context, schedule *models.Schedu
 	return r.db.WithContext(ctx).Create(schedule).Error
 }
 
+//nolint:dupl // FindByID с Preload для Schedule и Trip — одинаковая структура.
 func (r *scheduleRepository) FindByID(ctx context.Context, id string) (*models.Schedule, error) {
 	var schedule models.Schedule
 	if err := r.db.WithContext(ctx).Preload("Route").First(&schedule, "id = ?", id).Error; err != nil {
@@ -160,6 +162,7 @@ func (r *tripRepository) Create(ctx context.Context, trip *models.Trip) error {
 	return r.db.WithContext(ctx).Create(trip).Error
 }
 
+//nolint:dupl // FindByID с Preload для Schedule и Trip — одинаковая структура.
 func (r *tripRepository) FindByID(ctx context.Context, id string) (*models.Trip, error) {
 	var trip models.Trip
 	if err := r.db.WithContext(ctx).Preload("Schedule.Route").First(&trip, "id = ?", id).Error; err != nil {

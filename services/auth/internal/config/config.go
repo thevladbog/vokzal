@@ -10,6 +10,8 @@ import (
 )
 
 // Config — корневая конфигурация сервиса.
+//
+//nolint:govet // fieldalignment: порядок полей для mapstructure
 type Config struct {
 	Server   ServerConfig   `mapstructure:"server"`
 	Database DatabaseConfig `mapstructure:"database"`
@@ -24,6 +26,8 @@ type ServerConfig struct {
 }
 
 // DatabaseConfig — настройки подключения к PostgreSQL.
+//
+//nolint:govet // fieldalignment: порядок полей для DSN
 type DatabaseConfig struct {
 	Host     string `mapstructure:"host"`
 	Port     int    `mapstructure:"port"`

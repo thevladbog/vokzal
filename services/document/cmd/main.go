@@ -11,16 +11,24 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
+
 	"github.com/vokzal-tech/document-service/internal/config"
 	"github.com/vokzal-tech/document-service/internal/handlers"
 	"github.com/vokzal-tech/document-service/internal/models"
 	"github.com/vokzal-tech/document-service/internal/pdf"
 	"github.com/vokzal-tech/document-service/internal/repository"
 	"github.com/vokzal-tech/document-service/internal/service"
-	"go.uber.org/zap"
-	"gorm.io/driver/postgres"
-	"gorm.io/gorm"
 )
+
+func initLogger(cfg *config.Config) (*zap.Logger, error) {
+	if cfg.Logger.Level == "production" {
+		return zap.NewProduction()
+	}
+	return zap.NewDevelopment()
+}
 
 func main() {
 	cfg, err := config.Load()
@@ -28,13 +36,15 @@ func main() {
 		panic(fmt.Sprintf("Failed to load config: %v", err))
 	}
 
-	var logger *zap.Logger
-	if cfg.Logger.Level == "production" {
-		logger, _ = zap.NewProduction()
-	} else {
-		logger, _ = zap.NewDevelopment()
+	logger, errLog := initLogger(cfg)
+	if errLog != nil {
+		panic(fmt.Sprintf("Failed to create logger: %v", errLog))
 	}
-	defer func() { _ = logger.Sync() }()
+	defer func() {
+		if syncErr := logger.Sync(); syncErr != nil {
+			fmt.Fprintf(os.Stderr, "logger sync: %v\n", syncErr)
+		}
+	}()
 
 	logger.Info("Starting Document Service", zap.String("version", "1.0.0"))
 
@@ -51,13 +61,13 @@ func main() {
 	sqlDB.SetMaxOpenConns(100)
 	sqlDB.SetConnMaxLifetime(time.Hour)
 
-	if err := db.AutoMigrate(&models.DocumentTemplate{}, &models.GeneratedDocument{}); err != nil {
-		logger.Warn("Auto-migration failed", zap.Error(err))
+	if migErr := db.AutoMigrate(&models.DocumentTemplate{}, &models.GeneratedDocument{}); migErr != nil {
+		logger.Warn("Auto-migration failed", zap.Error(migErr))
 	}
 
 	docRepo := repository.NewDocumentRepository(db)
 	pdfGenerator := pdf.NewGenerator(logger)
-	
+
 	docService, err := service.NewDocumentService(docRepo, pdfGenerator, &cfg.MinIO, logger)
 	if err != nil {
 		logger.Fatal("Failed to create document service", zap.Error(err))
@@ -79,15 +89,11 @@ func main() {
 	})
 
 	v1 := router.Group("/v1")
-	{
-		doc := v1.Group("/document")
-		{
-			doc.POST("/ticket", docHandler.GenerateTicket)
-			doc.POST("/pd2", docHandler.GeneratePD2)
-			doc.GET("/:id", docHandler.GetDocument)
-			doc.GET("/list", docHandler.ListDocuments)
-		}
-	}
+	doc := v1.Group("/document")
+	doc.POST("/ticket", docHandler.GenerateTicket)
+	doc.POST("/pd2", docHandler.GeneratePD2)
+	doc.GET("/:id", docHandler.GetDocument)
+	doc.GET("/list", docHandler.ListDocuments)
 
 	srv := &http.Server{
 		Addr:         ":" + cfg.Server.Port,

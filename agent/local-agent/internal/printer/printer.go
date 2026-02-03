@@ -7,14 +7,17 @@ import (
 	"go.uber.org/zap"
 )
 
-// PrinterClient клиент для печати билетов
+// PrinterClient — клиент для печати билетов.
+//
+//nolint:revive // exported: имя PrinterClient намеренно (Client слишком общее в пакете printer).
 type PrinterClient struct {
-	devicePath string
+	logger      *zap.Logger
+	devicePath  string
 	printerType string
-	enabled    bool
-	logger     *zap.Logger
+	enabled     bool
 }
 
+// TicketData — данные билета для печати.
 type TicketData struct {
 	TicketID     string
 	Route        string
@@ -22,12 +25,13 @@ type TicketData struct {
 	Time         string
 	Platform     string
 	Seat         string
-	Price        float64
 	PassengerFIO string
 	QRCode       string
 	BarCode      string
+	Price        float64
 }
 
+// NewPrinterClient создаёт клиент принтера.
 func NewPrinterClient(devicePath, printerType string, enabled bool, logger *zap.Logger) *PrinterClient {
 	return &PrinterClient{
 		devicePath:  devicePath,
@@ -37,7 +41,7 @@ func NewPrinterClient(devicePath, printerType string, enabled bool, logger *zap.
 	}
 }
 
-// PrintTicket печатает билет
+// PrintTicket печатает билет.
 func (p *PrinterClient) PrintTicket(data *TicketData) error {
 	if !p.enabled {
 		p.logger.Info("Printer disabled, simulating ticket print")
@@ -50,11 +54,15 @@ func (p *PrinterClient) PrintTicket(data *TicketData) error {
 	commands := p.generateESCPOSCommands(data)
 
 	// Отправить команды на принтер
-	file, err := os.OpenFile(p.devicePath, os.O_WRONLY, 0666)
+	file, err := os.OpenFile(p.devicePath, os.O_WRONLY, 0o600)
 	if err != nil {
 		return fmt.Errorf("failed to open printer: %w", err)
 	}
-	defer file.Close()
+	defer func() {
+		if err := file.Close(); err != nil {
+			p.logger.Warn("failed to close printer device", zap.Error(err))
+		}
+	}()
 
 	if _, err := file.Write(commands); err != nil {
 		return fmt.Errorf("failed to write to printer: %w", err)
@@ -67,14 +75,8 @@ func (p *PrinterClient) PrintTicket(data *TicketData) error {
 func (p *PrinterClient) generateESCPOSCommands(data *TicketData) []byte {
 	var buf []byte
 
-	// ESC @ — Reset printer
-	buf = append(buf, 0x1B, 0x40)
-
-	// Выравнивание по центру
-	buf = append(buf, 0x1B, 0x61, 0x01)
-	
-	// Жирный шрифт
-	buf = append(buf, 0x1B, 0x45, 0x01)
+	// ESC @ — Reset; выравнивание по центру; жирный шрифт.
+	buf = append(buf, 0x1B, 0x40, 0x1B, 0x61, 0x01, 0x1B, 0x45, 0x01)
 	buf = append(buf, []byte("Вокзал.ТЕХ\n")...)
 	buf = append(buf, 0x1B, 0x45, 0x00)
 
@@ -88,15 +90,15 @@ func (p *PrinterClient) generateESCPOSCommands(data *TicketData) []byte {
 	buf = append(buf, []byte(fmt.Sprintf("Маршрут: %s\n", data.Route))...)
 	buf = append(buf, []byte(fmt.Sprintf("Дата: %s, %s\n", data.Date, data.Time))...)
 	buf = append(buf, []byte(fmt.Sprintf("Перрон: %s\n", data.Platform))...)
-	
+
 	if data.Seat != "" {
 		buf = append(buf, []byte(fmt.Sprintf("Место: %s\n", data.Seat))...)
 	}
-	
+
 	if data.PassengerFIO != "" {
 		buf = append(buf, []byte(fmt.Sprintf("Пассажир: %s\n", data.PassengerFIO))...)
 	}
-	
+
 	buf = append(buf, []byte(fmt.Sprintf("Цена: %.2f руб.\n\n", data.Price))...)
 
 	// QR код (если поддерживается)
@@ -122,28 +124,28 @@ func (p *PrinterClient) generateESCPOSCommands(data *TicketData) []byte {
 	return buf
 }
 
-// GetStatus получает статус принтера
+// GetStatus получает статус принтера.
 func (p *PrinterClient) GetStatus() (map[string]interface{}, error) {
 	if !p.enabled {
 		return map[string]interface{}{
-			"status":  "simulated",
-			"online":  true,
-			"paper":   true,
+			"status": "simulated",
+			"online": true,
+			"paper":  true,
 		}, nil
 	}
 
 	// Проверить доступность устройства
 	if _, err := os.Stat(p.devicePath); os.IsNotExist(err) {
 		return map[string]interface{}{
-			"status":  "offline",
-			"online":  false,
-			"error":   "device not found",
+			"status": "offline",
+			"online": false,
+			"error":  "device not found",
 		}, nil
 	}
 
 	return map[string]interface{}{
-		"status":  "online",
-		"online":  true,
-		"paper":   true,
+		"status": "online",
+		"online": true,
+		"paper":  true,
 	}, nil
 }

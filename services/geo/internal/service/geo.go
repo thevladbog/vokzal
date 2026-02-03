@@ -8,7 +8,9 @@ import (
 	"time"
 
 	"github.com/redis/go-redis/v9"
+
 	"github.com/vokzal-tech/geo-service/internal/yandex"
+
 	"go.uber.org/zap"
 )
 
@@ -40,7 +42,7 @@ func (s *geoService) Geocode(ctx context.Context, address string) (*yandex.Geoco
 	cached, err := s.redis.Get(ctx, cacheKey).Result()
 	if err == nil {
 		var result yandex.GeocodeResult
-		if err := json.Unmarshal([]byte(cached), &result); err == nil {
+		if unmarshalErr := json.Unmarshal([]byte(cached), &result); unmarshalErr == nil {
 			s.logger.Debug("Geocode cache hit", zap.String("address", address))
 			return &result, nil
 		}
@@ -53,7 +55,10 @@ func (s *geoService) Geocode(ctx context.Context, address string) (*yandex.Geoco
 	}
 
 	// Кэшировать результат (TTL 24 часа)
-	data, _ := json.Marshal(result)
+	data, err := json.Marshal(result)
+	if err != nil {
+		return nil, fmt.Errorf("marshal geocode result: %w", err)
+	}
 	s.redis.Set(ctx, cacheKey, data, 24*time.Hour)
 
 	return result, nil
@@ -65,7 +70,7 @@ func (s *geoService) ReverseGeocode(ctx context.Context, lat, lon float64) (*yan
 	cached, err := s.redis.Get(ctx, cacheKey).Result()
 	if err == nil {
 		var result yandex.GeocodeResult
-		if err := json.Unmarshal([]byte(cached), &result); err == nil {
+		if unmarshalErr := json.Unmarshal([]byte(cached), &result); unmarshalErr == nil {
 			s.logger.Debug("Reverse geocode cache hit", zap.Float64("lat", lat), zap.Float64("lon", lon))
 			return &result, nil
 		}
@@ -78,7 +83,10 @@ func (s *geoService) ReverseGeocode(ctx context.Context, lat, lon float64) (*yan
 	}
 
 	// Кэшировать результат (TTL 24 часа)
-	data, _ := json.Marshal(result)
+	data, err := json.Marshal(result)
+	if err != nil {
+		return nil, fmt.Errorf("marshal reverse geocode result: %w", err)
+	}
 	s.redis.Set(ctx, cacheKey, data, 24*time.Hour)
 
 	return result, nil

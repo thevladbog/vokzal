@@ -16,9 +16,9 @@ import (
 //
 //nolint:revive // Имя сохраняем для ясности при использовании (tts.Client).
 type TTSClient struct {
-	agentURL string
 	client   *http.Client
 	logger   *zap.Logger
+	agentURL string
 }
 
 // TTSRequest — тело запроса к TTS-агенту.
@@ -67,10 +67,17 @@ func (c *TTSClient) Announce(text, language, priority string) error {
 	if err != nil {
 		return fmt.Errorf("failed to send request: %w", err)
 	}
-	defer func() { _ = resp.Body.Close() }()
+	defer func() {
+		if closeErr := resp.Body.Close(); closeErr != nil {
+			c.logger.Warn("failed to close response body", zap.Error(closeErr))
+		}
+	}()
 
 	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
+		body, readErr := io.ReadAll(resp.Body)
+		if readErr != nil {
+			return fmt.Errorf("TTS returned status %d (body read failed: %w)", resp.StatusCode, readErr)
+		}
 		return fmt.Errorf("TTS returned status %d: %s", resp.StatusCode, string(body))
 	}
 

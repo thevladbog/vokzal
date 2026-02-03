@@ -10,14 +10,14 @@ import (
 
 // DocumentTemplate — шаблон документа.
 type DocumentTemplate struct {
-	ID          string    `gorm:"type:uuid;primary_key" json:"id"`
-	Name        string    `gorm:"type:varchar(100);not null;unique" json:"name"`
-	Type        string    `gorm:"type:varchar(50);not null" json:"type"` // pd2, ticket, invoice, custom
-	Description string    `gorm:"type:text" json:"description"`
-	Content     string    `gorm:"type:text" json:"content"` // HTML или простой шаблон
-	IsActive    bool      `gorm:"default:true" json:"is_active"`
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
+	ID          string    `gorm:"type:uuid;primary_key" json:"id"`
+	Name        string    `gorm:"type:varchar(100);not null;unique" json:"name"`
+	Type        string    `gorm:"type:varchar(50);not null" json:"type"`
+	Description string    `gorm:"type:text" json:"description"`
+	Content     string    `gorm:"type:text" json:"content"`
+	IsActive    bool      `gorm:"default:true" json:"is_active"`
 }
 
 // TableName возвращает имя таблицы шаблонов.
@@ -35,14 +35,14 @@ func (d *DocumentTemplate) BeforeCreate(_ *gorm.DB) error {
 
 // GeneratedDocument — сгенерированный документ.
 type GeneratedDocument struct {
-	ID           string    `gorm:"type:uuid;primary_key" json:"id"`
+	CreatedAt    time.Time `json:"created_at"`
 	TemplateID   *string   `gorm:"type:uuid;index" json:"template_id,omitempty"`
+	EntityID     *string   `gorm:"type:uuid;index" json:"entity_id,omitempty"`
+	ID           string    `gorm:"type:uuid;primary_key" json:"id"`
 	DocumentType string    `gorm:"type:varchar(50);not null" json:"document_type"`
-	EntityID     *string   `gorm:"type:uuid;index" json:"entity_id,omitempty"` // ID билета, рейса и т.д.
 	FileURL      string    `gorm:"type:varchar(500)" json:"file_url"`
 	FileName     string    `gorm:"type:varchar(200)" json:"file_name"`
 	Status       string    `gorm:"type:varchar(20);default:'generated'" json:"status"`
-	CreatedAt    time.Time `json:"created_at"`
 }
 
 // TableName возвращает имя таблицы сгенерированных документов.

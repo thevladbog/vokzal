@@ -10,14 +10,14 @@ import (
 
 // Config — корневая конфигурация сервиса.
 type Config struct {
-	Server      ServerConfig      `mapstructure:"server"`
-	Database    DatabaseConfig    `mapstructure:"database"`
-	NATS        NATSConfig        `mapstructure:"nats"`
-	Logger      LoggerConfig      `mapstructure:"logger"`
-	SMS         SMSConfig         `mapstructure:"sms"`
-	Email       EmailConfig       `mapstructure:"email"`
-	Telegram    TelegramConfig    `mapstructure:"telegram"`
-	LocalAgent  LocalAgentConfig  `mapstructure:"local_agent"`
+	NATS       NATSConfig       `mapstructure:"nats"`
+	Server     ServerConfig     `mapstructure:"server"`
+	SMS        SMSConfig        `mapstructure:"sms"`
+	Telegram   TelegramConfig   `mapstructure:"telegram"`
+	Logger     LoggerConfig     `mapstructure:"logger"`
+	LocalAgent LocalAgentConfig `mapstructure:"local_agent"`
+	Database   DatabaseConfig   `mapstructure:"database"`
+	Email      EmailConfig      `mapstructure:"email"`
 }
 
 // ServerConfig — настройки HTTP-сервера.
@@ -29,11 +29,11 @@ type ServerConfig struct {
 // DatabaseConfig — настройки БД.
 type DatabaseConfig struct {
 	Host     string `mapstructure:"host"`
-	Port     int    `mapstructure:"port"`
 	User     string `mapstructure:"user"`
 	Password string `mapstructure:"password"`
 	DBName   string `mapstructure:"dbname"`
 	SSLMode  string `mapstructure:"sslmode"`
+	Port     int    `mapstructure:"port"`
 }
 
 // NATSConfig — настройки подключения к NATS.
@@ -57,15 +57,15 @@ type SMSConfig struct {
 // EmailConfig — настройки SMTP для email.
 type EmailConfig struct {
 	SMTPHost string `mapstructure:"smtp_host"`
-	SMTPPort int    `mapstructure:"smtp_port"`
 	Username string `mapstructure:"username"`
 	Password string `mapstructure:"password"`
 	From     string `mapstructure:"from"`
+	SMTPPort int    `mapstructure:"smtp_port"`
 }
 
 // TelegramConfig — настройки Telegram-бота.
 type TelegramConfig struct {
-	BotToken string `mapstructure:"bot_token"`
+	BotToken   string `mapstructure:"bot_token"`
 	WebhookURL string `mapstructure:"webhook_url"`
 }
 

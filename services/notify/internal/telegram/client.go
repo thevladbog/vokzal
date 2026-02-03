@@ -49,13 +49,15 @@ func (c *TelegramClient) Send(chatID int64, message string) error {
 
 // SetWebhook устанавливает webhook для бота.
 func (c *TelegramClient) SetWebhook(webhookURL string) error {
-	_ = &tele.Webhook{
+	wh := &tele.Webhook{
 		Listen: ":8443",
 		Endpoint: &tele.WebhookEndpoint{
 			PublicURL: webhookURL,
 		},
 	}
-
+	if err := c.bot.SetWebhook(wh); err != nil {
+		return err
+	}
 	c.bot.Start()
 	return nil
 }

@@ -8,12 +8,13 @@ import (
 	"time"
 
 	"github.com/nats-io/nats.go"
+	"go.uber.org/zap"
+
 	"github.com/vokzal-tech/payment-service/internal/config"
 	"github.com/vokzal-tech/payment-service/internal/models"
 	"github.com/vokzal-tech/payment-service/internal/repository"
 	"github.com/vokzal-tech/payment-service/internal/sbp"
 	"github.com/vokzal-tech/payment-service/internal/tinkoff"
-	"go.uber.org/zap"
 )
 
 const (
@@ -52,8 +53,8 @@ type paymentService struct {
 // InitPaymentRequest — запрос на инициализацию платежа.
 type InitPaymentRequest struct {
 	TicketID    *string `json:"ticket_id"`
-	Amount      float64 `json:"amount" binding:"required,gt=0"`
 	Description string  `json:"description"`
+	Amount      float64 `json:"amount" binding:"required,gt=0"`
 }
 
 // NewPaymentService создаёт сервис платежей.
@@ -102,7 +103,9 @@ func (s *paymentService) InitTinkoffPayment(ctx context.Context, req *InitPaymen
 		payment.Status = statusFailed
 		errMsg := err.Error()
 		payment.ErrorMsg = &errMsg
-		_ = s.repo.Update(ctx, payment)
+		if updErr := s.repo.Update(ctx, payment); updErr != nil {
+			s.logger.Warn("Failed to update payment after tinkoff init error", zap.Error(updErr))
+		}
 		return nil, fmt.Errorf("failed to init tinkoff payment: %w", err)
 	}
 
@@ -149,7 +152,9 @@ func (s *paymentService) InitSBPPayment(ctx context.Context, req *InitPaymentReq
 		payment.Status = statusFailed
 		errMsg := err.Error()
 		payment.ErrorMsg = &errMsg
-		_ = s.repo.Update(ctx, payment)
+		if updErr := s.repo.Update(ctx, payment); updErr != nil {
+			s.logger.Warn("Failed to update payment after SBP QR error", zap.Error(updErr))
+		}
 		return nil, fmt.Errorf("failed to generate SBP QR: %w", err)
 	}
 
@@ -249,7 +254,7 @@ func (s *paymentService) CheckPaymentStatus(ctx context.Context, id string) (*mo
 			payment.Status = statusConfirmed
 			payment.ConfirmedAt = result.PaidAt
 			s.publishPaymentEvent(payment)
-		case "expired", "cancelled":
+		case "expired", "cancelled": //nolint:misspell // SBP/API returns British spelling
 			payment.Status = statusFailed
 			errMsg := fmt.Sprintf("Payment %s", result.Status)
 			payment.ErrorMsg = &errMsg

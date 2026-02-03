@@ -12,31 +12,39 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/nats-io/nats.go"
+	"go.uber.org/zap"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
+
 	"github.com/vokzal-tech/schedule-service/internal/config"
 	"github.com/vokzal-tech/schedule-service/internal/handlers"
 	"github.com/vokzal-tech/schedule-service/internal/models"
 	"github.com/vokzal-tech/schedule-service/internal/repository"
 	"github.com/vokzal-tech/schedule-service/internal/service"
-	"go.uber.org/zap"
-	"gorm.io/driver/postgres"
-	"gorm.io/gorm"
 )
 
+func initLogger(cfg *config.Config) (*zap.Logger, error) {
+	if cfg.Logger.Level == "production" {
+		return zap.NewProduction()
+	}
+	return zap.NewDevelopment()
+}
+
 func main() {
-	// Загрузить конфигурацию
 	cfg, err := config.Load()
 	if err != nil {
 		panic(fmt.Sprintf("Failed to load config: %v", err))
 	}
 
-	// Инициализировать логгер
-	var logger *zap.Logger
-	if cfg.Logger.Level == "production" {
-		logger, _ = zap.NewProduction()
-	} else {
-		logger, _ = zap.NewDevelopment()
+	logger, errLog := initLogger(cfg)
+	if errLog != nil {
+		panic(fmt.Sprintf("Failed to create logger: %v", errLog))
 	}
-	defer func() { _ = logger.Sync() }()
+	defer func() {
+		if syncErr := logger.Sync(); syncErr != nil {
+			fmt.Fprintf(os.Stderr, "logger sync: %v\n", syncErr)
+		}
+	}()
 
 	logger.Info("Starting Schedule Service", zap.String("version", "1.0.0"))
 
@@ -46,13 +54,12 @@ func main() {
 		logger.Fatal("Failed to connect to database", zap.Error(err))
 	}
 
-	// Auto-migrate (опционально для dev)
-	if err := db.AutoMigrate(&models.Route{}, &models.Schedule{}, &models.Trip{}); err != nil {
-		logger.Warn("Auto-migration failed", zap.Error(err))
+	if migErr := db.AutoMigrate(&models.Route{}, &models.Schedule{}, &models.Trip{}); migErr != nil {
+		logger.Warn("Auto-migration failed", zap.Error(migErr))
 	}
 
 	// Подключиться к NATS
-	natsConn, err := nats.Connect(cfg.NATS.URL, 
+	natsConn, err := nats.Connect(cfg.NATS.URL,
 		nats.UserInfo(cfg.NATS.User, cfg.NATS.Password),
 		nats.Name("schedule-service"))
 	if err != nil {
@@ -88,39 +95,25 @@ func main() {
 		})
 	})
 
-	// API routes
 	v1 := router.Group("/v1")
-	{
-		// Routes
-		routes := v1.Group("/routes")
-		{
-			routes.POST("", scheduleHandler.CreateRoute)
-			routes.GET("", scheduleHandler.ListRoutes)
-			routes.GET("/:id", scheduleHandler.GetRoute)
-			routes.PATCH("/:id", scheduleHandler.UpdateRoute)
-			routes.DELETE("/:id", scheduleHandler.DeleteRoute)
-		}
-
-		// Schedules
-		schedules := v1.Group("/schedules")
-		{
-			schedules.POST("", scheduleHandler.CreateSchedule)
-			schedules.GET("", scheduleHandler.ListSchedulesByRoute)
-			schedules.GET("/:id", scheduleHandler.GetSchedule)
-			schedules.PATCH("/:id", scheduleHandler.UpdateSchedule)
-			schedules.DELETE("/:id", scheduleHandler.DeleteSchedule)
-		}
-
-		// Trips
-		trips := v1.Group("/trips")
-		{
-			trips.POST("", scheduleHandler.CreateTrip)
-			trips.GET("", scheduleHandler.ListTripsByDate)
-			trips.GET("/:id", scheduleHandler.GetTrip)
-			trips.PATCH("/:id/status", scheduleHandler.UpdateTripStatus)
-			trips.POST("/generate", scheduleHandler.GenerateTrips)
-		}
-	}
+	routes := v1.Group("/routes")
+	routes.POST("", scheduleHandler.CreateRoute)
+	routes.GET("", scheduleHandler.ListRoutes)
+	routes.GET("/:id", scheduleHandler.GetRoute)
+	routes.PATCH("/:id", scheduleHandler.UpdateRoute)
+	routes.DELETE("/:id", scheduleHandler.DeleteRoute)
+	schedules := v1.Group("/schedules")
+	schedules.POST("", scheduleHandler.CreateSchedule)
+	schedules.GET("", scheduleHandler.ListSchedulesByRoute)
+	schedules.GET("/:id", scheduleHandler.GetSchedule)
+	schedules.PATCH("/:id", scheduleHandler.UpdateSchedule)
+	schedules.DELETE("/:id", scheduleHandler.DeleteSchedule)
+	trips := v1.Group("/trips")
+	trips.POST("", scheduleHandler.CreateTrip)
+	trips.GET("", scheduleHandler.ListTripsByDate)
+	trips.GET("/:id", scheduleHandler.GetTrip)
+	trips.PATCH("/:id/status", scheduleHandler.UpdateTripStatus)
+	trips.POST("/generate", scheduleHandler.GenerateTrips)
 
 	// Создать HTTP сервер
 	srv := &http.Server{

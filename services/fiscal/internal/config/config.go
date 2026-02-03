@@ -10,12 +10,12 @@ import (
 
 // Config — корневая конфигурация сервиса.
 type Config struct {
-	Server     ServerConfig     `mapstructure:"server"`
-	Database   DatabaseConfig   `mapstructure:"database"`
 	NATS       NATSConfig       `mapstructure:"nats"`
-	Logger     LoggerConfig     `mapstructure:"logger"`
 	ATOL       ATOLConfig       `mapstructure:"atol"`
+	Server     ServerConfig     `mapstructure:"server"`
+	Logger     LoggerConfig     `mapstructure:"logger"`
 	LocalAgent LocalAgentConfig `mapstructure:"local_agent"`
+	Database   DatabaseConfig   `mapstructure:"database"`
 }
 
 // ServerConfig — настройки HTTP-сервера.
@@ -27,11 +27,11 @@ type ServerConfig struct {
 // DatabaseConfig — настройки PostgreSQL.
 type DatabaseConfig struct {
 	Host     string `mapstructure:"host"`
-	Port     int    `mapstructure:"port"`
 	User     string `mapstructure:"user"`
 	Password string `mapstructure:"password"`
 	DBName   string `mapstructure:"dbname"`
 	SSLMode  string `mapstructure:"sslmode"`
+	Port     int    `mapstructure:"port"`
 }
 
 // NATSConfig — настройки NATS.

@@ -1,25 +1,28 @@
 // Package handlers содержит HTTP-обработчики API билетов.
+//
+//nolint:dupl // ListTicketsByTrip и GetBoardingStatus — один шаблон (query param + svc + JSON).
 package handlers
 
 import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/vokzal-tech/ticket-service/internal/service"
 	"go.uber.org/zap"
+
+	"github.com/vokzal-tech/ticket-service/internal/service"
 )
 
 // TicketHandler — обработчик HTTP-запросов для билетов и посадки.
 type TicketHandler struct {
-	service service.TicketService
-	logger  *zap.Logger
+	svc    service.TicketService
+	logger *zap.Logger
 }
 
 // NewTicketHandler создаёт обработчик билетов.
-func NewTicketHandler(service service.TicketService, logger *zap.Logger) *TicketHandler {
+func NewTicketHandler(svc service.TicketService, logger *zap.Logger) *TicketHandler {
 	return &TicketHandler{
-		service: service,
-		logger:  logger,
+		svc:    svc,
+		logger: logger,
 	}
 }
 
@@ -31,7 +34,7 @@ func (h *TicketHandler) SellTicket(c *gin.Context) {
 		return
 	}
 
-	ticket, err := h.service.SellTicket(c.Request.Context(), &req)
+	ticket, err := h.svc.SellTicket(c.Request.Context(), &req)
 	if err != nil {
 		h.logger.Error("Failed to sell ticket", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -44,7 +47,7 @@ func (h *TicketHandler) SellTicket(c *gin.Context) {
 // GetTicket возвращает билет по ID.
 func (h *TicketHandler) GetTicket(c *gin.Context) {
 	id := c.Param("id")
-	ticket, err := h.service.GetTicket(c.Request.Context(), id)
+	ticket, err := h.svc.GetTicket(c.Request.Context(), id)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Ticket not found"})
 		return
@@ -61,7 +64,7 @@ func (h *TicketHandler) GetTicketByQR(c *gin.Context) {
 		return
 	}
 
-	ticket, err := h.service.GetTicketByQR(c.Request.Context(), qrCode)
+	ticket, err := h.svc.GetTicketByQR(c.Request.Context(), qrCode)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Ticket not found"})
 		return
@@ -78,7 +81,7 @@ func (h *TicketHandler) ListTicketsByTrip(c *gin.Context) {
 		return
 	}
 
-	tickets, err := h.service.ListTicketsByTrip(c.Request.Context(), tripID)
+	tickets, err := h.svc.ListTicketsByTrip(c.Request.Context(), tripID)
 	if err != nil {
 		h.logger.Error("Failed to list tickets", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to list tickets"})
@@ -101,7 +104,7 @@ func (h *TicketHandler) RefundTicket(c *gin.Context) {
 		userID = "system"
 	}
 
-	result, err := h.service.RefundTicket(c.Request.Context(), ticketID, userID)
+	result, err := h.svc.RefundTicket(c.Request.Context(), ticketID, userID)
 	if err != nil {
 		h.logger.Error("Failed to refund ticket", zap.Error(err))
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -134,7 +137,7 @@ func (h *TicketHandler) StartBoarding(c *gin.Context) {
 		userID = "system"
 	}
 
-	if err := h.service.StartBoarding(c.Request.Context(), req.TripID, userID); err != nil {
+	if err := h.svc.StartBoarding(c.Request.Context(), req.TripID, userID); err != nil {
 		h.logger.Error("Failed to start boarding", zap.Error(err))
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -151,7 +154,7 @@ func (h *TicketHandler) MarkBoarding(c *gin.Context) {
 		return
 	}
 
-	if err := h.service.MarkBoarding(c.Request.Context(), &req); err != nil {
+	if err := h.svc.MarkBoarding(c.Request.Context(), &req); err != nil {
 		h.logger.Error("Failed to mark boarding", zap.Error(err))
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -168,7 +171,7 @@ func (h *TicketHandler) GetBoardingStatus(c *gin.Context) {
 		return
 	}
 
-	status, err := h.service.GetBoardingStatus(c.Request.Context(), tripID)
+	status, err := h.svc.GetBoardingStatus(c.Request.Context(), tripID)
 	if err != nil {
 		h.logger.Error("Failed to get boarding status", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get boarding status"})

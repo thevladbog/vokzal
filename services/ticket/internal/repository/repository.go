@@ -6,8 +6,9 @@ import (
 	"errors"
 	"time"
 
-	"github.com/vokzal-tech/ticket-service/internal/models"
 	"gorm.io/gorm"
+
+	"github.com/vokzal-tech/ticket-service/internal/models"
 )
 
 var (
@@ -65,26 +66,23 @@ func (r *ticketRepository) Create(ctx context.Context, ticket *models.Ticket) er
 	return r.db.WithContext(ctx).Create(ticket).Error
 }
 
-func (r *ticketRepository) FindByID(ctx context.Context, id string) (*models.Ticket, error) {
-	var ticket models.Ticket
-	if err := r.db.WithContext(ctx).First(&ticket, "id = ?", id).Error; err != nil {
+func findFirstBy[T any](db *gorm.DB, ctx context.Context, query string, arg any, notFoundErr error) (*T, error) {
+	var t T
+	if err := db.WithContext(ctx).First(&t, query, arg).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, ErrTicketNotFound
+			return nil, notFoundErr
 		}
 		return nil, err
 	}
-	return &ticket, nil
+	return &t, nil
+}
+
+func (r *ticketRepository) FindByID(ctx context.Context, id string) (*models.Ticket, error) {
+	return findFirstBy[models.Ticket](r.db, ctx, "id = ?", id, ErrTicketNotFound)
 }
 
 func (r *ticketRepository) FindByQRCode(ctx context.Context, qrCode string) (*models.Ticket, error) {
-	var ticket models.Ticket
-	if err := r.db.WithContext(ctx).First(&ticket, "qr_code = ?", qrCode).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, ErrTicketNotFound
-		}
-		return nil, err
-	}
-	return &ticket, nil
+	return findFirstBy[models.Ticket](r.db, ctx, "qr_code = ?", qrCode, ErrTicketNotFound)
 }
 
 func (r *ticketRepository) FindByTripID(ctx context.Context, tripID string) ([]*models.Ticket, error) {

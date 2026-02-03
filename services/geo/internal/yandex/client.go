@@ -14,10 +14,10 @@ import (
 
 // Client — клиент для Yandex Geocoder API.
 type Client struct {
-	apiKey  string
-	baseURL string
 	client  *http.Client
 	logger  *zap.Logger
+	apiKey  string
+	baseURL string
 }
 
 // GeocodeResponse — ответ Yandex Geocoder API.
@@ -77,7 +77,11 @@ func (c *Client) Geocode(address string) (*GeocodeResult, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to send request: %w", err)
 	}
-	defer func() { _ = resp.Body.Close() }()
+	defer func() {
+		if closeErr := resp.Body.Close(); closeErr != nil {
+			c.logger.Debug("failed to close response body", zap.Error(closeErr))
+		}
+	}()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -129,7 +133,11 @@ func (c *Client) ReverseGeocode(lat, lon float64) (*GeocodeResult, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to send request: %w", err)
 	}
-	defer func() { _ = resp.Body.Close() }()
+	defer func() {
+		if closeErr := resp.Body.Close(); closeErr != nil {
+			c.logger.Debug("failed to close response body", zap.Error(closeErr))
+		}
+	}()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {

@@ -8,9 +8,10 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
-	ws "github.com/vokzal-tech/board-service/internal/websocket"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
+
+	ws "github.com/vokzal-tech/board-service/internal/websocket"
 )
 
 // isAllowedOrigin возвращает true, если origin разрешён: либо allowAllInDev включён (для разработки),
@@ -90,11 +91,18 @@ func (h *BoardHandler) GetPublicBoard(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get trips"})
 		return
 	}
-	defer func() { _ = rows.Close() }()
+	defer func() {
+		if closeErr := rows.Close(); closeErr != nil {
+			h.logger.Warn("failed to close rows", zap.Error(closeErr))
+		}
+	}()
 
 	for rows.Next() {
 		var trip map[string]interface{}
-		_ = h.db.ScanRows(rows, &trip)
+		if scanErr := h.db.ScanRows(rows, &trip); scanErr != nil {
+			h.logger.Warn("failed to scan row", zap.Error(scanErr))
+			continue
+		}
 		trips = append(trips, trip)
 	}
 
@@ -129,11 +137,18 @@ func (h *BoardHandler) GetPlatformBoard(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get trips"})
 		return
 	}
-	defer func() { _ = rows.Close() }()
+	defer func() {
+		if closeErr := rows.Close(); closeErr != nil {
+			h.logger.Warn("failed to close rows", zap.Error(closeErr))
+		}
+	}()
 
 	for rows.Next() {
 		var trip map[string]interface{}
-		_ = h.db.ScanRows(rows, &trip)
+		if scanErr := h.db.ScanRows(rows, &trip); scanErr != nil {
+			h.logger.Warn("failed to scan row", zap.Error(scanErr))
+			continue
+		}
 		trips = append(trips, trip)
 	}
 

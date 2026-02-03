@@ -12,32 +12,40 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/nats-io/nats.go"
+	"go.uber.org/zap"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
+
 	"github.com/vokzal-tech/fiscal-service/internal/atol"
 	"github.com/vokzal-tech/fiscal-service/internal/config"
 	"github.com/vokzal-tech/fiscal-service/internal/handlers"
 	"github.com/vokzal-tech/fiscal-service/internal/models"
 	"github.com/vokzal-tech/fiscal-service/internal/repository"
 	"github.com/vokzal-tech/fiscal-service/internal/service"
-	"go.uber.org/zap"
-	"gorm.io/driver/postgres"
-	"gorm.io/gorm"
 )
 
+func initLogger(cfg *config.Config) (*zap.Logger, error) {
+	if cfg.Logger.Level == "production" {
+		return zap.NewProduction()
+	}
+	return zap.NewDevelopment()
+}
+
 func main() {
-	// Загрузить конфигурацию
 	cfg, err := config.Load()
 	if err != nil {
 		panic(fmt.Sprintf("Failed to load config: %v", err))
 	}
 
-	// Инициализировать логгер
-	var logger *zap.Logger
-	if cfg.Logger.Level == "production" {
-		logger, _ = zap.NewProduction()
-	} else {
-		logger, _ = zap.NewDevelopment()
+	logger, errLog := initLogger(cfg)
+	if errLog != nil {
+		panic(fmt.Sprintf("Failed to create logger: %v", errLog))
 	}
-	defer func() { _ = logger.Sync() }()
+	defer func() {
+		if syncErr := logger.Sync(); syncErr != nil {
+			fmt.Fprintf(os.Stderr, "logger sync: %v\n", syncErr)
+		}
+	}()
 
 	logger.Info("Starting Fiscal Service", zap.String("version", "1.0.0"))
 
@@ -56,9 +64,8 @@ func main() {
 	sqlDB.SetMaxOpenConns(100)
 	sqlDB.SetConnMaxLifetime(time.Hour)
 
-	// Auto-migrate
-	if err := db.AutoMigrate(&models.FiscalReceipt{}, &models.ZReport{}); err != nil {
-		logger.Warn("Auto-migration failed", zap.Error(err))
+	if migErr := db.AutoMigrate(&models.FiscalReceipt{}, &models.ZReport{}); migErr != nil {
+		logger.Warn("Auto-migration failed", zap.Error(migErr))
 	}
 
 	// Подключиться к NATS
@@ -102,27 +109,15 @@ func main() {
 		})
 	})
 
-	// API routes
 	v1 := router.Group("/v1")
-	{
-		// Receipts
-		receipts := v1.Group("/receipts")
-		{
-			receipts.GET("/:id", fiscalHandler.GetReceipt)
-			receipts.GET("", fiscalHandler.GetReceiptsByTicket)
-		}
-
-		// Z-Reports
-		reports := v1.Group("/z-reports")
-		{
-			reports.POST("", fiscalHandler.CreateZReport)
-			reports.GET("", fiscalHandler.ListZReports)
-			reports.GET("/date", fiscalHandler.GetZReport)
-		}
-
-		// KKT
-		v1.GET("/kkt/status", fiscalHandler.GetKKTStatus)
-	}
+	receipts := v1.Group("/receipts")
+	receipts.GET("/:id", fiscalHandler.GetReceipt)
+	receipts.GET("", fiscalHandler.GetReceiptsByTicket)
+	reports := v1.Group("/z-reports")
+	reports.POST("", fiscalHandler.CreateZReport)
+	reports.GET("", fiscalHandler.ListZReports)
+	reports.GET("/date", fiscalHandler.GetZReport)
+	v1.GET("/kkt/status", fiscalHandler.GetKKTStatus)
 
 	// Создать HTTP сервер
 	srv := &http.Server{

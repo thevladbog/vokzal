@@ -7,11 +7,12 @@ import (
 	"fmt"
 
 	"github.com/nats-io/nats.go"
+	"go.uber.org/zap"
+
 	"github.com/vokzal-tech/fiscal-service/internal/atol"
 	"github.com/vokzal-tech/fiscal-service/internal/config"
 	"github.com/vokzal-tech/fiscal-service/internal/models"
 	"github.com/vokzal-tech/fiscal-service/internal/repository"
-	"go.uber.org/zap"
 )
 
 const receiptStatusFailed = "failed"
@@ -62,8 +63,14 @@ func NewFiscalService(
 //
 //nolint:dupl // структура совпадает с ProcessTicketRefund (продажа/возврат)
 func (s *fiscalService) ProcessTicketSold(ctx context.Context, ticketData map[string]interface{}) error {
-	ticketID, _ := ticketData["id"].(string)
-	price, _ := ticketData["price"].(float64)
+	var ticketID string
+	if id, ok := ticketData["id"].(string); ok {
+		ticketID = id
+	}
+	var price float64
+	if p, ok := ticketData["price"].(float64); ok {
+		price = p
+	}
 
 	// Создать запись чека
 	receipt := &models.FiscalReceipt{
@@ -104,7 +111,9 @@ func (s *fiscalService) ProcessTicketSold(ctx context.Context, ticketData map[st
 		receipt.Status = receiptStatusFailed
 		errMsg := err.Error()
 		receipt.ErrorMsg = &errMsg
-		_ = s.repo.UpdateReceipt(ctx, receipt)
+		if updErr := s.repo.UpdateReceipt(ctx, receipt); updErr != nil {
+			s.logger.Warn("Failed to update receipt after print error", zap.Error(updErr))
+		}
 		return fmt.Errorf("failed to print receipt: %w", err)
 	}
 
@@ -134,8 +143,14 @@ func (s *fiscalService) ProcessTicketSold(ctx context.Context, ticketData map[st
 //
 //nolint:dupl // структура совпадает с ProcessTicketSold (продажа/возврат), рефакторинг усложнит чтение
 func (s *fiscalService) ProcessTicketRefund(ctx context.Context, ticketData map[string]interface{}) error {
-	ticketID, _ := ticketData["id"].(string)
-	refundAmount, _ := ticketData["refund_amount"].(float64)
+	var ticketID string
+	if id, ok := ticketData["id"].(string); ok {
+		ticketID = id
+	}
+	var refundAmount float64
+	if a, ok := ticketData["refund_amount"].(float64); ok {
+		refundAmount = a
+	}
 
 	// Создать запись чека возврата
 	receipt := &models.FiscalReceipt{
@@ -176,7 +191,9 @@ func (s *fiscalService) ProcessTicketRefund(ctx context.Context, ticketData map[
 		receipt.Status = receiptStatusFailed
 		errMsg := err.Error()
 		receipt.ErrorMsg = &errMsg
-		_ = s.repo.UpdateReceipt(ctx, receipt)
+		if updErr := s.repo.UpdateReceipt(ctx, receipt); updErr != nil {
+			s.logger.Warn("Failed to update refund receipt after print error", zap.Error(updErr))
+		}
 		return fmt.Errorf("failed to print refund receipt: %w", err)
 	}
 
@@ -267,33 +284,27 @@ func (s *fiscalService) GetKKTStatus(_ context.Context) (map[string]interface{},
 	return s.atolClient.GetKKTStatus()
 }
 
+// subscribeNATSOne подписывается на один топик и обрабатывает JSON → process.
+func (s *fiscalService) subscribeNATSOne(nc *nats.Conn, subject string, process func(context.Context, map[string]interface{}) error, logLabel string) {
+	_, err := nc.Subscribe(subject, func(msg *nats.Msg) {
+		var ticketData map[string]interface{}
+		if unmarshalErr := json.Unmarshal(msg.Data, &ticketData); unmarshalErr != nil {
+			s.logger.Error("Failed to unmarshal "+logLabel, zap.Error(unmarshalErr))
+			return
+		}
+		ctx := context.Background()
+		if err := process(ctx, ticketData); err != nil {
+			s.logger.Error("Failed to process "+logLabel, zap.Error(err))
+		}
+	})
+	if err != nil {
+		s.logger.Error("Failed to subscribe to "+subject, zap.Error(err))
+	}
+}
+
 // SubscribeToEvents подписывается на NATS-события для фискализации.
 func (s *fiscalService) SubscribeToEvents(nc *nats.Conn) {
-	_, _ = nc.Subscribe("ticket.sold", func(msg *nats.Msg) {
-		var ticketData map[string]interface{}
-		if err := json.Unmarshal(msg.Data, &ticketData); err != nil {
-			s.logger.Error("Failed to unmarshal ticket.sold event", zap.Error(err))
-			return
-		}
-
-		ctx := context.Background()
-		if err := s.ProcessTicketSold(ctx, ticketData); err != nil {
-			s.logger.Error("Failed to process ticket.sold", zap.Error(err))
-		}
-	})
-
-	_, _ = nc.Subscribe("ticket.returned", func(msg *nats.Msg) {
-		var ticketData map[string]interface{}
-		if err := json.Unmarshal(msg.Data, &ticketData); err != nil {
-			s.logger.Error("Failed to unmarshal ticket.returned event", zap.Error(err))
-			return
-		}
-
-		ctx := context.Background()
-		if err := s.ProcessTicketRefund(ctx, ticketData); err != nil {
-			s.logger.Error("Failed to process ticket.returned", zap.Error(err))
-		}
-	})
-
+	s.subscribeNATSOne(nc, "ticket.sold", s.ProcessTicketSold, "ticket.sold event")
+	s.subscribeNATSOne(nc, "ticket.returned", s.ProcessTicketRefund, "ticket.returned event")
 	s.logger.Info("Subscribed to NATS events: ticket.sold, ticket.returned")
 }

@@ -9,6 +9,8 @@ import (
 )
 
 // User — модель пользователя.
+//
+//nolint:govet // fieldalignment: порядок полей для GORM/JSON
 type User struct {
 	ID           string    `gorm:"type:uuid;primary_key" json:"id"`
 	Username     string    `gorm:"type:varchar(50);unique;not null" json:"username"`
@@ -22,13 +24,15 @@ type User struct {
 }
 
 // Session — модель сессии.
+//
+//nolint:govet // fieldalignment: порядок полей для GORM/JSON
 type Session struct {
 	ID        string    `gorm:"type:uuid;primary_key" json:"id"`
 	UserID    string    `gorm:"type:uuid;not null;index" json:"user_id"`
 	TokenHash string    `gorm:"type:varchar(255);unique;not null" json:"-"`
 	ExpiresAt time.Time `gorm:"not null;index" json:"expires_at"`
 	CreatedAt time.Time `json:"created_at"`
-	
+
 	User User `gorm:"foreignKey:UserID" json:"user,omitempty"`
 }
 

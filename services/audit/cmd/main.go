@@ -12,11 +12,13 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/nats-io/nats.go"
+
 	"github.com/vokzal-tech/audit-service/internal/config"
 	"github.com/vokzal-tech/audit-service/internal/handlers"
 	"github.com/vokzal-tech/audit-service/internal/models"
 	"github.com/vokzal-tech/audit-service/internal/repository"
 	"github.com/vokzal-tech/audit-service/internal/service"
+
 	"go.uber.org/zap"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -29,12 +31,20 @@ func main() {
 	}
 
 	var logger *zap.Logger
+	var errLog error
 	if cfg.Logger.Level == "production" {
-		logger, _ = zap.NewProduction()
+		logger, errLog = zap.NewProduction()
 	} else {
-		logger, _ = zap.NewDevelopment()
+		logger, errLog = zap.NewDevelopment()
 	}
-	defer func() { _ = logger.Sync() }()
+	if errLog != nil {
+		panic(fmt.Sprintf("Failed to create logger: %v", errLog))
+	}
+	defer func() {
+		if syncErr := logger.Sync(); syncErr != nil {
+			fmt.Fprintf(os.Stderr, "logger sync: %v\n", syncErr)
+		}
+	}()
 
 	logger.Info("Starting Audit Service", zap.String("version", "1.0.0"))
 
@@ -51,8 +61,8 @@ func main() {
 	sqlDB.SetMaxOpenConns(100)
 	sqlDB.SetConnMaxLifetime(time.Hour)
 
-	if err := db.AutoMigrate(&models.AuditLog{}); err != nil {
-		logger.Warn("Auto-migration failed", zap.Error(err))
+	if migErr := db.AutoMigrate(&models.AuditLog{}); migErr != nil {
+		logger.Warn("Auto-migration failed", zap.Error(migErr))
 	}
 
 	natsConn, err := nats.Connect(cfg.NATS.URL,
@@ -87,17 +97,13 @@ func main() {
 	})
 
 	v1 := router.Group("/v1")
-	{
-		audit := v1.Group("/audit")
-		{
-			audit.POST("/log", auditHandler.CreateLog)
-			audit.GET("/:id", auditHandler.GetLog)
-			audit.GET("/entity", auditHandler.GetLogsByEntity)
-			audit.GET("/user", auditHandler.GetLogsByUser)
-			audit.GET("/date-range", auditHandler.GetLogsByDateRange)
-			audit.GET("/list", auditHandler.ListLogs)
-		}
-	}
+	audit := v1.Group("/audit")
+	audit.POST("/log", auditHandler.CreateLog)
+	audit.GET("/:id", auditHandler.GetLog)
+	audit.GET("/entity", auditHandler.GetLogsByEntity)
+	audit.GET("/user", auditHandler.GetLogsByUser)
+	audit.GET("/date-range", auditHandler.GetLogsByDateRange)
+	audit.GET("/list", auditHandler.ListLogs)
 
 	srv := &http.Server{
 		Addr:         ":" + cfg.Server.Port,

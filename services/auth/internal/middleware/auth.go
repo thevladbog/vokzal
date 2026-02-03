@@ -6,7 +6,9 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+
 	"github.com/vokzal-tech/auth-service/internal/service"
+
 	"go.uber.org/zap"
 )
 

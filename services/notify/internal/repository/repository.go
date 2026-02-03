@@ -5,8 +5,9 @@ import (
 	"context"
 	"errors"
 
-	"github.com/vokzal-tech/notify-service/internal/models"
 	"gorm.io/gorm"
+
+	"github.com/vokzal-tech/notify-service/internal/models"
 )
 
 // ErrNotificationNotFound возвращается, когда уведомление не найдено.

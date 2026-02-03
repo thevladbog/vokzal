@@ -8,9 +8,10 @@ import (
 	"time"
 
 	"github.com/nats-io/nats.go"
+	"go.uber.org/zap"
+
 	"github.com/vokzal-tech/schedule-service/internal/models"
 	"github.com/vokzal-tech/schedule-service/internal/repository"
-	"go.uber.org/zap"
 )
 
 // ScheduleService — интерфейс сервиса расписания (маршруты, расписания, рейсы).
@@ -49,25 +50,25 @@ type scheduleService struct {
 type CreateRouteRequest struct {
 	Name        string                   `json:"name" binding:"required"`
 	Stops       []map[string]interface{} `json:"stops" binding:"required"`
-	DistanceKm  float64              `json:"distance_km"`
-	DurationMin int                  `json:"duration_min"`
+	DistanceKm  float64                  `json:"distance_km"`
+	DurationMin int                      `json:"duration_min"`
 }
 
 // UpdateRouteRequest — запрос на обновление маршрута.
 type UpdateRouteRequest struct {
-	Name        *string                 `json:"name"`
+	Name        *string                  `json:"name"`
+	DistanceKm  *float64                 `json:"distance_km"`
+	DurationMin *int                     `json:"duration_min"`
+	IsActive    *bool                    `json:"is_active"`
 	Stops       []map[string]interface{} `json:"stops"`
-	DistanceKm  *float64             `json:"distance_km"`
-	DurationMin *int                 `json:"duration_min"`
-	IsActive    *bool                  `json:"is_active"`
 }
 
 // CreateScheduleRequest — запрос на создание расписания.
 type CreateScheduleRequest struct {
 	RouteID       string `json:"route_id" binding:"required"`
 	DepartureTime string `json:"departure_time" binding:"required"`
-	DaysOfWeek    []int  `json:"days_of_week" binding:"required"`
 	Platform      string `json:"platform"`
+	DaysOfWeek    []int  `json:"days_of_week" binding:"required"`
 }
 
 // UpdateScheduleRequest — запрос на обновление расписания.
@@ -80,11 +81,11 @@ type UpdateScheduleRequest struct {
 
 // CreateTripRequest — запрос на создание рейса.
 type CreateTripRequest struct {
-	ScheduleID string  `json:"schedule_id" binding:"required"`
-	Date       string  `json:"date" binding:"required"`
 	Platform   *string `json:"platform"`
 	BusID      *string `json:"bus_id"`
 	DriverID   *string `json:"driver_id"`
+	ScheduleID string  `json:"schedule_id" binding:"required"`
+	Date       string  `json:"date" binding:"required"`
 }
 
 // NewScheduleService создаёт сервис расписания.
@@ -284,7 +285,7 @@ func (s *scheduleService) ListTripsByDate(ctx context.Context, date string) ([]*
 	return s.tripRepo.FindByDate(ctx, date)
 }
 
-func (s *scheduleService) UpdateTripStatus(ctx context.Context, id string, status string, delayMinutes int) (*models.Trip, error) {
+func (s *scheduleService) UpdateTripStatus(ctx context.Context, id, status string, delayMinutes int) (*models.Trip, error) {
 	trip, err := s.tripRepo.FindByID(ctx, id)
 	if err != nil {
 		return nil, err
@@ -332,7 +333,7 @@ func (s *scheduleService) GenerateTripsForSchedule(ctx context.Context, schedule
 	for date := fromDate; !date.After(toDate); date = date.AddDate(0, 0, 1) {
 		weekday := int(date.Weekday())
 		if weekday == 0 {
-			weekday = 7 // Воскресенье = 7
+			weekday = 7
 		}
 
 		// Проверить, входит ли день в расписание
@@ -346,20 +347,21 @@ func (s *scheduleService) GenerateTripsForSchedule(ctx context.Context, schedule
 
 		if shouldCreate {
 			dateStr := date.Format("2006-01-02")
-			existing, _ := s.tripRepo.FindByScheduleAndDate(ctx, scheduleID, dateStr)
-			if existing == nil {
-				trip := &models.Trip{
-					ScheduleID: scheduleID,
-					Date:       dateStr,
-					Status:     "scheduled",
-					Platform:   schedule.Platform,
-				}
-				if err := s.tripRepo.Create(ctx, trip); err != nil {
-					s.logger.Error("Failed to create trip", zap.Error(err), zap.String("date", dateStr))
-					continue
-				}
-				s.publishTripEvent("trip.created", trip)
+			existing, err := s.tripRepo.FindByScheduleAndDate(ctx, scheduleID, dateStr)
+			if err != nil || existing != nil {
+				continue
 			}
+			trip := &models.Trip{
+				ScheduleID: scheduleID,
+				Date:       dateStr,
+				Status:     "scheduled",
+				Platform:   schedule.Platform,
+			}
+			if err := s.tripRepo.Create(ctx, trip); err != nil {
+				s.logger.Error("Failed to create trip", zap.Error(err), zap.String("date", dateStr))
+				continue
+			}
+			s.publishTripEvent("trip.created", trip)
 		}
 	}
 

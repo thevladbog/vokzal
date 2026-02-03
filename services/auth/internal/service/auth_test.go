@@ -7,9 +7,11 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+
 	"github.com/vokzal-tech/auth-service/internal/config"
 	"github.com/vokzal-tech/auth-service/internal/models"
 	"github.com/vokzal-tech/auth-service/internal/repository"
+
 	"go.uber.org/zap"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -88,17 +90,18 @@ func (m *MockSessionRepository) DeleteExpired(ctx context.Context) error {
 
 func TestAuthService_Login(t *testing.T) {
 	logger, _ := zap.NewDevelopment()
-	
+
 	// Создаем bcrypt hash для "password123"
 	passwordHash, _ := bcrypt.GenerateFromPassword([]byte("password123"), bcrypt.DefaultCost)
-	
+
+	//nolint:govet // fieldalignment: test table struct
 	tests := []struct {
-		name          string
-		username      string
-		password      string
-		stationID     string
-		setupMock     func(*MockUserRepository, *MockSessionRepository)
-		expectError   bool
+		name        string
+		username    string
+		password    string
+		stationID   string
+		setupMock   func(*MockUserRepository, *MockSessionRepository)
+		expectError bool
 	}{
 		{
 			name:      "успешная авторизация",

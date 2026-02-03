@@ -7,13 +7,14 @@ import (
 	"strconv"
 	"time"
 
+	"go.uber.org/zap"
+
 	"github.com/vokzal-tech/notify-service/internal/email"
 	"github.com/vokzal-tech/notify-service/internal/models"
 	"github.com/vokzal-tech/notify-service/internal/repository"
 	"github.com/vokzal-tech/notify-service/internal/sms"
 	"github.com/vokzal-tech/notify-service/internal/telegram"
 	"github.com/vokzal-tech/notify-service/internal/tts"
-	"go.uber.org/zap"
 )
 
 const (
@@ -76,7 +77,9 @@ func (s *notifyService) SendSMS(ctx context.Context, phone, message string) (*mo
 		notification.Status = statusFailed
 		errMsg := err.Error()
 		notification.ErrorMsg = &errMsg
-		_ = s.repo.Update(ctx, notification)
+		if updErr := s.repo.Update(ctx, notification); updErr != nil {
+			s.logger.Warn("Failed to update notification status", zap.Error(updErr))
+		}
 		return nil, err
 	}
 
@@ -109,7 +112,9 @@ func (s *notifyService) SendEmail(ctx context.Context, to, subject, body string)
 		notification.Status = statusFailed
 		errMsg := err.Error()
 		notification.ErrorMsg = &errMsg
-		_ = s.repo.Update(ctx, notification)
+		if updErr := s.repo.Update(ctx, notification); updErr != nil {
+			s.logger.Warn("Failed to update notification status", zap.Error(updErr))
+		}
 		return nil, err
 	}
 
@@ -141,7 +146,9 @@ func (s *notifyService) SendTelegram(ctx context.Context, chatID int64, message 
 		notification.Status = statusFailed
 		errMsg := err.Error()
 		notification.ErrorMsg = &errMsg
-		_ = s.repo.Update(ctx, notification)
+		if updErr := s.repo.Update(ctx, notification); updErr != nil {
+			s.logger.Warn("Failed to update notification status", zap.Error(updErr))
+		}
 		return nil, err
 	}
 
@@ -173,7 +180,9 @@ func (s *notifyService) SendTTS(ctx context.Context, text, language, priority st
 		notification.Status = statusFailed
 		errMsg := err.Error()
 		notification.ErrorMsg = &errMsg
-		_ = s.repo.Update(ctx, notification)
+		if updErr := s.repo.Update(ctx, notification); updErr != nil {
+			s.logger.Warn("Failed to update notification status", zap.Error(updErr))
+		}
 		return nil, err
 	}
 

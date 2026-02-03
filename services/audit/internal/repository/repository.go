@@ -6,6 +6,7 @@ import (
 	"errors"
 
 	"github.com/vokzal-tech/audit-service/internal/models"
+
 	"gorm.io/gorm"
 )
 

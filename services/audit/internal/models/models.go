@@ -42,12 +42,12 @@ type AuditLog struct {
 	EntityType string    `gorm:"type:varchar(50);not null;index" json:"entity_type"`
 	EntityID   string    `gorm:"type:uuid;not null;index" json:"entity_id"`
 	Action     string    `gorm:"type:varchar(50);not null" json:"action"`
+	CreatedAt  time.Time `gorm:"index" json:"created_at"`
 	UserID     *string   `gorm:"type:uuid;index" json:"user_id,omitempty"`
-	OldValue   JSONB     `gorm:"type:jsonb" json:"old_value,omitempty"`
-	NewValue   JSONB     `gorm:"type:jsonb" json:"new_value,omitempty"`
 	IPAddress  *string   `gorm:"type:varchar(45)" json:"ip_address,omitempty"`
 	UserAgent  *string   `gorm:"type:varchar(500)" json:"user_agent,omitempty"`
-	CreatedAt  time.Time `gorm:"index" json:"created_at"`
+	OldValue   JSONB     `gorm:"type:jsonb" json:"old_value,omitempty"`
+	NewValue   JSONB     `gorm:"type:jsonb" json:"new_value,omitempty"`
 }
 
 // TableName возвращает имя таблицы для GORM.

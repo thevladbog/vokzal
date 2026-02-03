@@ -19,32 +19,32 @@ import (
 //
 //nolint:revive // Имя сохраняем для ясности (tinkoff.Client).
 type TinkoffClient struct {
+	client      *http.Client
+	logger      *zap.Logger
 	terminalKey string
 	password    string
 	apiURL      string
-	client      *http.Client
-	logger      *zap.Logger
 }
 
 // InitRequest — запрос инициализации платежа.
 type InitRequest struct {
-	TerminalKey string  `json:"TerminalKey"`
-	Amount      int64   `json:"Amount"` // в копейках
-	OrderID     string  `json:"OrderId"`
-	Description string  `json:"Description"`
-	Token       string  `json:"Token"`
+	TerminalKey     string `json:"TerminalKey"`
+	OrderID         string `json:"OrderId"`
+	Description     string `json:"Description"`
+	Token           string `json:"Token"`
 	NotificationURL string `json:"NotificationURL,omitempty"`
-	SuccessURL  string  `json:"SuccessURL,omitempty"`
-	FailURL     string  `json:"FailURL,omitempty"`
+	SuccessURL      string `json:"SuccessURL,omitempty"`
+	FailURL         string `json:"FailURL,omitempty"`
+	Amount          int64  `json:"Amount"`
 }
 
 // InitResponse — ответ на инициализацию платежа.
 type InitResponse struct {
-	Success     bool   `json:"Success"`
-	ErrorCode   string `json:"ErrorCode"`
-	Message     string `json:"Message"`
-	PaymentID   string `json:"PaymentId"`
-	PaymentURL  string `json:"PaymentURL"`
+	ErrorCode  string `json:"ErrorCode"`
+	Message    string `json:"Message"`
+	PaymentID  string `json:"PaymentId"`
+	PaymentURL string `json:"PaymentURL"`
+	Success    bool   `json:"Success"`
 }
 
 // GetStateRequest — запрос статуса платежа.
@@ -56,13 +56,13 @@ type GetStateRequest struct {
 
 // GetStateResponse — ответ со статусом платежа.
 type GetStateResponse struct {
-	Success   bool   `json:"Success"`
 	ErrorCode string `json:"ErrorCode"`
 	Message   string `json:"Message"`
-	Status    string `json:"Status"` // NEW, AUTHORIZED, CONFIRMED, REJECTED, REFUNDED
+	Status    string `json:"Status"`
 	PaymentID string `json:"PaymentId"`
 	OrderID   string `json:"OrderId"`
 	Amount    int64  `json:"Amount"`
+	Success   bool   `json:"Success"`
 }
 
 // NewTinkoffClient создаёт клиент Tinkoff Acquiring.
@@ -114,7 +114,11 @@ func (c *TinkoffClient) Init(orderID string, amount float64, description string)
 	if err != nil {
 		return nil, fmt.Errorf("failed to send request: %w", err)
 	}
-	defer func() { _ = resp.Body.Close() }()
+	defer func() {
+		if closeErr := resp.Body.Close(); closeErr != nil {
+			c.logger.Warn("failed to close response body", zap.Error(closeErr))
+		}
+	}()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -161,7 +165,11 @@ func (c *TinkoffClient) GetState(paymentID string) (*GetStateResponse, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to send request: %w", err)
 	}
-	defer func() { _ = resp.Body.Close() }()
+	defer func() {
+		if closeErr := resp.Body.Close(); closeErr != nil {
+			c.logger.Warn("failed to close response body", zap.Error(closeErr))
+		}
+	}()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {

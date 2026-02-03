@@ -10,17 +10,17 @@ import (
 
 // Notification — модель уведомления (SMS, email, Telegram, TTS).
 type Notification struct {
-	ID        string     `gorm:"type:uuid;primary_key" json:"id"`
-	Type      string     `gorm:"type:varchar(20);not null;index" json:"type"` // sms, email, telegram, tts
-	Recipient string     `gorm:"type:varchar(100);not null" json:"recipient"`
-	Message   string     `gorm:"type:text;not null" json:"message"`
-	Subject   *string    `gorm:"type:varchar(200)" json:"subject,omitempty"`
-	Status    string     `gorm:"type:varchar(20);not null;default:'pending'" json:"status"` // pending, sent, failed
-	SentAt    *time.Time `json:"sent_at,omitempty"`
-	ErrorMsg  *string    `gorm:"type:text" json:"error_msg,omitempty"`
-	Metadata  string     `gorm:"type:jsonb" json:"metadata,omitempty"`
 	CreatedAt time.Time  `json:"created_at"`
 	UpdatedAt time.Time  `json:"updated_at"`
+	Subject   *string    `gorm:"type:varchar(200)" json:"subject,omitempty"`
+	SentAt    *time.Time `json:"sent_at,omitempty"`
+	ErrorMsg  *string    `gorm:"type:text" json:"error_msg,omitempty"`
+	ID        string     `gorm:"type:uuid;primary_key" json:"id"`
+	Type      string     `gorm:"type:varchar(20);not null;index" json:"type"`
+	Recipient string     `gorm:"type:varchar(100);not null" json:"recipient"`
+	Message   string     `gorm:"type:text;not null" json:"message"`
+	Status    string     `gorm:"type:varchar(20);not null;default:'pending'" json:"status"`
+	Metadata  string     `gorm:"type:jsonb" json:"metadata,omitempty"`
 }
 
 // TableName возвращает имя таблицы для GORM.

@@ -16,29 +16,29 @@ import (
 //
 //nolint:revive // Имя сохраняем для ясности (sbp.Client).
 type SBPClient struct {
+	client     *http.Client
+	logger     *zap.Logger
 	merchantID string
 	apiURL     string
 	apiKey     string
-	client     *http.Client
-	logger     *zap.Logger
 }
 
 // QRRequest — запрос на генерацию QR-кода.
 type QRRequest struct {
 	MerchantID string  `json:"merchantId"`
-	Amount     float64 `json:"amount"`
 	Currency   string  `json:"currency"`
 	Purpose    string  `json:"purpose"`
-	QRType     string  `json:"qrType"` // dynamic, static
+	QRType     string  `json:"qrType"`
+	Amount     float64 `json:"amount"`
 }
 
 // QRResponse — ответ с QR-кодом.
 type QRResponse struct {
-	Success   bool   `json:"success"`
-	QRCode    string `json:"qrCode"` // base64 или SVG
-	QRString  string `json:"qrString"` // строка для генерации QR
+	QRCode    string `json:"qrCode"`
+	QRString  string `json:"qrString"`
 	PaymentID string `json:"paymentId"`
 	ErrorMsg  string `json:"errorMsg,omitempty"`
+	Success   bool   `json:"success"`
 }
 
 // StatusRequest — запрос статуса платежа.
@@ -49,12 +49,12 @@ type StatusRequest struct {
 
 // StatusResponse — ответ со статусом платежа.
 type StatusResponse struct {
-	Success   bool   `json:"success"`
-	Status    string `json:"status"` // pending, paid, expired, cancelled
-	PaymentID string `json:"paymentId"`
-	Amount    float64 `json:"amount"`
 	PaidAt    *time.Time `json:"paidAt,omitempty"`
-	ErrorMsg  string `json:"errorMsg,omitempty"`
+	Status    string     `json:"status"`
+	PaymentID string     `json:"paymentId"`
+	ErrorMsg  string     `json:"errorMsg,omitempty"`
+	Amount    float64    `json:"amount"`
+	Success   bool       `json:"success"`
 }
 
 // NewSBPClient создаёт клиент СБП.
@@ -99,7 +99,11 @@ func (c *SBPClient) GenerateQR(amount float64, purpose string) (*QRResponse, err
 	if err != nil {
 		return nil, fmt.Errorf("failed to send request: %w", err)
 	}
-	defer func() { _ = resp.Body.Close() }()
+	defer func() {
+		if closeErr := resp.Body.Close(); closeErr != nil {
+			c.logger.Warn("failed to close response body", zap.Error(closeErr))
+		}
+	}()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -142,7 +146,11 @@ func (c *SBPClient) GetStatus(paymentID string) (*StatusResponse, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to send request: %w", err)
 	}
-	defer func() { _ = resp.Body.Close() }()
+	defer func() {
+		if closeErr := resp.Body.Close(); closeErr != nil {
+			c.logger.Warn("failed to close response body", zap.Error(closeErr))
+		}
+	}()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {

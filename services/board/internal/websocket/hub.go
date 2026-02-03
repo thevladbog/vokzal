@@ -12,12 +12,12 @@ import (
 
 // Hub управляет WebSocket-соединениями.
 type Hub struct {
+	logger     *zap.Logger
 	clients    map[*Client]bool
 	broadcast  chan []byte
 	register   chan *Client
 	unregister chan *Client
 	mu         sync.RWMutex
-	logger     *zap.Logger
 }
 
 // Client представляет WebSocket-клиента.
@@ -27,14 +27,14 @@ type Client struct {
 	send chan []byte
 }
 
-// Message — структура сообщения для клиентов.
+// Message — структура сообщения для клиентов (поля: 8-байтные, затем 16-байтные, затем time для fieldalignment).
 type Message struct {
+	Timestamp    time.Time              `json:"timestamp"`
+	Data         map[string]interface{} `json:"data,omitempty"`
 	Type         string                 `json:"type"`
 	TripID       string                 `json:"trip_id,omitempty"`
 	Status       string                 `json:"status,omitempty"`
 	DelayMinutes int                    `json:"delay_minutes,omitempty"`
-	Data         map[string]interface{} `json:"data,omitempty"`
-	Timestamp    time.Time              `json:"timestamp"`
 }
 
 // NewHub создаёт новый Hub.
@@ -111,13 +111,19 @@ const (
 func (c *Client) readPump() {
 	defer func() {
 		c.hub.unregister <- c
-		_ = c.conn.Close()
+		if err := c.conn.Close(); err != nil {
+			c.hub.logger.Warn("failed to close conn in readPump", zap.Error(err))
+		}
 	}()
 
 	c.conn.SetReadLimit(maxMessageSize)
-	_ = c.conn.SetReadDeadline(time.Now().Add(pongWait))
+	if err := c.conn.SetReadDeadline(time.Now().Add(pongWait)); err != nil {
+		c.hub.logger.Warn("SetReadDeadline", zap.Error(err))
+	}
 	c.conn.SetPongHandler(func(string) error {
-		_ = c.conn.SetReadDeadline(time.Now().Add(pongWait))
+		if err := c.conn.SetReadDeadline(time.Now().Add(pongWait)); err != nil {
+			c.hub.logger.Warn("SetReadDeadline in pong", zap.Error(err))
+		}
 		return nil
 	})
 
@@ -134,15 +140,21 @@ func (c *Client) writePump() {
 	ticker := time.NewTicker(pingPeriod)
 	defer func() {
 		ticker.Stop()
-		_ = c.conn.Close()
+		if err := c.conn.Close(); err != nil {
+			c.hub.logger.Warn("failed to close conn in writePump", zap.Error(err))
+		}
 	}()
 
 	for {
 		select {
 		case message, ok := <-c.send:
-			_ = c.conn.SetWriteDeadline(time.Now().Add(writeWait))
+			if err := c.conn.SetWriteDeadline(time.Now().Add(writeWait)); err != nil {
+				c.hub.logger.Warn("SetWriteDeadline", zap.Error(err))
+			}
 			if !ok {
-				_ = c.conn.WriteMessage(websocket.CloseMessage, []byte{})
+				if err := c.conn.WriteMessage(websocket.CloseMessage, []byte{}); err != nil {
+					c.hub.logger.Warn("WriteMessage close", zap.Error(err))
+				}
 				return
 			}
 
@@ -150,14 +162,18 @@ func (c *Client) writePump() {
 			if err != nil {
 				return
 			}
-			_, _ = w.Write(message)
+			if _, err := w.Write(message); err != nil {
+				c.hub.logger.Warn("Write", zap.Error(err))
+			}
 
 			if err := w.Close(); err != nil {
 				return
 			}
 
 		case <-ticker.C:
-			_ = c.conn.SetWriteDeadline(time.Now().Add(writeWait))
+			if err := c.conn.SetWriteDeadline(time.Now().Add(writeWait)); err != nil {
+				c.hub.logger.Warn("SetWriteDeadline ping", zap.Error(err))
+			}
 			if err := c.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
 				return
 			}

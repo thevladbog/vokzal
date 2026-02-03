@@ -31,9 +31,9 @@ type TicketData struct {
 	Time         string
 	Platform     string
 	Seat         string
-	Price        float64
 	QRCode       string
 	BarCode      string
+	Price        float64
 }
 
 // GenerateTicket генерирует билет в PDF.
@@ -102,17 +102,17 @@ func (g *Generator) GenerateTicket(data *TicketData) ([]byte, error) {
 
 // PD2Data — данные для ПД-2 (проездной документ).
 type PD2Data struct {
-	Number        string
-	Series        string
-	PassengerFIO  string
-	PassengerDoc  string
-	RouteFrom     string
-	RouteTo       string
-	Date          string
-	Price         float64
-	IssueDate     string
-	IssuerName    string
-	BusNumber     string
+	Number       string
+	Series       string
+	PassengerFIO string
+	PassengerDoc string
+	RouteFrom    string
+	RouteTo      string
+	Date         string
+	IssueDate    string
+	IssuerName   string
+	BusNumber    string
+	Price        float64
 }
 
 // GeneratePD2 генерирует форму ПД-2.

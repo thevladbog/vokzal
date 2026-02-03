@@ -12,12 +12,12 @@ import (
 //
 //nolint:revive // Имя сохраняем для ясности при использовании из других пакетов (email.Client).
 type EmailClient struct {
+	logger   *zap.Logger
 	smtpHost string
-	smtpPort int
 	username string
 	password string
 	from     string
-	logger   *zap.Logger
+	smtpPort int
 }
 
 // NewEmailClient создаёт клиент для отправки email.

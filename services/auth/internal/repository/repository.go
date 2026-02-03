@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/vokzal-tech/auth-service/internal/models"
+
 	"gorm.io/gorm"
 )
 
@@ -69,9 +70,10 @@ func (r *userRepository) Create(ctx context.Context, user *models.User) error {
 	return nil
 }
 
-func (r *userRepository) FindByID(ctx context.Context, id string) (*models.User, error) {
+// findUserBy находит пользователя по полю и значению (устраняет dupl между FindByID и FindByUsername).
+func (r *userRepository) findUserBy(ctx context.Context, field, value string) (*models.User, error) {
 	var user models.User
-	result := r.db.WithContext(ctx).First(&user, "id = ?", id)
+	result := r.db.WithContext(ctx).First(&user, field+" = ?", value)
 	if result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 			return nil, ErrUserNotFound
@@ -81,16 +83,12 @@ func (r *userRepository) FindByID(ctx context.Context, id string) (*models.User,
 	return &user, nil
 }
 
+func (r *userRepository) FindByID(ctx context.Context, id string) (*models.User, error) {
+	return r.findUserBy(ctx, "id", id)
+}
+
 func (r *userRepository) FindByUsername(ctx context.Context, username string) (*models.User, error) {
-	var user models.User
-	result := r.db.WithContext(ctx).First(&user, "username = ?", username)
-	if result.Error != nil {
-		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-			return nil, ErrUserNotFound
-		}
-		return nil, fmt.Errorf("failed to find user: %w", result.Error)
-	}
-	return &user, nil
+	return r.findUserBy(ctx, "username", username)
 }
 
 func (r *userRepository) Update(ctx context.Context, user *models.User) error {
@@ -133,12 +131,12 @@ func (r *sessionRepository) FindByToken(ctx context.Context, tokenHash string) (
 		}
 		return nil, fmt.Errorf("failed to find session: %w", result.Error)
 	}
-	
+
 	// Проверить истечение срока
 	if session.ExpiresAt.Before(time.Now()) {
 		return nil, ErrSessionNotFound
 	}
-	
+
 	return &session, nil
 }
 

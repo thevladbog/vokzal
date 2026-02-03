@@ -5,8 +5,9 @@ import (
 	"context"
 	"errors"
 
-	"github.com/vokzal-tech/document-service/internal/models"
 	"gorm.io/gorm"
+
+	"github.com/vokzal-tech/document-service/internal/models"
 )
 
 var (
@@ -23,7 +24,7 @@ type DocumentRepository interface {
 	FindTemplateByName(ctx context.Context, name string) (*models.DocumentTemplate, error)
 	ListTemplates(ctx context.Context) ([]*models.DocumentTemplate, error)
 	UpdateTemplate(ctx context.Context, template *models.DocumentTemplate) error
-	
+
 	CreateDocument(ctx context.Context, doc *models.GeneratedDocument) error
 	FindDocumentByID(ctx context.Context, id string) (*models.GeneratedDocument, error)
 	FindDocumentsByEntity(ctx context.Context, entityID string) ([]*models.GeneratedDocument, error)
@@ -43,26 +44,24 @@ func (r *documentRepository) CreateTemplate(ctx context.Context, template *model
 	return r.db.WithContext(ctx).Create(template).Error
 }
 
-func (r *documentRepository) FindTemplateByID(ctx context.Context, id string) (*models.DocumentTemplate, error) {
-	var template models.DocumentTemplate
-	if err := r.db.WithContext(ctx).First(&template, "id = ?", id).Error; err != nil {
+// findFirstBy выполняет First по условию и маппит gorm.ErrRecordNotFound в notFoundErr (package-level generic).
+func findFirstBy[T any](db *gorm.DB, ctx context.Context, query string, arg any, notFoundErr error) (*T, error) {
+	var t T
+	if err := db.WithContext(ctx).First(&t, query, arg).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, ErrTemplateNotFound
+			return nil, notFoundErr
 		}
 		return nil, err
 	}
-	return &template, nil
+	return &t, nil
+}
+
+func (r *documentRepository) FindTemplateByID(ctx context.Context, id string) (*models.DocumentTemplate, error) {
+	return findFirstBy[models.DocumentTemplate](r.db, ctx, "id = ?", id, ErrTemplateNotFound)
 }
 
 func (r *documentRepository) FindTemplateByName(ctx context.Context, name string) (*models.DocumentTemplate, error) {
-	var template models.DocumentTemplate
-	if err := r.db.WithContext(ctx).First(&template, "name = ?", name).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, ErrTemplateNotFound
-		}
-		return nil, err
-	}
-	return &template, nil
+	return findFirstBy[models.DocumentTemplate](r.db, ctx, "name = ?", name, ErrTemplateNotFound)
 }
 
 func (r *documentRepository) ListTemplates(ctx context.Context) ([]*models.DocumentTemplate, error) {
@@ -82,14 +81,7 @@ func (r *documentRepository) CreateDocument(ctx context.Context, doc *models.Gen
 }
 
 func (r *documentRepository) FindDocumentByID(ctx context.Context, id string) (*models.GeneratedDocument, error) {
-	var doc models.GeneratedDocument
-	if err := r.db.WithContext(ctx).First(&doc, "id = ?", id).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, ErrDocumentNotFound
-		}
-		return nil, err
-	}
-	return &doc, nil
+	return findFirstBy[models.GeneratedDocument](r.db, ctx, "id = ?", id, ErrDocumentNotFound)
 }
 
 func (r *documentRepository) FindDocumentsByEntity(ctx context.Context, entityID string) ([]*models.GeneratedDocument, error) {

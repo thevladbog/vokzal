@@ -8,21 +8,21 @@ import (
 	"github.com/spf13/viper"
 )
 
-// Config — корневая конфигурация сервиса.
+// Config — корневая конфигурация сервиса (поля по убыванию размера для fieldalignment).
 type Config struct {
-	Server    ServerConfig    `mapstructure:"server"`
-	Database  DatabaseConfig  `mapstructure:"database"`
-	Redis     RedisConfig     `mapstructure:"redis"`
 	NATS      NATSConfig      `mapstructure:"nats"`
+	Server    ServerConfig    `mapstructure:"server"`
 	Logger    LoggerConfig    `mapstructure:"logger"`
+	Database  DatabaseConfig  `mapstructure:"database"`
 	WebSocket WebSocketConfig `mapstructure:"websocket"`
+	Redis     RedisConfig     `mapstructure:"redis"`
 }
 
 // WebSocketConfig — настройки WebSocket (в т.ч. проверка Origin).
 type WebSocketConfig struct {
 	// AllowedOrigins — разрешённые origins через запятую (например, "http://localhost:3000,https://board.example.com").
-	AllowedOrigins      string `mapstructure:"allowed_origins"`
-	AllowAllOriginsInDev bool  `mapstructure:"allow_all_origins_in_dev"`
+	AllowedOrigins       string `mapstructure:"allowed_origins"`
+	AllowAllOriginsInDev bool   `mapstructure:"allow_all_origins_in_dev"`
 }
 
 // ServerConfig — настройки HTTP-сервера.
@@ -34,18 +34,18 @@ type ServerConfig struct {
 // DatabaseConfig — настройки подключения к PostgreSQL.
 type DatabaseConfig struct {
 	Host     string `mapstructure:"host"`
-	Port     int    `mapstructure:"port"`
 	User     string `mapstructure:"user"`
 	Password string `mapstructure:"password"`
 	DBName   string `mapstructure:"dbname"`
 	SSLMode  string `mapstructure:"sslmode"`
+	Port     int    `mapstructure:"port"`
 }
 
 // RedisConfig — настройки Redis.
 type RedisConfig struct {
 	Host     string `mapstructure:"host"`
-	Port     int    `mapstructure:"port"`
 	Password string `mapstructure:"password"`
+	Port     int    `mapstructure:"port"`
 	DB       int    `mapstructure:"db"`
 }
 

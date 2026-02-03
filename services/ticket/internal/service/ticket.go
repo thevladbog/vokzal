@@ -8,10 +8,11 @@ import (
 	"time"
 
 	"github.com/nats-io/nats.go"
+	"go.uber.org/zap"
+
 	"github.com/vokzal-tech/ticket-service/internal/config"
 	"github.com/vokzal-tech/ticket-service/internal/models"
 	"github.com/vokzal-tech/ticket-service/internal/repository"
-	"go.uber.org/zap"
 )
 
 // TicketService — интерфейс сервиса билетов (продажа, возврат, посадка).
@@ -41,14 +42,14 @@ type ticketService struct {
 
 // SellTicketRequest — запрос на продажу билета.
 type SellTicketRequest struct {
-	TripID        string  `json:"trip_id" binding:"required"`
 	SeatID        *string `json:"seat_id"`
 	PassengerName *string `json:"passenger_name"`
 	PassengerDoc  *string `json:"passenger_doc"`
 	Phone         *string `json:"phone"`
 	Email         *string `json:"email"`
-	Price         float64 `json:"price" binding:"required,gt=0"`
+	TripID        string  `json:"trip_id" binding:"required"`
 	PaymentMethod string  `json:"payment_method" binding:"required"`
+	Price         float64 `json:"price" binding:"required,gt=0"`
 }
 
 // RefundResult — результат возврата билета.
@@ -67,11 +68,11 @@ type MarkBoardingRequest struct {
 
 // BoardingStatus — статус посадки по рейсу.
 type BoardingStatus struct {
-	TripID         string    `json:"trip_id"`
-	BoardingActive bool      `json:"boarding_active"`
 	StartedAt      *time.Time `json:"started_at,omitempty"`
-	TotalTickets   int       `json:"total_tickets"`
-	BoardedCount   int       `json:"boarded_count"`
+	TripID         string     `json:"trip_id"`
+	TotalTickets   int        `json:"total_tickets"`
+	BoardedCount   int        `json:"boarded_count"`
+	BoardingActive bool       `json:"boarding_active"`
 }
 
 // NewTicketService создаёт сервис билетов.
@@ -145,7 +146,7 @@ func (s *ticketService) ListTicketsByTrip(ctx context.Context, tripID string) ([
 }
 
 // RefundTicket возвращает билет.
-func (s *ticketService) RefundTicket(ctx context.Context, ticketID string, userID string) (*RefundResult, error) {
+func (s *ticketService) RefundTicket(ctx context.Context, ticketID, userID string) (*RefundResult, error) {
 	// Получить билет
 	ticket, err := s.ticketRepo.FindByID(ctx, ticketID)
 	if err != nil {
@@ -166,8 +167,10 @@ func (s *ticketService) RefundTicket(ctx context.Context, ticketID string, userI
 		return nil, repository.ErrBoardingAlreadyStarted
 	}
 
-	// Время отправления рейса для расчёта штрафа
-	departureTime, _ := s.ticketRepo.GetTripDepartureTime(ctx, ticket.TripID)
+	departureTime, err := s.ticketRepo.GetTripDepartureTime(ctx, ticket.TripID)
+	if err != nil {
+		s.logger.Warn("GetTripDepartureTime failed, using nil for penalty", zap.Error(err), zap.String("trip_id", ticket.TripID))
+	}
 	penalty := s.calculateRefundPenalty(ticket.Price, departureTime)
 
 	// Обновить билет
@@ -224,7 +227,7 @@ func (s *ticketService) calculateRefundPenalty(price float64, departureTime *tim
 }
 
 // StartBoarding начинает посадку (блокировка возвратов).
-func (s *ticketService) StartBoarding(ctx context.Context, tripID string, userID string) error {
+func (s *ticketService) StartBoarding(ctx context.Context, tripID, userID string) error {
 	// Проверить, не началась ли уже посадка
 	existing, err := s.boardingRepo.FindEventByTripID(ctx, tripID)
 	if err != nil {
