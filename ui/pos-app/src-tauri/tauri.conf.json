@@ -1,0 +1,78 @@
+{
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "npm run build",
+    "devPath": "http://localhost:1420",
+    "distDir": "../dist",
+    "withGlobalTauri": false
+  },
+  "package": {
+    "productName": "Vokzal.TECH POS",
+    "version": "1.0.0"
+  },
+  "tauri": {
+    "allowlist": {
+      "all": false,
+      "shell": {
+        "all": false,
+        "open": true
+      },
+      "window": {
+        "all": false,
+        "close": true,
+        "hide": true,
+        "show": true,
+        "maximize": true,
+        "minimize": true,
+        "unmaximize": true,
+        "unminimize": true,
+        "startDragging": true
+      },
+      "dialog": {
+        "all": false,
+        "ask": true,
+        "confirm": true,
+        "message": true,
+        "open": true,
+        "save": true
+      }
+    },
+    "bundle": {
+      "active": true,
+      "category": "Business",
+      "copyright": "© 2025 Вокзал.ТЕХ",
+      "icon": [
+        "icons/32x32.png",
+        "icons/128x128.png",
+        "icons/128x128@2x.png",
+        "icons/icon.icns",
+        "icons/icon.ico"
+      ],
+      "identifier": "tech.vokzal.pos",
+      "longDescription": "POS-система для продажи билетов на автобусных станциях",
+      "shortDescription": "POS система Вокзал.ТЕХ",
+      "targets": "all",
+      "resources": [],
+      "externalBin": [],
+      "windows": {
+        "certificateThumbprint": null,
+        "digestAlgorithm": "sha256",
+        "timestampUrl": ""
+      }
+    },
+    "security": {
+      "csp": null
+    },
+    "windows": [
+      {
+        "fullscreen": false,
+        "resizable": true,
+        "title": "Вокзал.ТЕХ POS",
+        "width": 1024,
+        "height": 768,
+        "minWidth": 800,
+        "minHeight": 600
+      }
+    ]
+  }
+}

@@ -1,0 +1,27 @@
+server:
+  port: "8084"
+  mode: "debug"
+
+database:
+  host: "localhost"
+  port: 5432
+  user: "admin"
+  password: "vokzal_secret_2026"
+  dbname: "vokzal"
+  sslmode: "disable"
+
+nats:
+  url: "nats://localhost:4222"
+  user: "vokzal"
+  password: "nats_secret_2026"
+
+logger:
+  level: "debug"
+
+atol:
+  company_inn: "1234567890"
+  company_name: "ООО «Вокзал.ТЕХ»"
+  tax_system: "osn"  # osn, usn_income, usn_income_outcome, esn, patent
+
+local_agent:
+  url: "http://localhost:8081"

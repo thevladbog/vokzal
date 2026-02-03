@@ -1,0 +1,188 @@
+---
+description: Стандарты разработки Go микросервисов
+globs: services/**/*.go
+alwaysApply: false
+---
+
+# Go Микросервисы — Стандарты кода
+
+## Структура сервиса
+
+```
+service-name/
+├── cmd/
+│   └── main.go           # Точка входа
+├── internal/
+│   ├── config/           # Viper конфигурация
+│   ├── handlers/         # HTTP handlers (Gin)
+│   ├── models/           # GORM модели
+│   ├── repository/       # Слой БД
+│   ├── service/          # Бизнес-логика
+│   └── middleware/       # JWT, логирование
+├── pkg/                  # Экспортируемые пакеты
+├── migrations/           # SQL миграции
+├── Dockerfile
+├── go.mod
+└── README.md
+```
+
+## Обработка ошибок
+
+```go
+// ❌ Плохо
+func GetUser(id string) (*User, error) {
+    user, err := db.Find(id)
+    if err != nil {
+        return nil, err  // Потеря контекста
+    }
+    return user, nil
+}
+
+// ✅ Хорошо
+func GetUser(ctx context.Context, id string) (*User, error) {
+    user, err := db.WithContext(ctx).Find(id)
+    if err != nil {
+        return nil, fmt.Errorf("failed to get user %s: %w", id, err)
+    }
+    return user, nil
+}
+```
+
+## HTTP Handlers (Gin)
+
+```go
+// ✅ Правильный формат handler'а
+func (h *Handler) CreateTicket(c *gin.Context) {
+    var req CreateTicketRequest
+    
+    if err := c.ShouldBindJSON(&req); err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{
+            "error": "Invalid request",
+            "details": err.Error(),
+        })
+        return
+    }
+    
+    ticket, err := h.service.CreateTicket(c.Request.Context(), req)
+    if err != nil {
+        h.logger.Error("Failed to create ticket", zap.Error(err))
+        c.JSON(http.StatusInternalServerError, gin.H{
+            "error": "Failed to create ticket",
+        })
+        return
+    }
+    
+    c.JSON(http.StatusCreated, ticket)
+}
+```
+
+## Логирование (Zap)
+
+```go
+// Всегда используй структурированное логирование
+logger.Info("Ticket sold",
+    zap.String("ticket_id", ticket.ID),
+    zap.String("user_id", userID),
+    zap.Float64("amount", ticket.Price),
+    zap.String("station_id", stationID))
+
+logger.Error("Database error",
+    zap.Error(err),
+    zap.String("operation", "ticket_sale"),
+    zap.String("ticket_id", ticketID))
+```
+
+## NATS Events
+
+```go
+// Публикация события
+type TicketSoldEvent struct {
+    TicketID    string    `json:"ticket_id"`
+    TripID      string    `json:"trip_id"`
+    Amount      float64   `json:"amount"`
+    PaymentType string    `json:"payment_type"`
+    SoldAt      time.Time `json:"sold_at"`
+}
+
+func (s *Service) PublishTicketSold(ticket *Ticket) error {
+    event := TicketSoldEvent{
+        TicketID:    ticket.ID,
+        TripID:      ticket.TripID,
+        Amount:      ticket.Price,
+        PaymentType: ticket.PaymentType,
+        SoldAt:      ticket.SoldAt,
+    }
+    
+    data, err := json.Marshal(event)
+    if err != nil {
+        return fmt.Errorf("failed to marshal event: %w", err)
+    }
+    
+    return s.nats.Publish("ticket.sold", data)
+}
+```
+
+## Конфигурация (Viper)
+
+```go
+// config/config.go
+type Config struct {
+    Server   ServerConfig   `mapstructure:"server"`
+    Database DatabaseConfig `mapstructure:"database"`
+    JWT      JWTConfig      `mapstructure:"jwt"`
+    NATS     NATSConfig     `mapstructure:"nats"`
+}
+
+func Load() (*Config, error) {
+    viper.SetConfigName("config")
+    viper.SetConfigType("yaml")
+    viper.AddConfigPath(".")
+    viper.AddConfigPath("/etc/vokzal/")
+    
+    viper.AutomaticEnv()
+    viper.SetEnvPrefix("VOKZAL")
+    
+    if err := viper.ReadInConfig(); err != nil {
+        return nil, fmt.Errorf("failed to read config: %w", err)
+    }
+    
+    var config Config
+    if err := viper.Unmarshal(&config); err != nil {
+        return nil, fmt.Errorf("failed to unmarshal config: %w", err)
+    }
+    
+    return &config, nil
+}
+```
+
+## Тестирование (Testify)
+
+```go
+func TestSellTicket(t *testing.T) {
+    // Arrange
+    mockRepo := new(MockTicketRepository)
+    mockNATS := new(MockNATSClient)
+    service := NewTicketService(mockRepo, mockNATS, logger)
+    
+    req := SellTicketRequest{
+        TripID:    "trip-123",
+        SeatID:    "seat-5",
+        Price:     1500.00,
+        PaymentMethod: "cash",
+    }
+    
+    mockRepo.On("Create", mock.Anything, mock.Anything).
+        Return(&Ticket{ID: "ticket-123"}, nil)
+    mockNATS.On("Publish", "ticket.sold", mock.Anything).
+        Return(nil)
+    
+    // Act
+    ticket, err := service.SellTicket(context.Background(), req)
+    
+    // Assert
+    assert.NoError(t, err)
+    assert.NotEmpty(t, ticket.ID)
+    mockRepo.AssertExpectations(t)
+    mockNATS.AssertExpectations(t)
+}
+```

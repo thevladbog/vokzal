@@ -1,0 +1,137 @@
+[http]
+  [http.routers]
+    # Auth Service
+    [http.routers.auth]
+      rule = "Host(`api.vokzal.tech`) && PathPrefix(`/v1/auth`)"
+      service = "auth-service"
+      middlewares = ["cors-headers"]
+      entryPoints = ["web", "websecure"]
+    
+    # Schedule Service
+    [http.routers.schedule]
+      rule = "Host(`api.vokzal.tech`) && PathPrefix(`/v1/schedule`, `/v1/routes`, `/v1/trips`)"
+      service = "schedule-service"
+      middlewares = ["cors-headers"]
+      entryPoints = ["web", "websecure"]
+    
+    # Ticket Service
+    [http.routers.ticket]
+      rule = "Host(`api.vokzal.tech`) && PathPrefix(`/v1/tickets`, `/v1/boarding`)"
+      service = "ticket-service"
+      middlewares = ["cors-headers"]
+      entryPoints = ["web", "websecure"]
+    
+    # Fiscal Service
+    [http.routers.fiscal]
+      rule = "Host(`api.vokzal.tech`) && PathPrefix(`/v1/receipts`, `/v1/z-reports`, `/v1/kkt`)"
+      service = "fiscal-service"
+      middlewares = ["cors-headers"]
+      entryPoints = ["web", "websecure"]
+    
+    # Payment Service
+    [http.routers.payment]
+      rule = "Host(`api.vokzal.tech`) && PathPrefix(`/v1/payment`)"
+      service = "payment-service"
+      middlewares = ["cors-headers"]
+      entryPoints = ["web", "websecure"]
+    
+    # Board Service
+    [http.routers.board]
+      rule = "Host(`api.vokzal.tech`) && PathPrefix(`/v1/board`)"
+      service = "board-service"
+      middlewares = ["cors-headers"]
+      entryPoints = ["web", "websecure"]
+    
+    # Notify Service
+    [http.routers.notify]
+      rule = "Host(`api.vokzal.tech`) && PathPrefix(`/v1/notify`)"
+      service = "notify-service"
+      middlewares = ["cors-headers"]
+      entryPoints = ["web", "websecure"]
+    
+    # Audit Service
+    [http.routers.audit]
+      rule = "Host(`api.vokzal.tech`) && PathPrefix(`/v1/audit`)"
+      service = "audit-service"
+      middlewares = ["cors-headers"]
+      entryPoints = ["web", "websecure"]
+    
+    # Document Service
+    [http.routers.document]
+      rule = "Host(`api.vokzal.tech`) && PathPrefix(`/v1/document`)"
+      service = "document-service"
+      middlewares = ["cors-headers"]
+      entryPoints = ["web", "websecure"]
+    
+    # Geo Service
+    [http.routers.geo]
+      rule = "Host(`api.vokzal.tech`) && PathPrefix(`/v1/geo`)"
+      service = "geo-service"
+      middlewares = ["cors-headers"]
+      entryPoints = ["web", "websecure"]
+
+  [http.services]
+    # Auth Service (port 8080)
+    [http.services.auth-service.loadBalancer]
+      [[http.services.auth-service.loadBalancer.servers]]
+        url = "http://auth:8080"
+    
+    # Schedule Service (port 8081)
+    [http.services.schedule-service.loadBalancer]
+      [[http.services.schedule-service.loadBalancer.servers]]
+        url = "http://schedule:8081"
+    
+    # Ticket Service (port 8082)
+    [http.services.ticket-service.loadBalancer]
+      [[http.services.ticket-service.loadBalancer.servers]]
+        url = "http://ticket:8082"
+    
+    # Fiscal Service (port 8083)
+    [http.services.fiscal-service.loadBalancer]
+      [[http.services.fiscal-service.loadBalancer.servers]]
+        url = "http://fiscal:8083"
+    
+    # Payment Service (port 8084)
+    [http.services.payment-service.loadBalancer]
+      [[http.services.payment-service.loadBalancer.servers]]
+        url = "http://payment:8084"
+    
+    # Board Service (port 8086)
+    [http.services.board-service.loadBalancer]
+      [[http.services.board-service.loadBalancer.servers]]
+        url = "http://board:8086"
+    
+    # Notify Service (port 8087)
+    [http.services.notify-service.loadBalancer]
+      [[http.services.notify-service.loadBalancer.servers]]
+        url = "http://notify:8087"
+    
+    # Audit Service (port 8088)
+    [http.services.audit-service.loadBalancer]
+      [[http.services.audit-service.loadBalancer.servers]]
+        url = "http://audit:8088"
+    
+    # Document Service (port 8089)
+    [http.services.document-service.loadBalancer]
+      [[http.services.document-service.loadBalancer.servers]]
+        url = "http://document:8089"
+    
+    # Geo Service (port 8090)
+    [http.services.geo-service.loadBalancer]
+      [[http.services.geo-service.loadBalancer.servers]]
+        url = "http://geo:8090"
+
+  [http.middlewares]
+    # CORS headers
+    [http.middlewares.cors-headers.headers]
+      accessControlAllowMethods = ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
+      accessControlAllowOriginList = ["http://localhost:5173", "http://localhost:3000", "https://vokzal.tech", "https://*.vokzal.tech"]
+      accessControlAllowHeaders = ["Authorization", "Content-Type", "X-Requested-With"]
+      accessControlAllowCredentials = true
+      accessControlMaxAge = 3600
+    
+    # Rate limiting
+    [http.middlewares.rate-limit.rateLimit]
+      average = 100
+      period = "1m"
+      burst = 50

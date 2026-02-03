@@ -1,0 +1,29 @@
+server:
+  port: "8085"
+  mode: "debug"
+
+database:
+  host: "localhost"
+  port: 5432
+  user: "admin"
+  password: "vokzal_secret_2026"
+  dbname: "vokzal"
+  sslmode: "disable"
+
+nats:
+  url: "nats://localhost:4222"
+  user: "vokzal"
+  password: "nats_secret_2026"
+
+logger:
+  level: "debug"
+
+tinkoff:
+  terminal_key: "YOUR_TERMINAL_KEY"
+  password: "YOUR_PASSWORD"
+  api_url: "https://securepay.tinkoff.ru/v2"
+
+sbp:
+  merchant_id: "YOUR_MERCHANT_ID"
+  api_key: "YOUR_API_KEY"
+  api_url: "https://api.sbp.nspk.ru"

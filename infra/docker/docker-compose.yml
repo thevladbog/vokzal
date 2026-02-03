@@ -1,0 +1,161 @@
+version: '3.8'
+
+services:
+  # PostgreSQL - основная БД
+  postgres:
+    image: postgres:16-alpine
+    container_name: vokzal-postgres
+    environment:
+      POSTGRES_DB: vokzal
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: vokzal_secret_2026
+      POSTGRES_INITDB_ARGS: "-E UTF8 --locale=ru_RU.UTF-8"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./init-scripts:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d vokzal"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - vokzal-network
+
+  # Redis - кэширование и сессии
+  redis:
+    image: redis:7.2-alpine
+    container_name: vokzal-redis
+    command: redis-server --requirepass vokzal_redis_2026
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - vokzal-network
+
+  # NATS - очереди событий
+  nats:
+    image: nats:2.10-alpine
+    container_name: vokzal-nats
+    command: "--http_port 8222 --user vokzal --pass nats_secret_2026"
+    ports:
+      - "4222:4222"  # Client port
+      - "8222:8222"  # HTTP monitoring
+      - "6222:6222"  # Cluster port
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "http://localhost:8222/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - vokzal-network
+
+  # MinIO - хранение документов
+  minio:
+    image: minio/minio:latest
+    container_name: vokzal-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: vokzal
+      MINIO_ROOT_PASSWORD: minio_secret_2026
+    ports:
+      - "9000:9000"  # API
+      - "9001:9001"  # Console
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - vokzal-network
+
+  # Traefik - API Gateway
+  traefik:
+    image: traefik:v3.0
+    container_name: vokzal-traefik
+    command:
+      - "--configFile=/etc/traefik/traefik.toml"
+    ports:
+      - "80:80"      # HTTP
+      - "443:443"    # HTTPS
+      - "8080:8080"  # Dashboard
+      - "8082:8082"  # Metrics
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik:/etc/traefik
+      - traefik-certs:/letsencrypt
+      - traefik-logs:/var/log/traefik
+    networks:
+      - vokzal-network
+    restart: unless-stopped
+
+  # Prometheus - метрики
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: vokzal-prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus:/etc/prometheus
+      - prometheus-data:/prometheus
+    networks:
+      - vokzal-network
+
+  # Grafana - визуализация метрик
+  grafana:
+    image: grafana/grafana:latest
+    container_name: vokzal-grafana
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: grafana_secret_2026
+      GF_SERVER_ROOT_URL: http://localhost:3000
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
+    depends_on:
+      - prometheus
+    networks:
+      - vokzal-network
+
+  # Loki - логирование
+  loki:
+    image: grafana/loki:latest
+    container_name: vokzal-loki
+    ports:
+      - "3100:3100"
+    command: -config.file=/etc/loki/local-config.yaml
+    volumes:
+      - ./loki:/etc/loki
+      - loki-data:/loki
+    networks:
+      - vokzal-network
+
+volumes:
+  postgres-data:
+  redis-data:
+  minio-data:
+  traefik-certs:
+  traefik-logs:
+  prometheus-data:
+  grafana-data:
+  loki-data:
+
+networks:
+  vokzal-network:
+    driver: bridge

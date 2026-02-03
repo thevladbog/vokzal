@@ -1,0 +1,138 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        type: choice
+        options:
+          - staging
+          - production
+
+jobs:
+  deploy-services:
+    name: Deploy Services
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment || 'production' }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'latest'
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v3
+        with:
+          version: 'latest'
+
+      - name: Configure kubectl
+        run: |
+          echo "${{ secrets.KUBECONFIG }}" | base64 -d > kubeconfig
+          export KUBECONFIG=kubeconfig
+
+      - name: Deploy to Kubernetes
+        run: |
+          kubectl apply -f infra/k8s/namespace.yaml
+          kubectl apply -f infra/k8s/configmaps/
+          kubectl apply -f infra/k8s/secrets/
+          kubectl apply -f infra/k8s/services/
+          kubectl apply -f infra/k8s/deployments/
+
+      - name: Wait for rollout
+        run: |
+          kubectl rollout status deployment/auth-service -n vokzal --timeout=5m
+          kubectl rollout status deployment/schedule-service -n vokzal --timeout=5m
+          kubectl rollout status deployment/ticket-service -n vokzal --timeout=5m
+          kubectl rollout status deployment/payment-service -n vokzal --timeout=5m
+
+      - name: Run database migrations
+        run: |
+          kubectl run migration-job \
+            --image=migrate/migrate:latest \
+            --restart=Never \
+            --rm -i \
+            --namespace=vokzal \
+            -- -path=/migrations -database "${{ secrets.DATABASE_URL }}" up
+
+      - name: Verify deployment
+        run: |
+          kubectl get pods -n vokzal
+          kubectl get services -n vokzal
+
+  deploy-ui:
+    name: Deploy UI Applications
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment || 'production' }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Build and deploy Admin Panel
+        working-directory: ui/admin-panel
+        run: |
+          npm ci
+          npm run build
+          aws s3 sync dist/ s3://${{ secrets.ADMIN_PANEL_BUCKET }}/ --delete
+          aws cloudfront create-invalidation --distribution-id ${{ secrets.ADMIN_PANEL_CF_ID }} --paths "/*"
+
+      - name: Build and deploy Passenger Portal
+        working-directory: ui/passenger-portal
+        run: |
+          npm ci
+          npm run build
+          aws s3 sync dist/ s3://${{ secrets.PASSENGER_PORTAL_BUCKET }}/ --delete
+          aws cloudfront create-invalidation --distribution-id ${{ secrets.PASSENGER_PORTAL_CF_ID }} --paths "/*"
+
+      - name: Build and deploy Board Display
+        working-directory: ui/board-display
+        run: |
+          npm ci
+          npm run build
+          aws s3 sync dist/ s3://${{ secrets.BOARD_DISPLAY_BUCKET }}/ --delete
+          aws cloudfront create-invalidation --distribution-id ${{ secrets.BOARD_DISPLAY_CF_ID }} --paths "/*"
+
+  notify-deployment:
+    name: Notify Deployment
+    needs: [deploy-services, deploy-ui]
+    runs-on: ubuntu-latest
+    if: always()
+    
+    steps:
+      - name: Send Telegram notification
+        uses: appleboy/telegram-action@master
+        with:
+          to: ${{ secrets.TELEGRAM_CHAT_ID }}
+          token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          message: |
+            🚀 Deployment to ${{ github.event.inputs.environment || 'production' }} completed
+            
+            Repository: ${{ github.repository }}
+            Branch: ${{ github.ref_name }}
+            Commit: ${{ github.sha }}
+            Author: ${{ github.actor }}
+            
+            Services Status: ${{ needs.deploy-services.result }}
+            UI Status: ${{ needs.deploy-ui.result }}

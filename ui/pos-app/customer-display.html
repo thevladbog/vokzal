@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Экран покупателя · Вокзал.ТЕХ</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+      }
+      .container {
+        text-align: center;
+        padding: 40px;
+      }
+      .logo {
+        font-size: 48px;
+        font-weight: bold;
+        margin-bottom: 20px;
+      }
+      .price {
+        font-size: 96px;
+        font-weight: bold;
+        margin: 40px 0;
+      }
+      .route {
+        font-size: 32px;
+        margin-bottom: 16px;
+      }
+      .info {
+        font-size: 24px;
+        opacity: 0.9;
+      }
+      .mascot {
+        font-size: 120px;
+        margin-top: 40px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="logo">Вокзал.ТЕХ</div>
+      <div class="mascot">🚌</div>
+      <div class="route" id="route">-</div>
+      <div class="price" id="price">0 ₽</div>
+      <div class="info" id="info">Добро пожаловать!</div>
+    </div>
+
+    <script>
+      // Слушаем сообщения от основного окна POS
+      window.addEventListener('message', (event) => {
+        const { type, data } = event.data;
+
+        if (type === 'update_display') {
+          document.getElementById('route').textContent = data.route || '-';
+          document.getElementById('price').textContent = data.price ? `${data.price} ₽` : '0 ₽';
+          document.getElementById('info').textContent = data.info || 'Добро пожаловать!';
+        }
+      });
+    </script>
+  </body>
+</html>

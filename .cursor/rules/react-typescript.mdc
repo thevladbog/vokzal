@@ -1,0 +1,220 @@
+---
+description: Стандарты React + TypeScript разработки
+globs: ui/**/*.{ts,tsx}
+alwaysApply: false
+---
+
+# React + TypeScript — Стандарты
+
+## Компоненты
+
+```tsx
+// ✅ Функциональные компоненты с типизацией
+interface TicketCardProps {
+  ticket: Ticket;
+  onReturn?: (ticketId: string) => void;
+}
+
+export const TicketCard: React.FC<TicketCardProps> = ({ ticket, onReturn }) => {
+  const handleReturn = () => {
+    if (onReturn) {
+      onReturn(ticket.id);
+    }
+  };
+
+  return (
+    <div className="ticket-card">
+      <h3>{ticket.route}</h3>
+      <p>Место: {ticket.seat_number}</p>
+      <p>Цена: {ticket.price} ₽</p>
+      {onReturn && (
+        <button onClick={handleReturn}>Вернуть билет</button>
+      )}
+    </div>
+  );
+};
+```
+
+## API запросы (TanStack Query)
+
+```tsx
+// ✅ Custom hook для API запросов
+export const useTickets = (tripId: string) => {
+  return useQuery({
+    queryKey: ['tickets', tripId],
+    queryFn: async () => {
+      const response = await apiClient.get<Ticket[]>(`/tickets?trip_id=${tripId}`);
+      return response.data;
+    },
+    staleTime: 30000, // 30 секунд
+  });
+};
+
+// Использование в компоненте
+const TripTickets: React.FC<{ tripId: string }> = ({ tripId }) => {
+  const { data: tickets, isLoading, error } = useTickets(tripId);
+
+  if (isLoading) return <Spinner />;
+  if (error) return <ErrorMessage error={error} />;
+
+  return (
+    <div>
+      {tickets?.map(ticket => (
+        <TicketCard key={ticket.id} ticket={ticket} />
+      ))}
+    </div>
+  );
+};
+```
+
+## Валидация (Zod)
+
+```tsx
+import { z } from 'zod';
+
+// ✅ Схема валидации
+export const ticketSaleSchema = z.object({
+  tripId: z.string().uuid(),
+  seatId: z.string().uuid().optional(),
+  passengerName: z.string().min(2).max(100).optional(),
+  passport: z.string().regex(/^\d{4}\s?\d{6}$/).optional(),
+  paymentMethod: z.enum(['cash', 'card', 'sbp']),
+});
+
+export type TicketSaleFormData = z.infer<typeof ticketSaleSchema>;
+
+// Использование в форме
+const TicketSaleForm: React.FC = () => {
+  const { register, handleSubmit, formState: { errors } } = useForm<TicketSaleFormData>({
+    resolver: zodResolver(ticketSaleSchema),
+  });
+
+  const onSubmit = (data: TicketSaleFormData) => {
+    // data гарантированно валидна
+    console.log(data);
+  };
+
+  return (
+    <form onSubmit={handleSubmit(onSubmit)}>
+      {/* поля формы */}
+    </form>
+  );
+};
+```
+
+## Локализация (i18next)
+
+```tsx
+// ✅ Использование переводов
+import { useTranslation } from 'react-i18next';
+
+const TicketStatus: React.FC<{ status: string }> = ({ status }) => {
+  const { t } = useTranslation('common');
+  
+  return (
+    <span className={`status-${status}`}>
+      {t(`ticket.status.${status}`)}
+    </span>
+  );
+};
+
+// public/locales/ru/common.json
+{
+  "ticket": {
+    "status": {
+      "active": "Активен",
+      "returned": "Возвращён",
+      "used": "Использован"
+    }
+  }
+}
+```
+
+## Типы (TypeScript)
+
+```tsx
+// ✅ Определение типов для API
+export interface Ticket {
+  id: string;
+  trip_id: string;
+  seat_id?: string;
+  passenger_name?: string;
+  price: number;
+  status: 'active' | 'returned' | 'used';
+  sold_at: string;
+  qr_code: string;
+}
+
+export interface Trip {
+  id: string;
+  route: string;
+  departure_time: string;
+  platform: string;
+  status: 'scheduled' | 'delayed' | 'cancelled' | 'departed' | 'arrived';
+  delay_minutes: number;
+  available_seats: number;
+}
+
+export interface ApiResponse<T> {
+  data: T;
+  error?: string;
+}
+```
+
+## Обработка ошибок
+
+```tsx
+// ✅ Компонент для отображения ошибок
+interface ErrorBoundaryState {
+  hasError: boolean;
+  error?: Error;
+}
+
+export class ErrorBoundary extends React.Component<
+  { children: React.ReactNode },
+  ErrorBoundaryState
+> {
+  state: ErrorBoundaryState = { hasError: false };
+
+  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    console.error('Error caught by boundary:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="error-container">
+          <h2>Что-то пошло не так</h2>
+          <p>Вокзалик уже работает над проблемой!</p>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+```
+
+## Tailwind CSS + Fluent UI
+
+```tsx
+// ✅ Комбинация Tailwind и Fluent UI
+import { Button } from '@fluentui/react-components';
+
+const TicketActions: React.FC = () => {
+  return (
+    <div className="flex gap-4 p-4 bg-gray-100 rounded-lg">
+      <Button appearance="primary" className="flex-1">
+        Продать билет
+      </Button>
+      <Button appearance="secondary" className="flex-1">
+        Возврат
+      </Button>
+    </div>
+  );
+};
+```

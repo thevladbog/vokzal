@@ -1,0 +1,16 @@
+server:
+  port: "8090"
+  mode: "debug"
+
+redis:
+  host: "localhost"
+  port: 6379
+  password: "vokzal_redis_2026"
+  db: 0
+
+logger:
+  level: "debug"
+
+yandex_maps:
+  api_key: "YOUR_YANDEX_MAPS_API_KEY"
+  base_url: "https://geocode-maps.yandex.ru/1.x/"

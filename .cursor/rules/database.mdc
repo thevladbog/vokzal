@@ -1,0 +1,199 @@
+---
+description: Стандарты работы с базой данных
+globs: "**/{migrations,models,repository}/**/*.{go,sql}"
+alwaysApply: false
+---
+
+# База данных — Стандарты
+
+## Миграции
+
+```sql
+-- migrations/001_initial_schema.up.sql
+-- ✅ Всегда используй UUID для primary keys
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+CREATE TABLE stations (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name VARCHAR(100) NOT NULL,
+    code VARCHAR(10) UNIQUE NOT NULL,
+    address TEXT,
+    timezone VARCHAR(50) NOT NULL DEFAULT 'Europe/Moscow',
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_stations_code ON stations(code);
+
+-- ✅ JSONB для гибких данных
+CREATE TABLE routes (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name VARCHAR(100) NOT NULL,
+    stops JSONB NOT NULL,
+    distance_km DECIMAL(8,2),
+    duration_min INTEGER,
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+-- migrations/001_initial_schema.down.sql
+DROP TABLE IF EXISTS routes;
+DROP TABLE IF EXISTS stations;
+```
+
+## GORM Models
+
+```go
+// ✅ Модель с правильными тегами и методами
+type Ticket struct {
+    ID            string         `gorm:"type:uuid;primary_key;default:uuid_generate_v4()" json:"id"`
+    TripID        string         `gorm:"type:uuid;not null;index" json:"trip_id"`
+    SeatID        *string        `gorm:"type:uuid;index" json:"seat_id,omitempty"`
+    PassengerName *string        `gorm:"type:varchar(100)" json:"passenger_name,omitempty"`
+    Passport      *string        `gorm:"type:varchar(20)" json:"passport,omitempty"`
+    Price         float64        `gorm:"type:decimal(10,2);not null" json:"price"`
+    Status        string         `gorm:"type:varchar(20);not null;default:'active'" json:"status"`
+    ReturnPenalty float64        `gorm:"type:decimal(10,2);default:0" json:"return_penalty"`
+    SoldAt        time.Time      `gorm:"not null" json:"sold_at"`
+    SoldBy        string         `gorm:"type:uuid;not null" json:"sold_by"`
+    StationID     string         `gorm:"type:uuid;not null" json:"station_id"`
+    CreatedAt     time.Time      `gorm:"not null" json:"created_at"`
+    UpdatedAt     time.Time      `gorm:"not null" json:"updated_at"`
+    
+    // Отношения
+    Trip    Trip    `gorm:"foreignKey:TripID" json:"trip,omitempty"`
+    Seat    *Seat   `gorm:"foreignKey:SeatID" json:"seat,omitempty"`
+    Station Station `gorm:"foreignKey:StationID" json:"station,omitempty"`
+}
+
+func (Ticket) TableName() string {
+    return "tickets"
+}
+
+// Хуки GORM
+func (t *Ticket) BeforeCreate(tx *gorm.DB) error {
+    if t.ID == "" {
+        t.ID = uuid.New().String()
+    }
+    t.CreatedAt = time.Now()
+    t.UpdatedAt = time.Now()
+    return nil
+}
+```
+
+## Repository Pattern
+
+```go
+// ✅ Интерфейс репозитория
+type TicketRepository interface {
+    Create(ctx context.Context, ticket *Ticket) error
+    FindByID(ctx context.Context, id string) (*Ticket, error)
+    FindByTripID(ctx context.Context, tripID string) ([]*Ticket, error)
+    Update(ctx context.Context, ticket *Ticket) error
+    Delete(ctx context.Context, id string) error
+}
+
+// Реализация
+type ticketRepository struct {
+    db *gorm.DB
+}
+
+func NewTicketRepository(db *gorm.DB) TicketRepository {
+    return &ticketRepository{db: db}
+}
+
+func (r *ticketRepository) Create(ctx context.Context, ticket *Ticket) error {
+    result := r.db.WithContext(ctx).Create(ticket)
+    if result.Error != nil {
+        return fmt.Errorf("failed to create ticket: %w", result.Error)
+    }
+    return nil
+}
+
+func (r *ticketRepository) FindByID(ctx context.Context, id string) (*Ticket, error) {
+    var ticket Ticket
+    result := r.db.WithContext(ctx).
+        Preload("Trip").
+        Preload("Seat").
+        First(&ticket, "id = ?", id)
+    
+    if result.Error != nil {
+        if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+            return nil, fmt.Errorf("ticket not found: %s", id)
+        }
+        return nil, fmt.Errorf("failed to find ticket: %w", result.Error)
+    }
+    
+    return &ticket, nil
+}
+```
+
+## Транзакции
+
+```go
+// ✅ Использование транзакций для связанных операций
+func (s *TicketService) SellTicket(ctx context.Context, req SellTicketRequest) (*Ticket, error) {
+    var ticket *Ticket
+    
+    err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+        // 1. Проверить доступность места
+        if req.SeatID != nil {
+            var existingTicket Ticket
+            if err := tx.Where("trip_id = ? AND seat_id = ? AND status = ?", 
+                req.TripID, req.SeatID, "active").First(&existingTicket).Error; 
+                err == nil {
+                return fmt.Errorf("seat already taken")
+            }
+        }
+        
+        // 2. Создать билет
+        ticket = &Ticket{
+            TripID:        req.TripID,
+            SeatID:        req.SeatID,
+            PassengerName: req.PassengerName,
+            Price:         req.Price,
+            Status:        "active",
+            SoldAt:        time.Now(),
+            SoldBy:        req.UserID,
+            StationID:     req.StationID,
+        }
+        
+        if err := tx.Create(ticket).Error; err != nil {
+            return fmt.Errorf("failed to create ticket: %w", err)
+        }
+        
+        // 3. Логировать в audit
+        auditLog := &AuditLog{
+            EntityType: "ticket",
+            EntityID:   ticket.ID,
+            Action:     "create",
+            UserID:     req.UserID,
+            NewValue:   ticket,
+        }
+        
+        if err := tx.Create(auditLog).Error; err != nil {
+            return fmt.Errorf("failed to create audit log: %w", err)
+        }
+        
+        return nil
+    })
+    
+    if err != nil {
+        return nil, err
+    }
+    
+    return ticket, nil
+}
+```
+
+## Индексы
+
+```sql
+-- ✅ Важные индексы для производительности
+CREATE INDEX idx_tickets_trip_seat ON tickets(trip_id, seat_id);
+CREATE INDEX idx_tickets_status ON tickets(status);
+CREATE INDEX idx_trips_schedule_date ON trips(schedule_id, date);
+CREATE INDEX idx_audit_logs_entity ON audit_logs(entity_type, entity_id);
+CREATE INDEX idx_audit_logs_created ON audit_logs(created_at);
+```

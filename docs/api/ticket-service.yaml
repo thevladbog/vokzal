@@ -1,0 +1,543 @@
+openapi: 3.0.3
+info:
+  title: Вокзал.ТЕХ - Ticket Service API
+  description: |
+    Сервис управления билетами для платформы Вокзал.ТЕХ.
+    
+    Основные возможности:
+    - Продажа билетов
+    - Возврат билетов (с блокировкой в течение 24ч до отправления)
+    - Бронирование билетов
+    - Отметка посадки пассажиров
+    - Управление местами в автобусе
+  version: 1.0.0
+  contact:
+    name: Вокзал.ТЕХ Support
+    email: support@vokzal.tech
+  license:
+    name: Proprietary
+
+servers:
+  - url: http://localhost:8083
+    description: Development
+  - url: https://api.vokzal.tech/ticket
+    description: Production
+
+tags:
+  - name: Tickets
+    description: Управление билетами
+  - name: Booking
+    description: Бронирование билетов
+  - name: Boarding
+    description: Посадка пассажиров
+
+paths:
+  /health:
+    get:
+      tags:
+        - Health
+      summary: Проверка здоровья сервиса
+      responses:
+        '200':
+          description: Сервис работает
+
+  /api/v1/tickets:
+    get:
+      tags:
+        - Tickets
+      summary: Получить список билетов
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: trip_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: passenger_email
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [booked, paid, cancelled, refunded, used]
+        - name: date_from
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: date_to
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Список билетов
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Ticket'
+
+    post:
+      tags:
+        - Tickets
+      summary: Создать билет (продажа)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTicketRequest'
+      responses:
+        '201':
+          description: Билет создан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Ticket'
+        '400':
+          description: Неверный запрос
+        '409':
+          description: Места заняты или недостаточно мест
+
+  /api/v1/tickets/{id}:
+    get:
+      tags:
+        - Tickets
+      summary: Получить билет по ID
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Информация о билете
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Ticket'
+        '404':
+          description: Билет не найден
+
+  /api/v1/tickets/{id}/cancel:
+    post:
+      tags:
+        - Tickets
+      summary: Отменить/вернуть билет
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+                  description: Причина отмены
+      responses:
+        '200':
+          description: Билет отменен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Ticket'
+        '400':
+          description: Возврат невозможен (менее 24ч до отправления)
+        '404':
+          description: Билет не найден
+
+  /api/v1/tickets/{id}/refund:
+    post:
+      tags:
+        - Tickets
+      summary: Оформить возврат билета
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Возврат оформлен
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ticket:
+                    $ref: '#/components/schemas/Ticket'
+                  refund_amount:
+                    type: number
+                    format: decimal
+                    description: Сумма возврата (может быть меньше стоимости билета)
+        '400':
+          description: Возврат невозможен
+
+  /api/v1/tickets/verify:
+    post:
+      tags:
+        - Tickets
+      summary: Проверить билет по QR-коду
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - qr_code
+              properties:
+                qr_code:
+                  type: string
+                  description: Данные из QR-кода
+      responses:
+        '200':
+          description: Билет найден и валиден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Ticket'
+        '404':
+          description: Билет не найден
+        '400':
+          description: Билет не валиден
+
+  /api/v1/bookings:
+    post:
+      tags:
+        - Booking
+      summary: Забронировать билет
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateBookingRequest'
+      responses:
+        '201':
+          description: Бронь создана
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Booking'
+        '400':
+          description: Неверный запрос
+        '409':
+          description: Места заняты
+
+  /api/v1/bookings/{id}:
+    get:
+      tags:
+        - Booking
+      summary: Получить информацию о брони
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Информация о брони
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Booking'
+
+  /api/v1/bookings/{id}/confirm:
+    post:
+      tags:
+        - Booking
+      summary: Подтвердить бронь (оплатить)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - payment_id
+              properties:
+                payment_id:
+                  type: string
+                  description: ID платежа из Payment Service
+      responses:
+        '200':
+          description: Бронь подтверждена, билет создан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Ticket'
+        '400':
+          description: Срок брони истёк или оплата не прошла
+
+  /api/v1/boarding/scan:
+    post:
+      tags:
+        - Boarding
+      summary: Отметить посадку пассажира
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - qr_code
+                - trip_id
+              properties:
+                qr_code:
+                  type: string
+                trip_id:
+                  type: string
+                  format: uuid
+      responses:
+        '200':
+          description: Посадка отмечена
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ticket:
+                    $ref: '#/components/schemas/Ticket'
+                  passenger:
+                    type: object
+                    properties:
+                      full_name:
+                        type: string
+                      seat_number:
+                        type: integer
+                  message:
+                    type: string
+                    example: Посадка разрешена
+        '400':
+          description: Билет уже использован или не валиден для этого рейса
+        '404':
+          description: Билет не найден
+
+  /api/v1/boarding/{trip_id}/stats:
+    get:
+      tags:
+        - Boarding
+      summary: Статистика посадки на рейс
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: trip_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Статистика посадки
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  trip_id:
+                    type: string
+                    format: uuid
+                  total_tickets:
+                    type: integer
+                  boarded:
+                    type: integer
+                  not_boarded:
+                    type: integer
+                  boarding_percentage:
+                    type: number
+                    format: float
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    Ticket:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        trip_id:
+          type: string
+          format: uuid
+        passenger_full_name:
+          type: string
+        passenger_phone:
+          type: string
+        passenger_email:
+          type: string
+        passenger_document:
+          type: string
+          description: Серия и номер документа
+        seat_number:
+          type: integer
+        price:
+          type: number
+          format: decimal
+        discount_amount:
+          type: number
+          format: decimal
+        final_price:
+          type: number
+          format: decimal
+        status:
+          type: string
+          enum: [booked, paid, cancelled, refunded, used]
+        qr_code:
+          type: string
+          description: Данные для QR-кода
+        booking_id:
+          type: string
+          format: uuid
+          nullable: true
+        payment_id:
+          type: string
+          nullable: true
+        sold_by:
+          type: string
+          format: uuid
+          description: ID кассира
+          nullable: true
+        sold_at:
+          type: string
+          format: date-time
+        boarded_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+
+    CreateTicketRequest:
+      type: object
+      required:
+        - trip_id
+        - passenger_full_name
+        - passenger_phone
+        - passenger_document
+        - seat_number
+      properties:
+        trip_id:
+          type: string
+          format: uuid
+        passenger_full_name:
+          type: string
+        passenger_phone:
+          type: string
+        passenger_email:
+          type: string
+        passenger_document:
+          type: string
+        seat_number:
+          type: integer
+        discount_amount:
+          type: number
+          format: decimal
+          default: 0
+        payment_method:
+          type: string
+          enum: [cash, card, online]
+
+    Booking:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        trip_id:
+          type: string
+          format: uuid
+        passenger_full_name:
+          type: string
+        passenger_phone:
+          type: string
+        passenger_email:
+          type: string
+        seat_numbers:
+          type: array
+          items:
+            type: integer
+        total_price:
+          type: number
+          format: decimal
+        status:
+          type: string
+          enum: [pending, confirmed, expired, cancelled]
+        expires_at:
+          type: string
+          format: date-time
+          description: Время истечения брони (обычно 15 минут)
+        created_at:
+          type: string
+          format: date-time
+
+    CreateBookingRequest:
+      type: object
+      required:
+        - trip_id
+        - passenger_full_name
+        - passenger_phone
+        - seat_numbers
+      properties:
+        trip_id:
+          type: string
+          format: uuid
+        passenger_full_name:
+          type: string
+        passenger_phone:
+          type: string
+        passenger_email:
+          type: string
+        seat_numbers:
+          type: array
+          items:
+            type: integer
+          minItems: 1
+          maxItems: 4

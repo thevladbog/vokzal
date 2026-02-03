@@ -1,0 +1,44 @@
+# Traefik Static Configuration
+
+[log]
+  level = "INFO"
+
+[accessLog]
+  filePath = "/var/log/traefik/access.log"
+  format = "json"
+
+[api]
+  dashboard = true
+  insecure = true
+
+[entryPoints]
+  [entryPoints.web]
+    address = ":80"
+  
+  [entryPoints.websecure]
+    address = ":443"
+  
+  [entryPoints.metrics]
+    address = ":8082"
+
+[providers]
+  [providers.docker]
+    exposedByDefault = false
+    network = "vokzal-network"
+  
+  [providers.file]
+    directory = "/etc/traefik/dynamic"
+    watch = true
+
+[metrics]
+  [metrics.prometheus]
+    entryPoint = "metrics"
+    addEntryPointsLabels = true
+    addServicesLabels = true
+
+[certificatesResolvers.letsencrypt.acme]
+  email = "admin@vokzal.tech"
+  storage = "/letsencrypt/acme.json"
+  
+  [certificatesResolvers.letsencrypt.acme.httpChallenge]
+    entryPoint = "web"

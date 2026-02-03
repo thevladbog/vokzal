@@ -1,0 +1,739 @@
+openapi: 3.0.3
+info:
+  title: Вокзал.ТЕХ - Schedule Service API
+  description: |
+    Сервис управления расписанием для платформы Вокзал.ТЕХ.
+    
+    Основные возможности:
+    - Управление станциями и автобусами
+    - Создание и редактирование маршрутов
+    - Управление расписаниями
+    - Планирование рейсов
+    - Назначение водителей и автобусов
+  version: 1.0.0
+  contact:
+    name: Вокзал.ТЕХ Support
+    email: support@vokzal.tech
+  license:
+    name: Proprietary
+
+servers:
+  - url: http://localhost:8082
+    description: Development
+  - url: https://api.vokzal.tech/schedule
+    description: Production
+
+tags:
+  - name: Stations
+    description: Управление станциями
+  - name: Routes
+    description: Управление маршрутами
+  - name: Schedules
+    description: Управление расписаниями
+  - name: Trips
+    description: Управление рейсами
+  - name: Search
+    description: Поиск рейсов
+
+paths:
+  /health:
+    get:
+      tags:
+        - Health
+      summary: Проверка здоровья сервиса
+      responses:
+        '200':
+          description: Сервис работает
+
+  /api/v1/stations:
+    get:
+      tags:
+        - Stations
+      summary: Получить список станций
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: city
+          in: query
+          schema:
+            type: string
+        - name: active
+          in: query
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Список станций
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Station'
+
+    post:
+      tags:
+        - Stations
+      summary: Создать станцию
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateStationRequest'
+      responses:
+        '201':
+          description: Станция создана
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Station'
+
+  /api/v1/stations/{id}:
+    get:
+      tags:
+        - Stations
+      summary: Получить станцию по ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Информация о станции
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Station'
+
+    put:
+      tags:
+        - Stations
+      summary: Обновить станцию
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateStationRequest'
+      responses:
+        '200':
+          description: Станция обновлена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Station'
+
+  /api/v1/routes:
+    get:
+      tags:
+        - Routes
+      summary: Получить список маршрутов
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: from_station
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: to_station
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: active
+          in: query
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Список маршрутов
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Route'
+
+    post:
+      tags:
+        - Routes
+      summary: Создать маршрут
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateRouteRequest'
+      responses:
+        '201':
+          description: Маршрут создан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Route'
+
+  /api/v1/routes/{id}:
+    get:
+      tags:
+        - Routes
+      summary: Получить маршрут по ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Информация о маршруте
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Route'
+
+  /api/v1/schedules:
+    get:
+      tags:
+        - Schedules
+      summary: Получить список расписаний
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: route_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: active
+          in: query
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Список расписаний
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Schedule'
+
+    post:
+      tags:
+        - Schedules
+      summary: Создать расписание
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateScheduleRequest'
+      responses:
+        '201':
+          description: Расписание создано
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Schedule'
+
+  /api/v1/trips:
+    get:
+      tags:
+        - Trips
+      summary: Получить список рейсов
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: date_from
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: date_to
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: route_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [scheduled, boarding, departed, arrived, cancelled]
+      responses:
+        '200':
+          description: Список рейсов
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Trip'
+
+    post:
+      tags:
+        - Trips
+      summary: Создать рейс
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTripRequest'
+      responses:
+        '201':
+          description: Рейс создан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Trip'
+
+  /api/v1/trips/{id}:
+    get:
+      tags:
+        - Trips
+      summary: Получить рейс по ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Информация о рейсе
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Trip'
+
+    put:
+      tags:
+        - Trips
+      summary: Обновить рейс
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTripRequest'
+      responses:
+        '200':
+          description: Рейс обновлен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Trip'
+
+  /api/v1/trips/{id}/status:
+    patch:
+      tags:
+        - Trips
+      summary: Изменить статус рейса
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - status
+              properties:
+                status:
+                  type: string
+                  enum: [scheduled, boarding, departed, arrived, cancelled]
+      responses:
+        '200':
+          description: Статус обновлен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Trip'
+
+  /api/v1/search/trips:
+    get:
+      tags:
+        - Search
+      summary: Поиск рейсов
+      parameters:
+        - name: from_station
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: to_station
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: date
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+        - name: passengers
+          in: query
+          schema:
+            type: integer
+            default: 1
+      responses:
+        '200':
+          description: Найденные рейсы
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SearchResult'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    Station:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        code:
+          type: string
+        city:
+          type: string
+        address:
+          type: string
+        latitude:
+          type: number
+          format: double
+        longitude:
+          type: number
+          format: double
+        is_active:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+
+    CreateStationRequest:
+      type: object
+      required:
+        - name
+        - code
+        - city
+        - address
+      properties:
+        name:
+          type: string
+        code:
+          type: string
+          minLength: 3
+          maxLength: 10
+        city:
+          type: string
+        address:
+          type: string
+        latitude:
+          type: number
+          format: double
+        longitude:
+          type: number
+          format: double
+
+    UpdateStationRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        address:
+          type: string
+        latitude:
+          type: number
+          format: double
+        longitude:
+          type: number
+          format: double
+        is_active:
+          type: boolean
+
+    Route:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        number:
+          type: string
+        name:
+          type: string
+        from_station_id:
+          type: string
+          format: uuid
+        to_station_id:
+          type: string
+          format: uuid
+        distance_km:
+          type: integer
+        duration_minutes:
+          type: integer
+        price_base:
+          type: number
+          format: decimal
+        is_active:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+
+    CreateRouteRequest:
+      type: object
+      required:
+        - number
+        - name
+        - from_station_id
+        - to_station_id
+        - distance_km
+        - duration_minutes
+        - price_base
+      properties:
+        number:
+          type: string
+        name:
+          type: string
+        from_station_id:
+          type: string
+          format: uuid
+        to_station_id:
+          type: string
+          format: uuid
+        distance_km:
+          type: integer
+        duration_minutes:
+          type: integer
+        price_base:
+          type: number
+          format: decimal
+
+    Schedule:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        route_id:
+          type: string
+          format: uuid
+        departure_time:
+          type: string
+          format: time
+          example: "08:30:00"
+        days_of_week:
+          type: array
+          items:
+            type: integer
+            minimum: 0
+            maximum: 6
+          description: 0-6 (воскресенье-суббота)
+        valid_from:
+          type: string
+          format: date
+        valid_to:
+          type: string
+          format: date
+          nullable: true
+        is_active:
+          type: boolean
+
+    CreateScheduleRequest:
+      type: object
+      required:
+        - route_id
+        - departure_time
+        - days_of_week
+        - valid_from
+      properties:
+        route_id:
+          type: string
+          format: uuid
+        departure_time:
+          type: string
+          format: time
+        days_of_week:
+          type: array
+          items:
+            type: integer
+            minimum: 0
+            maximum: 6
+        valid_from:
+          type: string
+          format: date
+        valid_to:
+          type: string
+          format: date
+          nullable: true
+
+    Trip:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        route_id:
+          type: string
+          format: uuid
+        schedule_id:
+          type: string
+          format: uuid
+          nullable: true
+        bus_id:
+          type: string
+          format: uuid
+          nullable: true
+        driver_id:
+          type: string
+          format: uuid
+          nullable: true
+        departure_time:
+          type: string
+          format: date-time
+        arrival_time:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [scheduled, boarding, departed, arrived, cancelled]
+        platform:
+          type: integer
+          nullable: true
+        seats_total:
+          type: integer
+        seats_available:
+          type: integer
+        price:
+          type: number
+          format: decimal
+        created_at:
+          type: string
+          format: date-time
+
+    CreateTripRequest:
+      type: object
+      required:
+        - route_id
+        - departure_time
+        - arrival_time
+        - seats_total
+        - price
+      properties:
+        route_id:
+          type: string
+          format: uuid
+        schedule_id:
+          type: string
+          format: uuid
+        bus_id:
+          type: string
+          format: uuid
+        driver_id:
+          type: string
+          format: uuid
+        departure_time:
+          type: string
+          format: date-time
+        arrival_time:
+          type: string
+          format: date-time
+        platform:
+          type: integer
+        seats_total:
+          type: integer
+        price:
+          type: number
+          format: decimal
+
+    UpdateTripRequest:
+      type: object
+      properties:
+        bus_id:
+          type: string
+          format: uuid
+        driver_id:
+          type: string
+          format: uuid
+        departure_time:
+          type: string
+          format: date-time
+        arrival_time:
+          type: string
+          format: date-time
+        platform:
+          type: integer
+        status:
+          type: string
+          enum: [scheduled, boarding, departed, arrived, cancelled]
+
+    SearchResult:
+      type: object
+      properties:
+        trip:
+          $ref: '#/components/schemas/Trip'
+        route:
+          $ref: '#/components/schemas/Route'
+        from_station:
+          $ref: '#/components/schemas/Station'
+        to_station:
+          $ref: '#/components/schemas/Station'

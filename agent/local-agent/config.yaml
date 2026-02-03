@@ -1,0 +1,30 @@
+server:
+  port: "8081"
+  mode: "debug"
+
+kkt:
+  enabled: true
+  device_path: "/dev/ttyUSB0"
+  atol_driver: "http://localhost:10001"
+  inn: "7707083893"
+  ofd_url: "https://check.ofd.ru"
+
+printer:
+  enabled: true
+  device_path: "/dev/usb/lp0"
+  type: "escpos"
+  name: "Thermal Printer"
+
+scanner:
+  enabled: true
+  device_path: "/dev/input/by-id/usb-scanner-event-kbd"
+  mode: "hid"
+
+tts:
+  enabled: true
+  engine: "rhvoice"
+  voice: "alena"
+  volume: 80
+
+logger:
+  level: "debug"

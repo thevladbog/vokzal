@@ -1,0 +1,9 @@
+# ESLint and Prettier
+.eslintcache
+.prettierignore
+
+# Secrets baseline
+.secrets.baseline
+
+# Pre-commit
+.pre-commit-config.yaml

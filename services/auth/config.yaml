@@ -1,0 +1,20 @@
+server:
+  port: "8081"
+  mode: "debug" # debug, release
+
+database:
+  host: "localhost"
+  port: 5432
+  user: "admin"
+  password: "vokzal_secret_2026"
+  dbname: "vokzal"
+  sslmode: "disable"
+
+jwt:
+  secret: "vokzal-tech-jwt-secret-change-me-in-production"
+  issuer: "vokzal.tech"
+  access_expiration: "24h"
+  refresh_expiration: "168h" # 7 дней
+
+logger:
+  level: "debug" # debug, info, warn, error

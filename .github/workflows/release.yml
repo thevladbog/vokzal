@@ -1,0 +1,117 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g., v1.0.0)'
+        required: true
+
+jobs:
+  create-release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    outputs:
+      upload_url: ${{ steps.create_release.outputs.upload_url }}
+      version: ${{ steps.get_version.outputs.version }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get version
+        id: get_version
+        run: |
+          if [ "${{ github.event.inputs.version }}" != "" ]; then
+            echo "version=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+          else
+            echo "version=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Generate changelog
+        id: changelog
+        uses: metcalfc/changelog-generator@v4.2.0
+        with:
+          myToken: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ steps.get_version.outputs.version }}
+          release_name: Release ${{ steps.get_version.outputs.version }}
+          body: |
+            ## 🚀 Вокзал.ТЕХ ${{ steps.get_version.outputs.version }}
+            
+            ### What's Changed
+            ${{ steps.changelog.outputs.changelog }}
+            
+            ### Docker Images
+            - `vokzaltech/auth-service:${{ steps.get_version.outputs.version }}`
+            - `vokzaltech/schedule-service:${{ steps.get_version.outputs.version }}`
+            - `vokzaltech/ticket-service:${{ steps.get_version.outputs.version }}`
+            - `vokzaltech/payment-service:${{ steps.get_version.outputs.version }}`
+            - `vokzaltech/fiscal-service:${{ steps.get_version.outputs.version }}`
+            
+            ### Installation
+            ```bash
+            docker-compose pull
+            docker-compose up -d
+            ```
+          draft: false
+          prerelease: false
+
+  build-and-publish:
+    name: Build & Publish Docker Images
+    needs: create-release
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: [auth, schedule, ticket, payment, fiscal, board, notify, audit, document, geo]
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: services/${{ matrix.service }}
+          push: true
+          tags: |
+            vokzaltech/${{ matrix.service }}-service:${{ needs.create-release.outputs.version }}
+            vokzaltech/${{ matrix.service }}-service:latest
+          platforms: linux/amd64,linux/arm64
+
+  notify-release:
+    name: Notify Release
+    needs: [create-release, build-and-publish]
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Send Telegram notification
+        uses: appleboy/telegram-action@master
+        with:
+          to: ${{ secrets.TELEGRAM_CHAT_ID }}
+          token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          message: |
+            🎉 New Release: Вокзал.ТЕХ ${{ needs.create-release.outputs.version }}
+            
+            📦 All services have been built and published to Docker Hub
+            🔗 Release notes: https://github.com/${{ github.repository }}/releases/tag/${{ needs.create-release.outputs.version }}

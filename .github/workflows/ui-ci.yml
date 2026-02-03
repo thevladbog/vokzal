@@ -1,0 +1,164 @@
+name: UI Applications CI
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'ui/**'
+      - '.github/workflows/ui-ci.yml'
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'ui/**'
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  detect-changes:
+    name: Detect Changed UI Apps
+    runs-on: ubuntu-latest
+    outputs:
+      apps: ${{ steps.filter.outputs.changes }}
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            admin-panel:
+              - 'ui/admin-panel/**'
+            board-display:
+              - 'ui/board-display/**'
+            passenger-portal:
+              - 'ui/passenger-portal/**'
+            controller-app:
+              - 'ui/controller-app/**'
+
+  lint-and-test:
+    name: Lint & Test
+    needs: detect-changes
+    if: ${{ needs.detect-changes.outputs.apps != '[]' }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        app: ${{ fromJSON(needs.detect-changes.outputs.apps) }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: ui/${{ matrix.app }}/package-lock.json
+
+      - name: Install dependencies
+        working-directory: ui/${{ matrix.app }}
+        run: npm ci
+
+      - name: Run ESLint
+        working-directory: ui/${{ matrix.app }}
+        run: npm run lint
+
+      - name: Run TypeScript check
+        working-directory: ui/${{ matrix.app }}
+        run: npm run type-check
+
+      - name: Run tests
+        working-directory: ui/${{ matrix.app }}
+        run: npm test -- --coverage --watchAll=false
+        env:
+          CI: true
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v4
+        with:
+          file: ./ui/${{ matrix.app }}/coverage/coverage-final.json
+          flags: ${{ matrix.app }}
+          name: ${{ matrix.app }}-coverage
+          token: ${{ secrets.CODECOV_TOKEN }}
+        if: always()
+
+  build:
+    name: Build Applications
+    needs: [detect-changes, lint-and-test]
+    if: ${{ needs.detect-changes.outputs.apps != '[]' }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        app: ${{ fromJSON(needs.detect-changes.outputs.apps) }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: ui/${{ matrix.app }}/package-lock.json
+
+      - name: Install dependencies
+        working-directory: ui/${{ matrix.app }}
+        run: npm ci
+
+      - name: Build application
+        working-directory: ui/${{ matrix.app }}
+        run: npm run build
+        env:
+          NODE_ENV: production
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.app }}-build
+          path: ui/${{ matrix.app }}/dist
+          retention-days: 7
+
+  build-docker:
+    name: Build Docker Images
+    needs: [detect-changes, build]
+    if: ${{ needs.detect-changes.outputs.apps != '[]' && github.event_name != 'pull_request' }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        app: ${{ fromJSON(needs.detect-changes.outputs.apps) }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: vokzaltech/${{ matrix.app }}
+          tags: |
+            type=ref,event=branch
+            type=sha,prefix={{branch}}-
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: ui/${{ matrix.app }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
