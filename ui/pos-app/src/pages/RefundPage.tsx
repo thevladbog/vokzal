@@ -72,7 +72,7 @@ export const RefundPage: React.FC = () => {
         err && typeof err === "object" && "response" in err
           ? (err as { response?: { status?: number } }).response?.status === 404
             ? "Билет не найден"
-            : (err as Error).message || String(err)
+            : (err as unknown as Error).message || String(err)
           : String(err);
       alert(`Ошибка поиска: ${msg}`);
     } finally {
