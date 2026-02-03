@@ -169,7 +169,8 @@ func (s *ticketService) RefundTicket(ctx context.Context, ticketID, userID strin
 
 	departureTime, err := s.ticketRepo.GetTripDepartureTime(ctx, ticket.TripID)
 	if err != nil {
-		s.logger.Warn("GetTripDepartureTime failed, using nil for penalty", zap.Error(err), zap.String("trip_id", ticket.TripID))
+		s.logger.Error("GetTripDepartureTime failed, refusing refund", zap.Error(err), zap.String("trip_id", ticket.TripID))
+		return nil, fmt.Errorf("failed to get trip departure time for penalty calculation: %w", err)
 	}
 	penalty := s.calculateRefundPenalty(ticket.Price, departureTime)
 

@@ -1,0 +1,9 @@
+{
+  "$schema": "https://biomejs.dev/schemas/1.9.4/schema.json",
+  "files": {
+    "ignore": [
+      "ui/admin-panel/coverage/**",
+      "coverage/**"
+    ]
+  }
+}
