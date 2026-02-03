@@ -1,5 +1,7 @@
 import axios from 'axios';
+import { REFRESH_TOKEN_STORAGE_KEY } from '@/constants/auth';
 import { useAuthStore } from '@/stores/authStore';
+import type { User } from '@/types';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || '/api/v1';
 
@@ -24,7 +26,7 @@ apiClient.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Response interceptor: on 401, try refresh via HttpOnly cookie then retry
+// Response interceptor: on 401, try refresh using token from sessionStorage then retry
 apiClient.interceptors.response.use(
   (response) => response,
   async (error) => {
@@ -33,29 +35,48 @@ apiClient.interceptors.response.use(
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
 
+      let refreshToken: string | null = null;
       try {
-        // Refresh token is sent via HttpOnly cookie (withCredentials: true)
-        const response = await apiClient.post<{ access_token?: string }>(
-          '/auth/refresh',
-          {},
-          { withCredentials: true }
-        );
-
-        const accessToken = response.data?.access_token;
-        if (accessToken) {
-          useAuthStore.getState().setAccessToken(accessToken);
-          originalRequest.headers.Authorization = `Bearer ${accessToken}`;
-          return apiClient(originalRequest);
-        }
+        refreshToken = sessionStorage.getItem(REFRESH_TOKEN_STORAGE_KEY);
       } catch {
-        // Refresh failed or no cookie: clear in-memory state and redirect to login
-        useAuthStore.getState().clearAuth();
-        window.location.href = '/login';
-        return Promise.reject(error);
+        // sessionStorage unavailable
       }
 
-      useAuthStore.getState().clearAuth();
-      window.location.href = '/login';
+      let refreshed = false;
+      if (refreshToken) {
+        try {
+          const response = await apiClient.post<{
+            success?: boolean;
+            data?: { access_token: string; refresh_token: string; user: unknown };
+          }>('/auth/refresh', { refresh_token: refreshToken });
+
+          const data = response.data?.data;
+          if (response.data?.success === true && data?.access_token && data?.user) {
+            useAuthStore.getState().setAuth(data.user as User, data.access_token);
+            try {
+              sessionStorage.setItem(REFRESH_TOKEN_STORAGE_KEY, data.refresh_token);
+            } catch {
+              // ignore
+            }
+            originalRequest.headers.Authorization = `Bearer ${data.access_token}`;
+            refreshed = true;
+            return apiClient(originalRequest);
+          }
+        } catch {
+          // Refresh failed (network or 4xx): fall through to clear and redirect
+        }
+      }
+
+      // Only clear and redirect when we did not successfully refresh (no token, failed, or bad response)
+      if (!refreshed) {
+        try {
+          sessionStorage.removeItem(REFRESH_TOKEN_STORAGE_KEY);
+        } catch {
+          // ignore
+        }
+        useAuthStore.getState().clearAuth();
+        window.location.href = '/login';
+      }
     }
 
     return Promise.reject(error);

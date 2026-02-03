@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { REFRESH_TOKEN_STORAGE_KEY } from '@/constants/auth';
 import { apiClient } from './api';
 import { useAuthStore } from '@/stores/authStore';
 import type { AuthResponse, User } from '@/types';
@@ -54,14 +55,72 @@ export const authService = {
 
     const data = result.data;
     useAuthStore.getState().setAuth(data.user, data.access_token);
+    try {
+      sessionStorage.setItem(REFRESH_TOKEN_STORAGE_KEY, data.refresh_token);
+    } catch {
+      // sessionStorage may be unavailable (private mode, etc.)
+    }
     return data;
   },
 
   logout: async (): Promise<void> => {
     try {
-      await apiClient.post('/auth/logout', {}, { withCredentials: true });
+      const refreshToken = sessionStorage.getItem(REFRESH_TOKEN_STORAGE_KEY);
+      if (refreshToken) {
+        await apiClient.post(
+          '/auth/logout',
+          {},
+          { withCredentials: true, headers: { 'X-Refresh-Token': refreshToken } }
+        );
+      }
     } finally {
+      try {
+        sessionStorage.removeItem(REFRESH_TOKEN_STORAGE_KEY);
+      } catch {
+        // ignore
+      }
       useAuthStore.getState().clearAuth();
+    }
+  },
+
+  /**
+   * Restore session on app load using refresh token from sessionStorage.
+   * Call once before rendering protected routes. Returns true if session was restored.
+   */
+  restoreSession: async (): Promise<boolean> => {
+    let refreshToken: string | null = null;
+    try {
+      refreshToken = sessionStorage.getItem(REFRESH_TOKEN_STORAGE_KEY);
+    } catch {
+      return false;
+    }
+    if (!refreshToken) return false;
+
+    try {
+      const response = await apiClient.post<{ success: boolean; data?: AuthResponse }>(
+        '/auth/refresh',
+        { refresh_token: refreshToken }
+      );
+      if (response.data?.success !== true || !response.data?.data) return false;
+
+      const parsed = AuthResponseSchema.safeParse(response.data.data);
+      if (!parsed.success) return false;
+
+      const data = parsed.data;
+      useAuthStore.getState().setAuth(data.user, data.access_token);
+      try {
+        sessionStorage.setItem(REFRESH_TOKEN_STORAGE_KEY, data.refresh_token);
+      } catch {
+        // ignore
+      }
+      return true;
+    } catch {
+      try {
+        sessionStorage.removeItem(REFRESH_TOKEN_STORAGE_KEY);
+      } catch {
+        // ignore
+      }
+      return false;
     }
   },
 

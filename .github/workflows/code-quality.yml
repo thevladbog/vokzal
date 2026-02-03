@@ -53,7 +53,7 @@ jobs:
   sonarcloud:
     name: SonarCloud Analysis
     runs-on: ubuntu-latest
-    if: vars.SONARCLOUD_ENABLED == 'true'
+    if: ${{ vars.SONARCLOUD_ENABLED == 'true' }}
 
     steps:
       - name: Checkout code

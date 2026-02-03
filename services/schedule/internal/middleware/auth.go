@@ -48,6 +48,7 @@ func AuthMiddleware(jwtSecret string, logger *zap.Logger) gin.HandlerFunc {
 			}
 			return []byte(jwtSecret), nil
 		})
+		// Treat any JWT parse error as 401: signature invalid, expired, malformed, etc.
 		if err != nil {
 			logger.Warn("Invalid or expired JWT", zap.Error(err))
 			c.JSON(http.StatusUnauthorized, gin.H{

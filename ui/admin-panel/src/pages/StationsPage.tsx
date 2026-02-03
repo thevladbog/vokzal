@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Card,
@@ -42,6 +43,7 @@ const useStyles = makeStyles({
 });
 
 export const StationsPage: React.FC = () => {
+  const { t } = useTranslation();
   const styles = useStyles();
   const queryClient = useQueryClient();
   const [cityFilter, setCityFilter] = useState('');
@@ -84,14 +86,14 @@ export const StationsPage: React.FC = () => {
   if (isLoading) {
     return (
       <div className={styles.loading}>
-        <Spinner label="Загрузка станций..." />
+        <Spinner label={t('stations.loading')} />
       </div>
     );
   }
   if (error) {
     return (
       <div className={styles.container}>
-        <Text>Ошибка загрузки станций</Text>
+        <Text>{t('stations.loadError')}</Text>
       </div>
     );
   }
@@ -99,16 +101,16 @@ export const StationsPage: React.FC = () => {
   return (
     <div className={styles.container}>
       <div className={styles.header}>
-        <Title2>Станции</Title2>
+        <Title2>{t('stations.title')}</Title2>
         <Dialog open={createOpen} onOpenChange={(_, d) => setCreateOpen(d.open)}>
           <DialogTrigger disableButtonEnhancement>
             <Button appearance="primary" icon={<Add24Regular />}>
-              Добавить станцию
+              {t('stations.addStation')}
             </Button>
           </DialogTrigger>
           <DialogSurface>
             <DialogBody>
-              <DialogTitle>Новая станция</DialogTitle>
+              <DialogTitle>{t('stations.createStationTitle')}</DialogTitle>
               <DialogContent>
                 <StationForm
                   onSubmit={(formData) => createMutation.mutate(formData)}
@@ -122,12 +124,12 @@ export const StationsPage: React.FC = () => {
       </div>
 
       <div className={styles.filters}>
-        <Label htmlFor="city-filter">Город / название:</Label>
+        <Label htmlFor="city-filter">{t('stations.cityFilterLabel')}</Label>
         <Input
           id="city-filter"
           value={cityFilter}
           onChange={(_, v) => setCityFilter(v.value)}
-          placeholder="Фильтр..."
+          placeholder={t('stations.filterPlaceholder')}
           style={{ minWidth: '200px' }}
         />
       </div>
@@ -136,11 +138,11 @@ export const StationsPage: React.FC = () => {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHeaderCell>Код</TableHeaderCell>
-              <TableHeaderCell>Название</TableHeaderCell>
-              <TableHeaderCell>Адрес</TableHeaderCell>
-              <TableHeaderCell>Часовой пояс</TableHeaderCell>
-              <TableHeaderCell>Действия</TableHeaderCell>
+              <TableHeaderCell>{t('stations.code')}</TableHeaderCell>
+              <TableHeaderCell>{t('stations.name')}</TableHeaderCell>
+              <TableHeaderCell>{t('stations.address')}</TableHeaderCell>
+              <TableHeaderCell>{t('stations.timezone')}</TableHeaderCell>
+              <TableHeaderCell>{t('stations.actions')}</TableHeaderCell>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -149,20 +151,20 @@ export const StationsPage: React.FC = () => {
                 <TableCell>{s.code}</TableCell>
                 <TableCell>{s.name}</TableCell>
                 <TableCell>{s.address ?? '—'}</TableCell>
-                <TableCell>{s.timezone ?? 'Europe/Moscow'}</TableCell>
+                <TableCell>{s.timezone ?? t('stations.timezonePlaceholder')}</TableCell>
                 <TableCell>
                   <div className={styles.actions}>
                     <Button
                       appearance="subtle"
                       icon={<Edit24Regular />}
                       onClick={() => setEditStation(s)}
-                      aria-label="Редактировать"
+                      aria-label={t('common.edit')}
                     />
                     <Button
                       appearance="subtle"
                       icon={<Delete24Regular />}
                       onClick={() => setDeleteStation(s)}
-                      aria-label="Удалить"
+                      aria-label={t('common.delete')}
                     />
                   </div>
                 </TableCell>
@@ -176,7 +178,7 @@ export const StationsPage: React.FC = () => {
         <Dialog open={!!editStation} onOpenChange={(_, d) => !d.open && setEditStation(null)}>
           <DialogSurface>
             <DialogBody>
-              <DialogTitle>Редактировать станцию</DialogTitle>
+              <DialogTitle>{t('stations.editStationTitle')}</DialogTitle>
               <DialogContent>
                 <StationForm
                   initial={editStation}
@@ -197,23 +199,25 @@ export const StationsPage: React.FC = () => {
         <Dialog open={!!deleteStation} onOpenChange={(_, d) => !d.open && setDeleteStation(null)}>
           <DialogSurface>
             <DialogBody>
-              <DialogTitle>Удалить станцию?</DialogTitle>
+              <DialogTitle>{t('stations.deleteStationTitle')}</DialogTitle>
               <DialogContent>
                 <Text>
-                  Удалить станцию {deleteStation.name} ({deleteStation.code})? Это действие нельзя
-                  отменить.
+                  {t('stations.deleteConfirm', {
+                    name: deleteStation.name,
+                    code: deleteStation.code,
+                  })}
                 </Text>
               </DialogContent>
               <DialogActions>
                 <Button appearance="secondary" onClick={() => setDeleteStation(null)}>
-                  Отмена
+                  {t('common.cancel')}
                 </Button>
                 <Button
                   appearance="primary"
                   onClick={() => deleteMutation.mutate(deleteStation.id)}
                   disabled={deleteMutation.isPending}
                 >
-                  Удалить
+                  {t('common.delete')}
                 </Button>
               </DialogActions>
             </DialogBody>
@@ -231,6 +235,7 @@ const StationForm: React.FC<{
   isLoading: boolean;
   isEdit?: boolean;
 }> = ({ initial, onSubmit, onCancel, isLoading, isEdit }) => {
+  const { t } = useTranslation();
   const styles = useStyles();
   const [name, setName] = useState(initial?.name ?? '');
   const [code, setCode] = useState(initial?.code ?? '');
@@ -251,7 +256,7 @@ const StationForm: React.FC<{
   return (
     <form onSubmit={handleSubmit}>
       <div className={styles.formRow}>
-        <Label htmlFor="station-name">Название *</Label>
+        <Label htmlFor="station-name">{t('stations.nameRequired')}</Label>
         <Input
           id="station-name"
           value={name}
@@ -261,7 +266,7 @@ const StationForm: React.FC<{
         />
       </div>
       <div className={styles.formRow}>
-        <Label htmlFor="station-code">Код *</Label>
+        <Label htmlFor="station-code">{t('stations.codeRequired')}</Label>
         <Input
           id="station-code"
           value={code}
@@ -272,7 +277,7 @@ const StationForm: React.FC<{
         />
       </div>
       <div className={styles.formRow}>
-        <Label htmlFor="station-address">Адрес</Label>
+        <Label htmlFor="station-address">{t('stations.address')}</Label>
         <Input
           id="station-address"
           value={address}
@@ -280,20 +285,20 @@ const StationForm: React.FC<{
         />
       </div>
       <div className={styles.formRow}>
-        <Label htmlFor="station-timezone">Часовой пояс</Label>
+        <Label htmlFor="station-timezone">{t('stations.timezone')}</Label>
         <Input
           id="station-timezone"
           value={timezone}
           onChange={(_, v) => setTimezone(v.value)}
-          placeholder="Europe/Moscow"
+          placeholder={t('stations.timezonePlaceholder')}
         />
       </div>
       <DialogActions>
         <Button type="button" appearance="secondary" onClick={onCancel}>
-          Отмена
+          {t('common.cancel')}
         </Button>
         <Button type="submit" appearance="primary" disabled={isLoading}>
-          {isEdit ? 'Сохранить' : 'Создать'}
+          {isEdit ? t('common.save') : t('common.create')}
         </Button>
       </DialogActions>
     </form>

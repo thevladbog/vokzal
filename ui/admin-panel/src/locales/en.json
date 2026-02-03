@@ -34,6 +34,35 @@
     "servicesOverview": "Open «Services overview» dashboard",
     "databaseMonitoring": "Database monitoring"
   },
+  "reports": {
+    "title": "Reports",
+    "description": "Summary reports on sales, returns and fiscalization are available in Grafana.",
+    "openBusinessMetrics": "Open «Business metrics» dashboard",
+    "reportTypes": "Report types:",
+    "typeSales": "Sales for period",
+    "typeReturns": "Returns",
+    "typeZReports": "Z-reports (54-FZ)"
+  },
+  "stations": {
+    "title": "Stations",
+    "loading": "Loading stations...",
+    "loadError": "Failed to load stations",
+    "addStation": "Add station",
+    "createStationTitle": "New station",
+    "editStationTitle": "Edit station",
+    "deleteStationTitle": "Delete station?",
+    "deleteConfirm": "Delete station {{name}} ({{code}})? This action cannot be undone.",
+    "cityFilterLabel": "City / name:",
+    "filterPlaceholder": "Filter...",
+    "code": "Code",
+    "name": "Name",
+    "address": "Address",
+    "timezone": "Time zone",
+    "actions": "Actions",
+    "nameRequired": "Name *",
+    "codeRequired": "Code *",
+    "timezonePlaceholder": "Europe/Moscow"
+  },
   "login": {
     "title": "Vokzal.TECH",
     "subtitle": "Admin panel login",
@@ -69,6 +98,7 @@
     "password": "Password",
     "newPasswordPlaceholder": "New password (leave empty to keep unchanged)",
     "passwordMinHint": "At least 8 characters",
+    "passwordMinError": "Password must be at least 8 characters",
     "activeCheckbox": "Active",
     "loadError": "Failed to load users",
     "loading": "Loading users...",

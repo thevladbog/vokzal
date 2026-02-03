@@ -437,15 +437,22 @@ const EditUserForm: React.FC<{
   const [password, setPassword] = useState('');
   const [role, setRole] = useState<UpdateUserRequest['role']>(user.role);
   const [isActive, setIsActive] = useState(user.is_active);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setPasswordError(null);
+    const trimmed = password.trim();
+    if (trimmed.length > 0 && trimmed.length < 8) {
+      setPasswordError(t('users.passwordMinError'));
+      return;
+    }
     const data: UpdateUserRequest = {
       full_name: fullName,
       role,
       is_active: isActive,
     };
-    if (password.trim().length >= 8) data.password = password.trim();
+    if (trimmed.length >= 8) data.password = trimmed;
     onSubmit(data);
   };
 
@@ -471,10 +478,20 @@ const EditUserForm: React.FC<{
           id="edit-password"
           type="password"
           value={password}
-          onChange={(_, v) => setPassword(v.value)}
+          onChange={(_, v) => {
+            setPassword(v.value);
+            setPasswordError(null);
+          }}
           minLength={8}
           placeholder={t('users.passwordMinHint')}
+          aria-invalid={!!passwordError}
+          aria-describedby={passwordError ? 'edit-password-error' : undefined}
         />
+        {passwordError && (
+          <Text id="edit-password-error" style={{ color: 'var(--colorPaletteRedForeground1)', marginTop: '4px' }} role="alert">
+            {passwordError}
+          </Text>
+        )}
       </div>
       <div className={styles.formRow}>
         <Label htmlFor="edit-role">{t('users.role')} *</Label>

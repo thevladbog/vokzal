@@ -17,6 +17,8 @@ TIMESTAMP="$(date +%Y%m%d_%H%M%S)"
 DUMP_NAME="vokzal_${TIMESTAMP}.dump"
 DUMP_PATH="${BACKUP_DIR}/${DUMP_NAME}"
 
+command -v pg_dump >/dev/null 2>&1 || { echo "pg_dump not found; install PostgreSQL client tools" >&2; exit 1; }
+
 # Restrict permissions so unencrypted dumps are not readable by other users
 umask 077
 mkdir -p --mode=700 "${BACKUP_DIR}"

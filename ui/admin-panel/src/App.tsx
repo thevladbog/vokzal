@@ -1,6 +1,7 @@
+import { useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { FluentProvider, webLightTheme, Toaster } from '@fluentui/react-components';
+import { FluentProvider, webLightTheme, Toaster, Spinner } from '@fluentui/react-components';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { LoginPage } from '@/pages/LoginPage';
 import { DashboardPage } from '@/pages/DashboardPage';
@@ -12,6 +13,7 @@ import { TripsPage } from '@/pages/TripsPage';
 import { AuditPage } from '@/pages/AuditPage';
 import { ReportsPage } from '@/pages/ReportsPage';
 import { MonitoringPage } from '@/pages/MonitoringPage';
+import { authService } from '@/services/auth';
 import { useAuthStore } from '@/stores/authStore';
 
 const queryClient = new QueryClient({
@@ -25,6 +27,21 @@ const queryClient = new QueryClient({
 
 function App() {
   const isAuthenticated = useAuthStore((state) => !!state.accessToken);
+  const [sessionRestored, setSessionRestored] = useState(false);
+
+  useEffect(() => {
+    authService.restoreSession().finally(() => setSessionRestored(true));
+  }, []);
+
+  if (!sessionRestored) {
+    return (
+      <FluentProvider theme={webLightTheme}>
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
+          <Spinner labelPosition="after" />
+        </div>
+      </FluentProvider>
+    );
+  }
 
   return (
     <QueryClientProvider client={queryClient}>

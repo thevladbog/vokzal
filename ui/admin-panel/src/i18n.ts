@@ -8,8 +8,20 @@ const resources = {
   en: { translation: en },
 };
 
-const savedLang = localStorage.getItem('admin-panel-lang') as 'ru' | 'en' | null;
-const lng = savedLang && (savedLang === 'ru' || savedLang === 'en') ? savedLang : 'ru';
+function getSavedLanguage(): 'ru' | 'en' {
+  try {
+    if (typeof window === 'undefined' || typeof window.localStorage === 'undefined') {
+      return 'ru';
+    }
+    const saved = window.localStorage.getItem('admin-panel-lang');
+    if (saved === 'ru' || saved === 'en') return saved;
+  } catch {
+    // localStorage unavailable (private mode, quota, etc.)
+  }
+  return 'ru';
+}
+
+const lng = getSavedLanguage();
 
 i18n.use(initReactI18next).init({
   resources,
@@ -21,7 +33,13 @@ i18n.use(initReactI18next).init({
 });
 
 i18n.on('languageChanged', (lng) => {
-  localStorage.setItem('admin-panel-lang', lng);
+  try {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      window.localStorage.setItem('admin-panel-lang', lng);
+    }
+  } catch {
+    // ignore
+  }
 });
 
 export default i18n;
