@@ -87,10 +87,10 @@ export const SchedulesPage: React.FC = () => {
           <TableBody>
             {schedules?.map((schedule) => (
               <TableRow key={schedule.id}>
-                <TableCell>{schedule.route_name || schedule.route_id}</TableCell>
+                <TableCell>{schedule.route?.name ?? schedule.route_id}</TableCell>
                 <TableCell>{schedule.departure_time}</TableCell>
-                <TableCell>{formatDaysOfWeek(schedule.days_of_week)}</TableCell>
-                <TableCell>{schedule.price} ₽</TableCell>
+                <TableCell>{formatDaysOfWeek(schedule.days_of_week ?? [])}</TableCell>
+                <TableCell>{schedule.price != null ? `${schedule.price} ₽` : 'N/A'}</TableCell>
                 <TableCell>{schedule.is_active ? 'Активно' : 'Неактивно'}</TableCell>
               </TableRow>
             ))}

@@ -64,7 +64,7 @@ type CreateUserRequest struct {
 	Username  string  `json:"username" binding:"required,min=3,max=50"`
 	Password  string  `json:"password" binding:"required,min=8"`
 	FullName  string  `json:"full_name" binding:"required,max=100"`
-	Role      string  `json:"role" binding:"required,oneof=admin dispatcher cashier controller"`
+	Role      string  `json:"role" binding:"required,oneof=admin dispatcher cashier controller accountant"`
 	StationID *string `json:"station_id"`
 }
 
@@ -189,7 +189,7 @@ func (h *AuthHandler) UpdateUser(c *gin.Context) {
 	}
 	if req.Role != nil && *req.Role != "" {
 		valid := false
-		for _, r := range []string{"admin", "dispatcher", "cashier", "controller"} {
+		for _, r := range []string{"admin", "dispatcher", "cashier", "controller", "accountant"} {
 			if *req.Role == r {
 				valid = true
 				break

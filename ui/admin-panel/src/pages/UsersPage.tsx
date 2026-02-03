@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Card,
@@ -33,7 +34,7 @@ import {
 } from '@fluentui/react-components';
 import { Add24Regular, Delete24Regular, Edit24Regular } from '@fluentui/react-icons';
 import { usersService } from '@/services/users';
-import type { UserAdmin, CreateUserRequest, UpdateUserRequest } from '@/types';
+import type { UserAdmin, CreateUserRequest, UpdateUserRequest, UserRole } from '@/types';
 
 const useStyles = makeStyles({
   container: {
@@ -66,24 +67,20 @@ const useStyles = makeStyles({
   },
 });
 
-const ROLES = [
-  { value: 'admin', label: 'Администратор' },
-  { value: 'dispatcher', label: 'Диспетчер' },
-  { value: 'cashier', label: 'Кассир' },
-  { value: 'controller', label: 'Контролёр' },
-] as const;
+const ROLE_VALUES: UserRole[] = ['admin', 'dispatcher', 'cashier', 'controller', 'accountant'];
 
 export const UsersPage: React.FC = () => {
+  const { t } = useTranslation();
   const styles = useStyles();
   const queryClient = useQueryClient();
-  const { dispatchToast } = useToastController();
+  const listId = useId('list-users');
+  const { dispatchToast } = useToastController(listId);
+  const getRoleLabel = (role: UserRole) => t(`users.role_${role}`, { defaultValue: role });
   const [page, setPage] = useState(1);
   const [roleFilter, setRoleFilter] = useState<string>('');
   const [createOpen, setCreateOpen] = useState(false);
   const [editUser, setEditUser] = useState<UserAdmin | null>(null);
   const [deleteUser, setDeleteUser] = useState<UserAdmin | null>(null);
-
-  const listId = useId('list-users');
   const { data, isLoading, error } = useQuery({
     queryKey: ['users', page, roleFilter],
     queryFn: () =>
@@ -101,8 +98,8 @@ export const UsersPage: React.FC = () => {
       setCreateOpen(false);
       dispatchToast(
         <Toast>
-          <ToastTitle>Пользователь создан</ToastTitle>
-          <ToastBody>Пользователь успешно добавлен.</ToastBody>
+          <ToastTitle>{t('users.createSuccess')}</ToastTitle>
+          <ToastBody>{t('users.createSuccessBody')}</ToastBody>
         </Toast>,
         { intent: 'success' }
       );
@@ -110,8 +107,8 @@ export const UsersPage: React.FC = () => {
     onError: (err: { response?: { data?: { error?: string } } }) => {
       dispatchToast(
         <Toast>
-          <ToastTitle>Ошибка</ToastTitle>
-          <ToastBody>{err.response?.data?.error ?? 'Не удалось создать пользователя'}</ToastBody>
+          <ToastTitle>{t('common.error')}</ToastTitle>
+          <ToastBody>{err.response?.data?.error ?? t('users.createError')}</ToastBody>
         </Toast>,
         { intent: 'error' }
       );
@@ -126,8 +123,8 @@ export const UsersPage: React.FC = () => {
       setEditUser(null);
       dispatchToast(
         <Toast>
-          <ToastTitle>Пользователь обновлён</ToastTitle>
-          <ToastBody>Изменения сохранены.</ToastBody>
+          <ToastTitle>{t('users.updateSuccess')}</ToastTitle>
+          <ToastBody>{t('users.updateSuccessBody')}</ToastBody>
         </Toast>,
         { intent: 'success' }
       );
@@ -135,8 +132,8 @@ export const UsersPage: React.FC = () => {
     onError: (err: { response?: { data?: { error?: string } } }) => {
       dispatchToast(
         <Toast>
-          <ToastTitle>Ошибка</ToastTitle>
-          <ToastBody>{err.response?.data?.error ?? 'Не удалось обновить пользователя'}</ToastBody>
+          <ToastTitle>{t('common.error')}</ToastTitle>
+          <ToastBody>{err.response?.data?.error ?? t('users.updateError')}</ToastBody>
         </Toast>,
         { intent: 'error' }
       );
@@ -150,8 +147,8 @@ export const UsersPage: React.FC = () => {
       setDeleteUser(null);
       dispatchToast(
         <Toast>
-          <ToastTitle>Пользователь удалён</ToastTitle>
-          <ToastBody>Пользователь удалён из системы.</ToastBody>
+          <ToastTitle>{t('users.deleteSuccess')}</ToastTitle>
+          <ToastBody>{t('users.deleteSuccessBody')}</ToastBody>
         </Toast>,
         { intent: 'success' }
       );
@@ -159,8 +156,8 @@ export const UsersPage: React.FC = () => {
     onError: (err: { response?: { data?: { error?: string } } }) => {
       dispatchToast(
         <Toast>
-          <ToastTitle>Ошибка</ToastTitle>
-          <ToastBody>{err.response?.data?.error ?? 'Не удалось удалить пользователя'}</ToastBody>
+          <ToastTitle>{t('common.error')}</ToastTitle>
+          <ToastBody>{err.response?.data?.error ?? t('users.deleteError')}</ToastBody>
         </Toast>,
         { intent: 'error' }
       );
@@ -170,7 +167,7 @@ export const UsersPage: React.FC = () => {
   if (isLoading) {
     return (
       <div className={styles.loading}>
-        <Spinner label="Загрузка пользователей..." />
+        <Spinner label={t('users.loading')} />
       </div>
     );
   }
@@ -178,7 +175,7 @@ export const UsersPage: React.FC = () => {
   if (error) {
     return (
       <div className={styles.container}>
-        <Text>Ошибка загрузки пользователей</Text>
+        <Text>{t('users.loadError')}</Text>
       </div>
     );
   }
@@ -191,18 +188,19 @@ export const UsersPage: React.FC = () => {
     <div className={styles.container}>
       <Toaster toasterId={listId} />
       <div className={styles.header}>
-        <Title2>Пользователи</Title2>
+        <Title2>{t('users.title')}</Title2>
         <Dialog open={createOpen} onOpenChange={(_, d) => setCreateOpen(d.open)}>
           <DialogTrigger disableButtonEnhancement>
             <Button appearance="primary" icon={<Add24Regular />}>
-              Добавить пользователя
+              {t('users.addUser')}
             </Button>
           </DialogTrigger>
           <DialogSurface>
             <DialogBody>
-              <DialogTitle>Новый пользователь</DialogTitle>
+              <DialogTitle>{t('users.createUserTitle')}</DialogTitle>
               <DialogContent>
                 <CreateUserForm
+                  getRoleLabel={getRoleLabel}
                   onSubmit={(formData) => createMutation.mutate(formData)}
                   onCancel={() => setCreateOpen(false)}
                   isLoading={createMutation.isPending}
@@ -214,17 +212,17 @@ export const UsersPage: React.FC = () => {
       </div>
 
       <div className={styles.filters}>
-        <Label htmlFor="role-filter">Роль:</Label>
+        <Label htmlFor="role-filter">{t('users.roleFilter')}</Label>
         <Select
           id="role-filter"
           value={roleFilter}
           onChange={(_, v) => setRoleFilter(v.value ?? '')}
           style={{ minWidth: '160px' }}
         >
-          <Option value="">Все</Option>
-          {ROLES.map((r) => (
-            <Option key={r.value} value={r.value}>
-              {r.label}
+          <Option value="">{t('users.allRoles')}</Option>
+          {ROLE_VALUES.map((r) => (
+            <Option key={r} value={r}>
+              {getRoleLabel(r)}
             </Option>
           ))}
         </Select>
@@ -234,11 +232,11 @@ export const UsersPage: React.FC = () => {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHeaderCell>Логин</TableHeaderCell>
-              <TableHeaderCell>ФИО</TableHeaderCell>
-              <TableHeaderCell>Роль</TableHeaderCell>
-              <TableHeaderCell>Статус</TableHeaderCell>
-              <TableHeaderCell>Действия</TableHeaderCell>
+              <TableHeaderCell>{t('users.username')}</TableHeaderCell>
+              <TableHeaderCell>{t('users.fullName')}</TableHeaderCell>
+              <TableHeaderCell>{t('users.role')}</TableHeaderCell>
+              <TableHeaderCell>{t('users.status')}</TableHeaderCell>
+              <TableHeaderCell>{t('users.actions')}</TableHeaderCell>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -246,21 +244,21 @@ export const UsersPage: React.FC = () => {
               <TableRow key={user.id}>
                 <TableCell>{user.username}</TableCell>
                 <TableCell>{user.full_name}</TableCell>
-                <TableCell>{ROLES.find((r) => r.value === user.role)?.label ?? user.role}</TableCell>
-                <TableCell>{user.is_active ? 'Активен' : 'Неактивен'}</TableCell>
+                <TableCell>{getRoleLabel(user.role)}</TableCell>
+                <TableCell>{user.is_active ? t('users.active') : t('users.inactive')}</TableCell>
                 <TableCell>
                   <div className={styles.actions}>
                     <Button
                       appearance="subtle"
                       icon={<Edit24Regular />}
                       onClick={() => setEditUser(user)}
-                      aria-label="Редактировать"
+                      aria-label={t('users.edit')}
                     />
                     <Button
                       appearance="subtle"
                       icon={<Delete24Regular />}
                       onClick={() => setDeleteUser(user)}
-                      aria-label="Удалить"
+                      aria-label={t('common.delete')}
                     />
                   </div>
                 </TableCell>
@@ -275,17 +273,15 @@ export const UsersPage: React.FC = () => {
               disabled={page <= 1}
               onClick={() => setPage((p) => p - 1)}
             >
-              Назад
+              {t('users.back')}
             </Button>
-            <Text>
-              Страница {page} из {totalPages}
-            </Text>
+            <Text>{t('users.pageOf', { page, total: totalPages })}</Text>
             <Button
               appearance="subtle"
               disabled={page >= totalPages}
               onClick={() => setPage((p) => p + 1)}
             >
-              Вперёд
+              {t('users.next')}
             </Button>
           </div>
         )}
@@ -295,10 +291,11 @@ export const UsersPage: React.FC = () => {
         <Dialog open={!!editUser} onOpenChange={(_, d) => !d.open && setEditUser(null)}>
           <DialogSurface>
             <DialogBody>
-              <DialogTitle>Редактировать пользователя</DialogTitle>
+              <DialogTitle>{t('users.editUserTitle')}</DialogTitle>
               <DialogContent>
                 <EditUserForm
                   user={editUser}
+                  getRoleLabel={getRoleLabel}
                   onSubmit={(formData) =>
                     updateMutation.mutate({ id: editUser.id, data: formData })
                   }
@@ -315,17 +312,19 @@ export const UsersPage: React.FC = () => {
         <Dialog open={!!deleteUser} onOpenChange={(_, d) => !d.open && setDeleteUser(null)}>
           <DialogSurface>
             <DialogBody>
-              <DialogTitle>Удалить пользователя?</DialogTitle>
+              <DialogTitle>{t('users.deleteUserTitle')}</DialogTitle>
               <DialogContent>
                 <Text>
-                  Вы уверены, что хотите удалить пользователя {deleteUser.username} (
-                  {deleteUser.full_name})? Это действие нельзя отменить.
+                  {t('users.deleteConfirm', {
+                    username: deleteUser.username,
+                    fullName: deleteUser.full_name,
+                  })}
                 </Text>
               </DialogContent>
               <DialogActions>
                 <DialogTrigger disableButtonEnhancement>
                   <Button appearance="secondary" onClick={() => setDeleteUser(null)}>
-                    Отмена
+                    {t('common.cancel')}
                   </Button>
                 </DialogTrigger>
                 <Button
@@ -333,7 +332,7 @@ export const UsersPage: React.FC = () => {
                   onClick={() => deleteMutation.mutate(deleteUser.id)}
                   disabled={deleteMutation.isPending}
                 >
-                  Удалить
+                  {t('common.delete')}
                 </Button>
               </DialogActions>
             </DialogBody>
@@ -346,10 +345,12 @@ export const UsersPage: React.FC = () => {
 
 // Create user form (inline in dialog)
 const CreateUserForm: React.FC<{
+  getRoleLabel: (role: UserRole) => string;
   onSubmit: (data: CreateUserRequest) => void;
   onCancel: () => void;
   isLoading: boolean;
-}> = ({ onSubmit, onCancel, isLoading }) => {
+}> = ({ getRoleLabel, onSubmit, onCancel, isLoading }) => {
+  const { t } = useTranslation();
   const styles = useStyles();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -365,7 +366,7 @@ const CreateUserForm: React.FC<{
   return (
     <form onSubmit={handleSubmit}>
       <div className={styles.formRow}>
-        <Label htmlFor="create-username">Логин *</Label>
+        <Label htmlFor="create-username">{t('users.username')} *</Label>
         <Input
           id="create-username"
           value={username}
@@ -376,7 +377,7 @@ const CreateUserForm: React.FC<{
         />
       </div>
       <div className={styles.formRow}>
-        <Label htmlFor="create-password">Пароль *</Label>
+        <Label htmlFor="create-password">{t('users.password')} *</Label>
         <Input
           id="create-password"
           type="password"
@@ -387,7 +388,7 @@ const CreateUserForm: React.FC<{
         />
       </div>
       <div className={styles.formRow}>
-        <Label htmlFor="create-fullname">ФИО *</Label>
+        <Label htmlFor="create-fullname">{t('users.fullName')} *</Label>
         <Input
           id="create-fullname"
           value={fullName}
@@ -397,25 +398,25 @@ const CreateUserForm: React.FC<{
         />
       </div>
       <div className={styles.formRow}>
-        <Label htmlFor="create-role">Роль *</Label>
+        <Label htmlFor="create-role">{t('users.role')} *</Label>
         <Select
           id="create-role"
           value={role}
           onChange={(_, v) => setRole((v.value ?? 'cashier') as CreateUserRequest['role'])}
         >
-          {ROLES.map((r) => (
-            <Option key={r.value} value={r.value}>
-              {r.label}
+          {ROLE_VALUES.map((r) => (
+            <Option key={r} value={r}>
+              {getRoleLabel(r)}
             </Option>
           ))}
         </Select>
       </div>
       <DialogActions>
         <Button type="button" appearance="secondary" onClick={onCancel}>
-          Отмена
+          {t('common.cancel')}
         </Button>
         <Button type="submit" appearance="primary" disabled={isLoading}>
-          Создать
+          {t('common.create')}
         </Button>
       </DialogActions>
     </form>
@@ -425,10 +426,12 @@ const CreateUserForm: React.FC<{
 // Edit user form
 const EditUserForm: React.FC<{
   user: UserAdmin;
+  getRoleLabel: (role: UserRole) => string;
   onSubmit: (data: UpdateUserRequest) => void;
   onCancel: () => void;
   isLoading: boolean;
-}> = ({ user, onSubmit, onCancel, isLoading }) => {
+}> = ({ user, getRoleLabel, onSubmit, onCancel, isLoading }) => {
+  const { t } = useTranslation();
   const styles = useStyles();
   const [fullName, setFullName] = useState(user.full_name);
   const [password, setPassword] = useState('');
@@ -449,11 +452,11 @@ const EditUserForm: React.FC<{
   return (
     <form onSubmit={handleSubmit}>
       <div className={styles.formRow}>
-        <Label>Логин</Label>
+        <Label>{t('users.username')}</Label>
         <Text block>{user.username}</Text>
       </div>
       <div className={styles.formRow}>
-        <Label htmlFor="edit-fullname">ФИО *</Label>
+        <Label htmlFor="edit-fullname">{t('users.fullName')} *</Label>
         <Input
           id="edit-fullname"
           value={fullName}
@@ -463,26 +466,26 @@ const EditUserForm: React.FC<{
         />
       </div>
       <div className={styles.formRow}>
-        <Label htmlFor="edit-password">Новый пароль (оставьте пустым, чтобы не менять)</Label>
+        <Label htmlFor="edit-password">{t('users.newPasswordPlaceholder')}</Label>
         <Input
           id="edit-password"
           type="password"
           value={password}
           onChange={(_, v) => setPassword(v.value)}
           minLength={8}
-          placeholder="Минимум 8 символов"
+          placeholder={t('users.passwordMinHint')}
         />
       </div>
       <div className={styles.formRow}>
-        <Label htmlFor="edit-role">Роль *</Label>
+        <Label htmlFor="edit-role">{t('users.role')} *</Label>
         <Select
           id="edit-role"
           value={role}
           onChange={(_, v) => setRole((v.value ?? user.role) as UpdateUserRequest['role'])}
         >
-          {ROLES.map((r) => (
-            <Option key={r.value} value={r.value}>
-              {r.label}
+          {ROLE_VALUES.map((r) => (
+            <Option key={r} value={r}>
+              {getRoleLabel(r)}
             </Option>
           ))}
         </Select>
@@ -494,15 +497,15 @@ const EditUserForm: React.FC<{
             checked={isActive}
             onChange={(e) => setIsActive(e.target.checked)}
           />{' '}
-          Активен
+          {t('users.activeCheckbox')}
         </Label>
       </div>
       <DialogActions>
         <Button type="button" appearance="secondary" onClick={onCancel}>
-          Отмена
+          {t('common.cancel')}
         </Button>
         <Button type="submit" appearance="primary" disabled={isLoading}>
-          Сохранить
+          {t('common.save')}
         </Button>
       </DialogActions>
     </form>

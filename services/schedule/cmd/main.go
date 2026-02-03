@@ -18,6 +18,7 @@ import (
 
 	"github.com/vokzal-tech/schedule-service/internal/config"
 	"github.com/vokzal-tech/schedule-service/internal/handlers"
+	"github.com/vokzal-tech/schedule-service/internal/middleware"
 	"github.com/vokzal-tech/schedule-service/internal/models"
 	"github.com/vokzal-tech/schedule-service/internal/repository"
 	"github.com/vokzal-tech/schedule-service/internal/service"
@@ -87,7 +88,7 @@ func main() {
 	}
 	router := gin.Default()
 
-	// Health check
+	// Health check (public, no auth)
 	router.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"status":  "ok",
@@ -97,6 +98,7 @@ func main() {
 	})
 
 	v1 := router.Group("/v1")
+	v1.Use(middleware.AuthMiddleware(cfg.JWT.Secret, logger))
 	stations := v1.Group("/stations")
 	stations.POST("", scheduleHandler.CreateStation)
 	stations.GET("", scheduleHandler.ListStations)

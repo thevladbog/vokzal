@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Select, Option } from '@fluentui/react-components';
 import {
@@ -42,6 +43,7 @@ const useStyles = makeStyles({
 });
 
 export const RoutesPage: React.FC = () => {
+  const { t } = useTranslation();
   const styles = useStyles();
   const queryClient = useQueryClient();
   const [createOpen, setCreateOpen] = useState(false);
@@ -88,14 +90,14 @@ export const RoutesPage: React.FC = () => {
   if (isLoading) {
     return (
       <div className={styles.loading}>
-        <Spinner label="Загрузка маршрутов..." />
+        <Spinner label={t('routes.loading')} />
       </div>
     );
   }
   if (error) {
     return (
       <div className={styles.container}>
-        <Text>Ошибка загрузки маршрутов</Text>
+        <Text>{t('routes.loadError')}</Text>
       </div>
     );
   }
@@ -103,16 +105,16 @@ export const RoutesPage: React.FC = () => {
   return (
     <div className={styles.container}>
       <div className={styles.header}>
-        <Title2>Маршруты</Title2>
+        <Title2>{t('routes.title')}</Title2>
         <Dialog open={createOpen} onOpenChange={(_, d) => setCreateOpen(d.open)}>
           <DialogTrigger disableButtonEnhancement>
             <Button appearance="primary" icon={<Add24Regular />}>
-              Добавить маршрут
+              {t('routes.addRoute')}
             </Button>
           </DialogTrigger>
           <DialogSurface>
             <DialogBody>
-              <DialogTitle>Новый маршрут</DialogTitle>
+              <DialogTitle>{t('routes.createRouteTitle')}</DialogTitle>
               <DialogContent>
                 <RouteForm
                   onSubmit={(formData) => {
@@ -138,12 +140,12 @@ export const RoutesPage: React.FC = () => {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHeaderCell>Название</TableHeaderCell>
-              <TableHeaderCell>Расстояние (км)</TableHeaderCell>
-              <TableHeaderCell>Время (мин)</TableHeaderCell>
-              <TableHeaderCell>Остановок</TableHeaderCell>
-              <TableHeaderCell>Статус</TableHeaderCell>
-              <TableHeaderCell>Действия</TableHeaderCell>
+              <TableHeaderCell>{t('routes.name')}</TableHeaderCell>
+              <TableHeaderCell>{t('routes.distanceKm')}</TableHeaderCell>
+              <TableHeaderCell>{t('routes.durationMin')}</TableHeaderCell>
+              <TableHeaderCell>{t('routes.stopsCount')}</TableHeaderCell>
+              <TableHeaderCell>{t('routes.status')}</TableHeaderCell>
+              <TableHeaderCell>{t('routes.actions')}</TableHeaderCell>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -153,20 +155,20 @@ export const RoutesPage: React.FC = () => {
                 <TableCell>{r.distance_km ?? '—'}</TableCell>
                 <TableCell>{r.duration_min ?? '—'}</TableCell>
                 <TableCell>{Array.isArray(r.stops) ? r.stops.length : 0}</TableCell>
-                <TableCell>{r.is_active ? 'Активен' : 'Неактивен'}</TableCell>
+                <TableCell>{r.is_active ? t('routes.active') : t('routes.inactive')}</TableCell>
                 <TableCell>
                   <div className={styles.actions}>
                     <Button
                       appearance="subtle"
                       icon={<Edit24Regular />}
                       onClick={() => setEditRoute(r)}
-                      aria-label="Редактировать"
+                      aria-label={t('common.edit')}
                     />
                     <Button
                       appearance="subtle"
                       icon={<Delete24Regular />}
                       onClick={() => setDeleteRoute(r)}
-                      aria-label="Удалить"
+                      aria-label={t('common.delete')}
                     />
                   </div>
                 </TableCell>
@@ -180,7 +182,7 @@ export const RoutesPage: React.FC = () => {
         <Dialog open={!!editRoute} onOpenChange={(_, d) => !d.open && setEditRoute(null)}>
           <DialogSurface>
             <DialogBody>
-              <DialogTitle>Редактировать маршрут</DialogTitle>
+              <DialogTitle>{t('routes.editRouteTitle')}</DialogTitle>
               <DialogContent>
                 <RouteForm
                   initial={editRoute}
@@ -201,22 +203,22 @@ export const RoutesPage: React.FC = () => {
         <Dialog open={!!deleteRoute} onOpenChange={(_, d) => !d.open && setDeleteRoute(null)}>
           <DialogSurface>
             <DialogBody>
-              <DialogTitle>Удалить маршрут?</DialogTitle>
+              <DialogTitle>{t('routes.deleteRouteTitle')}</DialogTitle>
               <DialogContent>
                 <Text>
-                  Удалить маршрут «{deleteRoute.name}»? Это действие нельзя отменить.
+                  {t('routes.deleteConfirm', { name: deleteRoute.name })}
                 </Text>
               </DialogContent>
               <DialogActions>
                 <Button appearance="secondary" onClick={() => setDeleteRoute(null)}>
-                  Отмена
+                  {t('common.cancel')}
                 </Button>
                 <Button
                   appearance="primary"
                   onClick={() => deleteMutation.mutate(deleteRoute.id)}
                   disabled={deleteMutation.isPending}
                 >
-                  Удалить
+                  {t('common.delete')}
                 </Button>
               </DialogActions>
             </DialogBody>
@@ -242,6 +244,7 @@ const RouteForm: React.FC<{
   isLoading: boolean;
   isEdit?: boolean;
 }> = ({ initial, onSubmit, onCancel, isLoading, isEdit }) => {
+  const { t } = useTranslation();
   const styles = useStyles();
   const { data: stationsRaw } = useQuery({
     queryKey: ['stations'],
@@ -287,7 +290,7 @@ const RouteForm: React.FC<{
   return (
     <form onSubmit={handleSubmit}>
       <div className={styles.formRow}>
-        <Label htmlFor="route-name">Название *</Label>
+        <Label htmlFor="route-name">{t('routes.nameRequired')}</Label>
         <Input
           id="route-name"
           value={name}
@@ -297,7 +300,7 @@ const RouteForm: React.FC<{
         />
       </div>
       <div className={styles.formRow}>
-        <Label htmlFor="route-distance">Расстояние (км)</Label>
+        <Label htmlFor="route-distance">{t('routes.distanceKm')}</Label>
         <Input
           id="route-distance"
           type="number"
@@ -308,7 +311,7 @@ const RouteForm: React.FC<{
         />
       </div>
       <div className={styles.formRow}>
-        <Label htmlFor="route-duration">Время в пути (мин)</Label>
+        <Label htmlFor="route-duration">{t('routes.durationLabel')}</Label>
         <Input
           id="route-duration"
           type="number"
@@ -319,7 +322,7 @@ const RouteForm: React.FC<{
       </div>
       {!isEdit && stations.length > 0 && (
         <div className={styles.formRow}>
-          <Label htmlFor="route-first-station">Первая остановка (обязательно)</Label>
+          <Label htmlFor="route-first-station">{t('routes.firstStationRequired')}</Label>
           <Select
             id="route-first-station"
             value={firstStationId}
@@ -342,16 +345,16 @@ const RouteForm: React.FC<{
               checked={isActive}
               onChange={(e) => setIsActive(e.target.checked)}
             />{' '}
-            Активен
+            {t('routes.activeCheckbox')}
           </Label>
         </div>
       )}
       <DialogActions>
         <Button type="button" appearance="secondary" onClick={onCancel}>
-          Отмена
+          {t('common.cancel')}
         </Button>
         <Button type="submit" appearance="primary" disabled={isLoading}>
-          {isEdit ? 'Сохранить' : 'Создать'}
+          {isEdit ? t('common.save') : t('common.create')}
         </Button>
       </DialogActions>
     </form>

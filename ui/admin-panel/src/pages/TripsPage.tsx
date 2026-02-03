@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import {
   Card,
@@ -26,17 +27,15 @@ const useStyles = makeStyles({
   loading: { display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' },
 });
 
-const TRIP_STATUS_LABELS: Record<string, string> = {
-  scheduled: 'Запланирован',
-  delayed: 'Задержан',
-  cancelled: 'Отменён',
-  departed: 'Отправлен',
-  arrived: 'Прибыл',
-};
-
 export const TripsPage: React.FC = () => {
+  const { t } = useTranslation();
   const styles = useStyles();
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
+
+  const getStatusLabel = (status: Trip['status']): string => {
+    const key = `trips.status_${status}` as const;
+    return t(key, { defaultValue: status });
+  };
 
   const { data: trips = [], isLoading, error } = useQuery<Trip[]>({
     queryKey: ['trips', date],
@@ -46,14 +45,14 @@ export const TripsPage: React.FC = () => {
   if (isLoading) {
     return (
       <div className={styles.loading}>
-        <Spinner label="Загрузка рейсов..." />
+        <Spinner label={t('trips.loading')} />
       </div>
     );
   }
   if (error) {
     return (
       <div className={styles.container}>
-        <Text>Ошибка загрузки рейсов</Text>
+        <Text>{t('trips.loadError')}</Text>
       </div>
     );
   }
@@ -61,10 +60,10 @@ export const TripsPage: React.FC = () => {
   return (
     <div className={styles.container}>
       <div className={styles.header}>
-        <Title2>Рейсы</Title2>
+        <Title2>{t('trips.title')}</Title2>
       </div>
       <div className={styles.filters}>
-        <Label htmlFor="trip-date">Дата</Label>
+        <Label htmlFor="trip-date">{t('trips.date')}</Label>
         <Input
           id="trip-date"
           type="date"
@@ -77,11 +76,11 @@ export const TripsPage: React.FC = () => {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHeaderCell>Дата</TableHeaderCell>
-              <TableHeaderCell>Маршрут / расписание</TableHeaderCell>
-              <TableHeaderCell>Статус</TableHeaderCell>
-              <TableHeaderCell>Задержка</TableHeaderCell>
-              <TableHeaderCell>Перрон</TableHeaderCell>
+              <TableHeaderCell>{t('trips.date')}</TableHeaderCell>
+              <TableHeaderCell>{t('trips.routeSchedule')}</TableHeaderCell>
+              <TableHeaderCell>{t('trips.status')}</TableHeaderCell>
+              <TableHeaderCell>{t('trips.delay')}</TableHeaderCell>
+              <TableHeaderCell>{t('trips.platform')}</TableHeaderCell>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -95,8 +94,10 @@ export const TripsPage: React.FC = () => {
                 <TableCell>
                   {trip.schedule_id?.slice(0, 8) ?? trip.id.slice(0, 8)}…
                 </TableCell>
-                <TableCell>{TRIP_STATUS_LABELS[trip.status] ?? trip.status}</TableCell>
-                <TableCell>{trip.delay_minutes ? `${trip.delay_minutes} мин` : '—'}</TableCell>
+                <TableCell>{getStatusLabel(trip.status)}</TableCell>
+                <TableCell>
+                  {trip.delay_minutes ? t('trips.delayMinutes', { count: trip.delay_minutes }) : '—'}
+                </TableCell>
                 <TableCell>{trip.platform ?? '—'}</TableCell>
               </TableRow>
             ))}
@@ -104,7 +105,7 @@ export const TripsPage: React.FC = () => {
         </Table>
         {trips.length === 0 && (
           <div style={{ padding: '24px', textAlign: 'center' }}>
-            <Text>Рейсов на выбранную дату нет</Text>
+            <Text>{t('trips.noTrips')}</Text>
           </div>
         )}
       </Card>

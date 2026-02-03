@@ -15,28 +15,24 @@ export const auditService = {
     const response = await apiClient.get<{ data: AuditLog[] }>(`${baseUrl}/entity`, {
       params: { entity_type: entityType, entity_id: entityId },
     });
-    const body = response.data as { data?: AuditLog[] };
-    return body.data ?? [];
+    return unwrap(response.data as { data?: AuditLog[] }) ?? [];
   },
   getLogsByUser: async (userId: string, limit = 100): Promise<AuditLog[]> => {
     const response = await apiClient.get<{ data: AuditLog[] }>(`${baseUrl}/user`, {
       params: { user_id: userId, limit },
     });
-    const body = response.data as { data?: AuditLog[] };
-    return body.data ?? [];
+    return unwrap(response.data as { data?: AuditLog[] }) ?? [];
   },
   getLogsByDateRange: async (from: string, to: string): Promise<AuditLog[]> => {
     const response = await apiClient.get<{ data: AuditLog[] }>(`${baseUrl}/date-range`, {
       params: { from, to },
     });
-    const body = response.data as { data?: AuditLog[] };
-    return body.data ?? [];
+    return unwrap(response.data as { data?: AuditLog[] }) ?? [];
   },
   listLogs: async (limit = 100): Promise<AuditLog[]> => {
     const response = await apiClient.get<{ data: AuditLog[] }>(`${baseUrl}/list`, {
       params: { limit },
     });
-    const body = response.data as { data?: AuditLog[] };
-    return body.data ?? [];
+    return unwrap(response.data as { data?: AuditLog[] }) ?? [];
   },
 };

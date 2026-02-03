@@ -13,7 +13,6 @@ import {
   tokens,
 } from "@fluentui/react-components";
 import { authService } from "@/services/auth";
-import { useAuthStore } from "@/stores/authStore";
 
 const useStyles = makeStyles({
   container: {
@@ -46,8 +45,6 @@ export const LoginPage: React.FC = () => {
   const styles = useStyles();
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const setUser = useAuthStore((state) => state.setUser);
-
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -59,8 +56,7 @@ export const LoginPage: React.FC = () => {
     setLoading(true);
 
     try {
-      const response = await authService.login(username, password);
-      setUser(response.user);
+      await authService.login(username, password);
       navigate("/");
     } catch (err: unknown) {
       const msg =

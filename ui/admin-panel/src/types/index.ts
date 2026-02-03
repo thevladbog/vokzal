@@ -98,21 +98,23 @@ export interface Route {
   updated_at: string;
 }
 
-// Schedule
+// Schedule (matches backend: id, route_id, departure_time, days_of_week, is_active, created_at, updated_at, platform, nested route)
 export interface Schedule {
   id: string;
   route_id: string;
-  route_name?: string;
-  departure_station_id: string;
-  arrival_station_id: string;
   departure_time: string;
   days_of_week: number[];
-  price: number;
-  bus_id?: string;
-  driver_id?: string;
   is_active: boolean;
   created_at: string;
   updated_at: string;
+  platform?: string;
+  route?: Route;
+  // Optional/legacy fields not returned by API:
+  price?: number;
+  departure_station_id?: string;
+  arrival_station_id?: string;
+  bus_id?: string;
+  driver_id?: string;
 }
 
 // Trip
