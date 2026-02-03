@@ -44,15 +44,6 @@ jobs:
         working-directory: agent/local-agent
         run: go test -v -race -coverprofile=coverage.out -covermode=atomic ./...
 
-      - name: Upload coverage
-        uses: codecov/codecov-action@v4
-        with:
-          file: ./agent/local-agent/coverage.out
-          flags: fiscal-agent
-          name: fiscal-agent-coverage
-          token: ${{ secrets.CODECOV_TOKEN }}
-        if: always()
-
   build:
     name: Build Executables
     needs: lint-and-test

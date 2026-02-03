@@ -86,15 +86,6 @@ jobs:
         working-directory: services/${{ matrix.service }}
         run: go test -v -race -coverprofile=coverage.out -covermode=atomic ./...
 
-      - name: Upload coverage
-        uses: codecov/codecov-action@v4
-        with:
-          file: ./services/${{ matrix.service }}/coverage.out
-          flags: ${{ matrix.service }}
-          name: ${{ matrix.service }}-coverage
-          token: ${{ secrets.CODECOV_TOKEN }}
-        if: always()
-
   build:
     name: Build Docker Images
     needs: [detect-changes, lint-and-test]
