@@ -1,3 +1,4 @@
+// Package atol — клиент АТОЛ ККТ через локальный агент.
 package atol
 
 import (
@@ -11,60 +12,67 @@ import (
 	"go.uber.org/zap"
 )
 
-// ATOLClient клиент для работы с АТОЛ через локальный агент
+// ATOLClient — клиент для работы с АТОЛ через локальный агент.
+//
+//nolint:revive // exported: имя ATOLClient намеренно (Client слишком общее в пакете atol).
 type ATOLClient struct {
-	agentURL string
 	client   *http.Client
 	logger   *zap.Logger
+	agentURL string
 }
 
-// ReceiptRequest запрос на печать чека
+// ReceiptRequest — запрос на печать чека.
 type ReceiptRequest struct {
-	Operation string        `json:"operation"` // sell, refund
+	Company   Company       `json:"company"`
+	Operation string        `json:"operation"`
 	Items     []ReceiptItem `json:"items"`
 	Payment   Payment       `json:"payment"`
-	Company   Company       `json:"company"`
 }
 
+// ReceiptItem — позиция чека.
 type ReceiptItem struct {
 	Name     string  `json:"name"`
+	VAT      string  `json:"vat"`
 	Quantity float64 `json:"quantity"`
 	Price    float64 `json:"price"`
-	VAT      string  `json:"vat"` // vat20, vat10, vat0, none
 }
 
+// Payment — платёж в чеке.
 type Payment struct {
-	Type   string  `json:"type"`   // cash, card, online
+	Type   string  `json:"type"` // cash, card, online
 	Amount float64 `json:"amount"`
 }
 
+// Company — реквизиты организации для чека.
 type Company struct {
 	INN       string `json:"inn"`
 	Name      string `json:"name"`
 	TaxSystem string `json:"tax_system"`
 }
 
-// ReceiptResponse ответ от ККТ
+// ReceiptResponse — ответ от ККТ.
 type ReceiptResponse struct {
-	Success    bool   `json:"success"`
 	OFDURL     string `json:"ofd_url"`
 	FiscalSign string `json:"fiscal_sign"`
 	KKTSerial  string `json:"kkt_serial"`
 	ErrorMsg   string `json:"error_msg,omitempty"`
+	Success    bool   `json:"success"`
 }
 
-// ZReportResponse ответ на Z-отчёт
+// ZReportResponse — ответ на Z-отчёт.
 type ZReportResponse struct {
-	Success      bool    `json:"success"`
+	FiscalSign   string  `json:"fiscal_sign"`
+	KKTSerial    string  `json:"kkt_serial,omitempty"`
+	ErrorMsg     string  `json:"error_msg,omitempty"`
 	ShiftNumber  int     `json:"shift_number"`
 	TotalSales   float64 `json:"total_sales"`
 	TotalRefunds float64 `json:"total_refunds"`
 	SalesCount   int     `json:"sales_count"`
 	RefundsCount int     `json:"refunds_count"`
-	FiscalSign   string  `json:"fiscal_sign"`
-	ErrorMsg     string  `json:"error_msg,omitempty"`
+	Success      bool    `json:"success"`
 }
 
+// NewATOLClient создаёт новый ATOLClient.
 func NewATOLClient(agentURL string, logger *zap.Logger) *ATOLClient {
 	return &ATOLClient{
 		agentURL: agentURL,
@@ -75,7 +83,7 @@ func NewATOLClient(agentURL string, logger *zap.Logger) *ATOLClient {
 	}
 }
 
-// PrintReceipt отправляет запрос на печать чека через локальный агент
+// PrintReceipt отправляет запрос на печать чека через локальный агент.
 func (c *ATOLClient) PrintReceipt(req *ReceiptRequest) (*ReceiptResponse, error) {
 	jsonData, err := json.Marshal(req)
 	if err != nil {
@@ -95,7 +103,11 @@ func (c *ATOLClient) PrintReceipt(req *ReceiptRequest) (*ReceiptResponse, error)
 	if err != nil {
 		return nil, fmt.Errorf("failed to send request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if closeErr := resp.Body.Close(); closeErr != nil {
+			c.logger.Warn("failed to close response body", zap.Error(closeErr))
+		}
+	}()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -114,10 +126,10 @@ func (c *ATOLClient) PrintReceipt(req *ReceiptRequest) (*ReceiptResponse, error)
 	return &result, nil
 }
 
-// CreateZReport формирует Z-отчёт
+// CreateZReport формирует Z-отчёт.
 func (c *ATOLClient) CreateZReport() (*ZReportResponse, error) {
 	url := fmt.Sprintf("%s/kkt/z-report", c.agentURL)
-	httpReq, err := http.NewRequest("POST", url, nil)
+	httpReq, err := http.NewRequest("POST", url, http.NoBody)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
@@ -128,7 +140,11 @@ func (c *ATOLClient) CreateZReport() (*ZReportResponse, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to send request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if closeErr := resp.Body.Close(); closeErr != nil {
+			c.logger.Warn("failed to close response body", zap.Error(closeErr))
+		}
+	}()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -147,14 +163,18 @@ func (c *ATOLClient) CreateZReport() (*ZReportResponse, error) {
 	return &result, nil
 }
 
-// GetKKTStatus получает статус ККТ
+// GetKKTStatus получает статус ККТ.
 func (c *ATOLClient) GetKKTStatus() (map[string]interface{}, error) {
 	url := fmt.Sprintf("%s/kkt/status", c.agentURL)
 	resp, err := c.client.Get(url)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get status: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if closeErr := resp.Body.Close(); closeErr != nil {
+			c.logger.Warn("failed to close response body", zap.Error(closeErr))
+		}
+	}()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {

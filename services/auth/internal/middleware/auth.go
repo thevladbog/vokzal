@@ -1,3 +1,4 @@
+// Package middleware — HTTP middleware Auth Service.
 package middleware
 
 import (
@@ -5,15 +6,19 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+
 	"github.com/vokzal-tech/auth-service/internal/service"
+
 	"go.uber.org/zap"
 )
 
+// AuthMiddleware — middleware для проверки JWT и ролей.
 type AuthMiddleware struct {
 	authService service.AuthService
 	logger      *zap.Logger
 }
 
+// NewAuthMiddleware создаёт новый AuthMiddleware.
 func NewAuthMiddleware(authService service.AuthService, logger *zap.Logger) *AuthMiddleware {
 	return &AuthMiddleware{
 		authService: authService,
@@ -21,7 +26,7 @@ func NewAuthMiddleware(authService service.AuthService, logger *zap.Logger) *Aut
 	}
 }
 
-// RequireAuth проверяет JWT токен
+// RequireAuth проверяет JWT токен.
 func (m *AuthMiddleware) RequireAuth() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
@@ -70,7 +75,7 @@ func (m *AuthMiddleware) RequireAuth() gin.HandlerFunc {
 	}
 }
 
-// RequireRole проверяет роль пользователя
+// RequireRole проверяет роль пользователя.
 func (m *AuthMiddleware) RequireRole(roles ...string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		userRole := c.GetString("role")
@@ -104,7 +109,7 @@ func (m *AuthMiddleware) RequireRole(roles ...string) gin.HandlerFunc {
 	}
 }
 
-// CORS middleware
+// CORS — middleware для CORS-заголовков.
 func CORS() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
@@ -121,7 +126,7 @@ func CORS() gin.HandlerFunc {
 	}
 }
 
-// RequestLogger логирование запросов
+// RequestLogger — логирование входящих запросов.
 func RequestLogger(logger *zap.Logger) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		logger.Info("Incoming request",

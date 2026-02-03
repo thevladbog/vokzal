@@ -1,3 +1,4 @@
+// Package repository — слой доступа к данным Audit Service.
 package repository
 
 import (
@@ -5,13 +6,16 @@ import (
 	"errors"
 
 	"github.com/vokzal-tech/audit-service/internal/models"
+
 	"gorm.io/gorm"
 )
 
 var (
+	// ErrAuditLogNotFound возвращается, когда запись аудита не найдена.
 	ErrAuditLogNotFound = errors.New("audit log not found")
 )
 
+// AuditRepository — интерфейс репозитория записей аудита.
 type AuditRepository interface {
 	Create(ctx context.Context, log *models.AuditLog) error
 	FindByID(ctx context.Context, id string) (*models.AuditLog, error)
@@ -25,6 +29,7 @@ type auditRepository struct {
 	db *gorm.DB
 }
 
+// NewAuditRepository создаёт новый AuditRepository.
 func NewAuditRepository(db *gorm.DB) AuditRepository {
 	return &auditRepository{db: db}
 }

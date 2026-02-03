@@ -1,9 +1,15 @@
-import { format, parseISO } from 'date-fns';
-import { ru } from 'date-fns/locale';
+import { format, parseISO } from "date-fns";
+import { ru } from "date-fns/locale";
+
+declare global {
+  interface Window {
+    webkitAudioContext?: typeof AudioContext;
+  }
+}
 
 export const formatDate = (dateString: string): string => {
   try {
-    return format(parseISO(dateString), 'd MMMM yyyy', { locale: ru });
+    return format(parseISO(dateString), "d MMMM yyyy", { locale: ru });
   } catch {
     return dateString;
   }
@@ -11,7 +17,7 @@ export const formatDate = (dateString: string): string => {
 
 export const formatTime = (dateString: string): string => {
   try {
-    return format(parseISO(dateString), 'HH:mm', { locale: ru });
+    return format(parseISO(dateString), "HH:mm", { locale: ru });
   } catch {
     return dateString;
   }
@@ -19,7 +25,7 @@ export const formatTime = (dateString: string): string => {
 
 export const formatDateTime = (dateString: string): string => {
   try {
-    return format(parseISO(dateString), 'd MMMM yyyy, HH:mm', { locale: ru });
+    return format(parseISO(dateString), "d MMMM yyyy, HH:mm", { locale: ru });
   } catch {
     return dateString;
   }
@@ -28,29 +34,31 @@ export const formatDateTime = (dateString: string): string => {
 export const formatDuration = (minutes: number): string => {
   const hours = Math.floor(minutes / 60);
   const mins = minutes % 60;
-  
+
   if (hours === 0) {
     return `${mins} мин`;
   }
-  
+
   if (mins === 0) {
     return `${hours} ч`;
   }
-  
+
   return `${hours} ч ${mins} мин`;
 };
 
 export const formatPrice = (amount: number): string => {
-  return new Intl.NumberFormat('ru-RU', {
-    style: 'currency',
-    currency: 'RUB',
+  return new Intl.NumberFormat("ru-RU", {
+    style: "currency",
+    currency: "RUB",
     minimumFractionDigits: 0,
     maximumFractionDigits: 2,
   }).format(amount);
 };
 
 export const playSuccessSound = () => {
-  const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+  const AudioCtx = window.AudioContext || window.webkitAudioContext;
+  if (!AudioCtx) throw new Error("Web Audio API not supported");
+  const audioContext = new AudioCtx();
   const oscillator = audioContext.createOscillator();
   const gainNode = audioContext.createGain();
 
@@ -58,17 +66,22 @@ export const playSuccessSound = () => {
   gainNode.connect(audioContext.destination);
 
   oscillator.frequency.value = 800;
-  oscillator.type = 'sine';
+  oscillator.type = "sine";
 
   gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-  gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+  gainNode.gain.exponentialRampToValueAtTime(
+    0.01,
+    audioContext.currentTime + 0.2
+  );
 
   oscillator.start(audioContext.currentTime);
   oscillator.stop(audioContext.currentTime + 0.2);
 };
 
 export const playErrorSound = () => {
-  const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+  const AudioCtx = window.AudioContext || window.webkitAudioContext;
+  if (!AudioCtx) throw new Error("Web Audio API not supported");
+  const audioContext = new AudioCtx();
   const oscillator = audioContext.createOscillator();
   const gainNode = audioContext.createGain();
 
@@ -76,17 +89,20 @@ export const playErrorSound = () => {
   gainNode.connect(audioContext.destination);
 
   oscillator.frequency.value = 400;
-  oscillator.type = 'sawtooth';
+  oscillator.type = "sawtooth";
 
   gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-  gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+  gainNode.gain.exponentialRampToValueAtTime(
+    0.01,
+    audioContext.currentTime + 0.3
+  );
 
   oscillator.start(audioContext.currentTime);
   oscillator.stop(audioContext.currentTime + 0.3);
 };
 
 export const vibratePhone = (pattern: number | number[] = 200) => {
-  if ('vibrate' in navigator) {
+  if ("vibrate" in navigator) {
     navigator.vibrate(pattern);
   }
 };

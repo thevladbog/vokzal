@@ -1,3 +1,4 @@
+// Package main — точка входа Payment Service.
 package main
 
 import (
@@ -11,6 +12,10 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/nats-io/nats.go"
+	"go.uber.org/zap"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
+
 	"github.com/vokzal-tech/payment-service/internal/config"
 	"github.com/vokzal-tech/payment-service/internal/handlers"
 	"github.com/vokzal-tech/payment-service/internal/models"
@@ -18,26 +23,30 @@ import (
 	"github.com/vokzal-tech/payment-service/internal/sbp"
 	"github.com/vokzal-tech/payment-service/internal/service"
 	"github.com/vokzal-tech/payment-service/internal/tinkoff"
-	"go.uber.org/zap"
-	"gorm.io/driver/postgres"
-	"gorm.io/gorm"
 )
 
+func initLogger(cfg *config.Config) (*zap.Logger, error) {
+	if cfg.Logger.Level == "production" {
+		return zap.NewProduction()
+	}
+	return zap.NewDevelopment()
+}
+
 func main() {
-	// Загрузить конфигурацию
 	cfg, err := config.Load()
 	if err != nil {
 		panic(fmt.Sprintf("Failed to load config: %v", err))
 	}
 
-	// Инициализировать логгер
-	var logger *zap.Logger
-	if cfg.Logger.Level == "production" {
-		logger, _ = zap.NewProduction()
-	} else {
-		logger, _ = zap.NewDevelopment()
+	logger, errLog := initLogger(cfg)
+	if errLog != nil {
+		panic(fmt.Sprintf("Failed to create logger: %v", errLog))
 	}
-	defer logger.Sync()
+	defer func() {
+		if syncErr := logger.Sync(); syncErr != nil {
+			fmt.Fprintf(os.Stderr, "logger sync: %v\n", syncErr)
+		}
+	}()
 
 	logger.Info("Starting Payment Service", zap.String("version", "1.0.0"))
 
@@ -56,9 +65,8 @@ func main() {
 	sqlDB.SetMaxOpenConns(100)
 	sqlDB.SetConnMaxLifetime(time.Hour)
 
-	// Auto-migrate
-	if err := db.AutoMigrate(&models.Payment{}); err != nil {
-		logger.Warn("Auto-migration failed", zap.Error(err))
+	if migErr := db.AutoMigrate(&models.Payment{}); migErr != nil {
+		logger.Warn("Auto-migration failed", zap.Error(migErr))
 	}
 
 	// Подключиться к NATS
@@ -118,27 +126,17 @@ func main() {
 		})
 	})
 
-	// API routes
 	v1 := router.Group("/v1")
-	{
-		// Payments
-		payments := v1.Group("/payments")
-		{
-			payments.POST("/tinkoff/init", paymentHandler.InitTinkoff)
-			payments.POST("/sbp/init", paymentHandler.InitSBP)
-			payments.POST("/cash/init", paymentHandler.InitCash)
-			payments.GET("/:id", paymentHandler.GetPayment)
-			payments.GET("/:id/status", paymentHandler.CheckStatus)
-			payments.GET("", paymentHandler.GetPaymentsByTicket)
-			payments.GET("/list", paymentHandler.ListPayments)
-		}
-
-		// Webhooks
-		webhooks := v1.Group("/webhooks")
-		{
-			webhooks.POST("/tinkoff", paymentHandler.TinkoffWebhook)
-		}
-	}
+	payments := v1.Group("/payments")
+	payments.POST("/tinkoff/init", paymentHandler.InitTinkoff)
+	payments.POST("/sbp/init", paymentHandler.InitSBP)
+	payments.POST("/cash/init", paymentHandler.InitCash)
+	payments.GET("/:id", paymentHandler.GetPayment)
+	payments.GET("/:id/status", paymentHandler.CheckStatus)
+	payments.GET("", paymentHandler.GetPaymentsByTicket)
+	payments.GET("/list", paymentHandler.ListPayments)
+	webhooks := v1.Group("/webhooks")
+	webhooks.POST("/tinkoff", paymentHandler.TinkoffWebhook)
 
 	// Создать HTTP сервер
 	srv := &http.Server{

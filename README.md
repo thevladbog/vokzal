@@ -2,11 +2,10 @@
 
 **Система автоматизации автовокзалов**
 
-[![Services CI](https://github.com/vokzal-tech/vokzal/actions/workflows/services-ci.yml/badge.svg)](https://github.com/vokzal-tech/vokzal/actions/workflows/services-ci.yml)
-[![UI CI](https://github.com/vokzal-tech/vokzal/actions/workflows/ui-ci.yml/badge.svg)](https://github.com/vokzal-tech/vokzal/actions/workflows/ui-ci.yml)
-[![E2E Tests](https://github.com/vokzal-tech/vokzal/actions/workflows/e2e-tests.yml/badge.svg)](https://github.com/vokzal-tech/vokzal/actions/workflows/e2e-tests.yml)
-[![codecov](https://codecov.io/gh/vokzal-tech/vokzal/branch/main/graph/badge.svg)](https://codecov.io/gh/vokzal-tech/vokzal)
-[![Go Report Card](https://goreportcard.com/badge/github.com/vokzal-tech/vokzal)](https://goreportcard.com/report/github.com/vokzal-tech/vokzal)
+[![Services CI](https://github.com/thevladbog/vokzal/actions/workflows/services-ci.yml/badge.svg)](https://github.com/vokzal-tech/vokzal/actions/workflows/services-ci.yml)
+[![UI CI](https://github.com/thevladbog/vokzal/actions/workflows/ui-ci.yml/badge.svg)](https://github.com/vokzal-tech/vokzal/actions/workflows/ui-ci.yml)
+[![codecov](https://codecov.io/gh/thevladbog/vokzal/branch/main/graph/badge.svg)](https://codecov.io/gh/vokzal-tech/vokzal)
+[![Go Report Card](https://goreportcard.com/badge/github.com/thevladbog/vokzal)](https://goreportcard.com/report/github.com/thevladbog/vokzal)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ## Описание
@@ -28,18 +27,18 @@ vokzal-tech/
 │   ├── notify/       # Уведомления (SMS, Email, Telegram)
 │   ├── audit/        # Логирование операций
 │   └── document/     # Генерация документов
-├── ui/               # React приложения
-│   ├── admin/        # Панель администратора
-│   ├── passenger/    # Портал пассажира
-│   ├── pos/          # POS-приложение (Tauri)
-│   ├── board/        # Табло отправлений
-│   └── controller/   # Приложение контролёра
-├── agent/            # Локальный агент
-│   └── local-agent/  # Работа с ККТ/принтерами
+├── ui/                  # React приложения
+│   ├── admin-panel/     # Панель администратора
+│   ├── passenger-portal/# Портал пассажира
+│   ├── pos-app/         # POS-приложение (Tauri)
+│   ├── board-display/   # Табло отправлений
+│   ├── controller-app/  # Приложение контролёра
+│   └── shared/          # Общие ресурсы (логотип, brand-colors)
+├── agent/               # Локальный агент
+│   └── local-agent/     # Работа с ККТ/принтерами
 ├── infra/
-│   ├── docker/       # Docker Compose
-│   ├── k8s/          # Kubernetes манифесты
-│   └── migrations/   # SQL миграции
+│   ├── docker/          # Docker Compose
+│   └── migrations/      # SQL миграции
 ├── docs/             # Документация
 └── shared/           # Общие библиотеки
     ├── go-common/    # Общий Go код

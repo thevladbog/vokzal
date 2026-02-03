@@ -1,3 +1,4 @@
+// Package tinkoff предоставляет клиент для Tinkoff Acquiring API.
 package tinkoff
 
 import (
@@ -14,54 +15,57 @@ import (
 	"go.uber.org/zap"
 )
 
-// TinkoffClient клиент для работы с Tinkoff Acquiring API
+// TinkoffClient — клиент для работы с Tinkoff Acquiring API.
+//
+//nolint:revive // Имя сохраняем для ясности (tinkoff.Client).
 type TinkoffClient struct {
+	client      *http.Client
+	logger      *zap.Logger
 	terminalKey string
 	password    string
 	apiURL      string
-	client      *http.Client
-	logger      *zap.Logger
 }
 
-// InitRequest запрос инициализации платежа
+// InitRequest — запрос инициализации платежа.
 type InitRequest struct {
-	TerminalKey string  `json:"TerminalKey"`
-	Amount      int64   `json:"Amount"` // в копейках
-	OrderID     string  `json:"OrderId"`
-	Description string  `json:"Description"`
-	Token       string  `json:"Token"`
+	TerminalKey     string `json:"TerminalKey"`
+	OrderID         string `json:"OrderId"`
+	Description     string `json:"Description"`
+	Token           string `json:"Token"`
 	NotificationURL string `json:"NotificationURL,omitempty"`
-	SuccessURL  string  `json:"SuccessURL,omitempty"`
-	FailURL     string  `json:"FailURL,omitempty"`
+	SuccessURL      string `json:"SuccessURL,omitempty"`
+	FailURL         string `json:"FailURL,omitempty"`
+	Amount          int64  `json:"Amount"`
 }
 
-// InitResponse ответ на инициализацию
+// InitResponse — ответ на инициализацию платежа.
 type InitResponse struct {
-	Success     bool   `json:"Success"`
-	ErrorCode   string `json:"ErrorCode"`
-	Message     string `json:"Message"`
-	PaymentID   string `json:"PaymentId"`
-	PaymentURL  string `json:"PaymentURL"`
+	ErrorCode  string `json:"ErrorCode"`
+	Message    string `json:"Message"`
+	PaymentID  string `json:"PaymentId"`
+	PaymentURL string `json:"PaymentURL"`
+	Success    bool   `json:"Success"`
 }
 
-// GetStateRequest запрос статуса платежа
+// GetStateRequest — запрос статуса платежа.
 type GetStateRequest struct {
 	TerminalKey string `json:"TerminalKey"`
 	PaymentID   string `json:"PaymentId"`
 	Token       string `json:"Token"`
 }
 
-// GetStateResponse ответ со статусом
+// GetStateResponse — ответ со статусом платежа.
 type GetStateResponse struct {
-	Success   bool   `json:"Success"`
 	ErrorCode string `json:"ErrorCode"`
 	Message   string `json:"Message"`
-	Status    string `json:"Status"` // NEW, AUTHORIZED, CONFIRMED, REJECTED, REFUNDED
+	Status    string `json:"Status"`
 	PaymentID string `json:"PaymentId"`
 	OrderID   string `json:"OrderId"`
 	Amount    int64  `json:"Amount"`
+	Success   bool   `json:"Success"`
 }
 
+// NewTinkoffClient создаёт клиент Tinkoff Acquiring.
 func NewTinkoffClient(terminalKey, password, apiURL string, logger *zap.Logger) *TinkoffClient {
 	return &TinkoffClient{
 		terminalKey: terminalKey,
@@ -74,7 +78,7 @@ func NewTinkoffClient(terminalKey, password, apiURL string, logger *zap.Logger) 
 	}
 }
 
-// Init инициализирует платеж
+// Init инициализирует платёж.
 func (c *TinkoffClient) Init(orderID string, amount float64, description string) (*InitResponse, error) {
 	amountKopecks := int64(amount * 100)
 
@@ -110,7 +114,11 @@ func (c *TinkoffClient) Init(orderID string, amount float64, description string)
 	if err != nil {
 		return nil, fmt.Errorf("failed to send request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if closeErr := resp.Body.Close(); closeErr != nil {
+			c.logger.Warn("failed to close response body", zap.Error(closeErr))
+		}
+	}()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -129,7 +137,7 @@ func (c *TinkoffClient) Init(orderID string, amount float64, description string)
 	return &result, nil
 }
 
-// GetState получает статус платежа
+// GetState получает статус платежа.
 func (c *TinkoffClient) GetState(paymentID string) (*GetStateResponse, error) {
 	req := &GetStateRequest{
 		TerminalKey: c.terminalKey,
@@ -157,7 +165,11 @@ func (c *TinkoffClient) GetState(paymentID string) (*GetStateResponse, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to send request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if closeErr := resp.Body.Close(); closeErr != nil {
+			c.logger.Warn("failed to close response body", zap.Error(closeErr))
+		}
+	}()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -172,7 +184,7 @@ func (c *TinkoffClient) GetState(paymentID string) (*GetStateResponse, error) {
 	return &result, nil
 }
 
-// generateToken генерирует токен для подписи запроса
+// generateToken генерирует токен для подписи запроса.
 func (c *TinkoffClient) generateToken(params map[string]interface{}) string {
 	// Добавляем Password к параметрам
 	params["Password"] = c.password
@@ -185,7 +197,7 @@ func (c *TinkoffClient) generateToken(params map[string]interface{}) string {
 	sort.Strings(keys)
 
 	// Формируем строку для хеширования
-	var parts []string
+	parts := make([]string, 0, len(keys))
 	for _, k := range keys {
 		parts = append(parts, fmt.Sprintf("%v", params[k]))
 	}

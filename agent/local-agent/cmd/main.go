@@ -10,13 +10,14 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
+
 	"github.com/vokzal-tech/local-agent/internal/config"
 	"github.com/vokzal-tech/local-agent/internal/handlers"
 	"github.com/vokzal-tech/local-agent/internal/kkt"
 	"github.com/vokzal-tech/local-agent/internal/printer"
 	"github.com/vokzal-tech/local-agent/internal/scanner"
 	"github.com/vokzal-tech/local-agent/internal/tts"
-	"go.uber.org/zap"
 )
 
 func main() {
@@ -31,7 +32,11 @@ func main() {
 	if err != nil {
 		panic(fmt.Sprintf("Failed to init logger: %v", err))
 	}
-	defer logger.Sync()
+	defer func() {
+		if err := logger.Sync(); err != nil {
+			fmt.Fprintf(os.Stderr, "logger sync: %v\n", err)
+		}
+	}()
 
 	logger.Info("Starting Vokzal.TECH Local Agent",
 		zap.String("version", "1.0.0"),
@@ -80,39 +85,25 @@ func main() {
 	router.GET("/health", handler.Health)
 	router.GET("/status", handler.GetAgentStatus)
 
-	// KKT endpoints
 	kktGroup := router.Group("/kkt")
-	{
-		kktGroup.POST("/receipt", handler.PrintReceipt)
-		kktGroup.POST("/z-report", handler.CreateZReport)
-		kktGroup.GET("/status", handler.GetKKTStatus)
-	}
-
-	// Printer endpoints
+	kktGroup.POST("/receipt", handler.PrintReceipt)
+	kktGroup.POST("/z-report", handler.CreateZReport)
+	kktGroup.GET("/status", handler.GetKKTStatus)
 	printerGroup := router.Group("/printer")
-	{
-		printerGroup.POST("/ticket", handler.PrintTicket)
-		printerGroup.GET("/status", handler.GetPrinterStatus)
-	}
-
-	// Scanner endpoints
+	printerGroup.POST("/ticket", handler.PrintTicket)
+	printerGroup.GET("/status", handler.GetPrinterStatus)
 	scannerGroup := router.Group("/scanner")
-	{
-		scannerGroup.POST("/scan", handler.ScanBarcode)
-		scannerGroup.GET("/status", handler.GetScannerStatus)
-	}
-
-	// TTS endpoints
+	scannerGroup.POST("/scan", handler.ScanBarcode)
+	scannerGroup.GET("/status", handler.GetScannerStatus)
 	ttsGroup := router.Group("/tts")
-	{
-		ttsGroup.POST("/announce", handler.Announce)
-		ttsGroup.GET("/status", handler.GetTTSStatus)
-	}
+	ttsGroup.POST("/announce", handler.Announce)
+	ttsGroup.GET("/status", handler.GetTTSStatus)
 
 	// Запустить сервер
 	srv := &http.Server{
-		Addr:    ":" + cfg.Server.Port,
-		Handler: router,
+		Addr:              ":" + cfg.Server.Port,
+		Handler:           router,
+		ReadHeaderTimeout: 5 * time.Second,
 	}
 
 	go func() {
@@ -154,7 +145,7 @@ func initLogger(level string) (*zap.Logger, error) {
 		zapLevel = zap.NewAtomicLevelAt(zap.InfoLevel)
 	}
 
-	config := zap.Config{
+	zapCfg := zap.Config{
 		Level:            zapLevel,
 		Encoding:         "json",
 		OutputPaths:      []string{"stdout", "/var/log/vokzal/agent.log"},
@@ -162,5 +153,5 @@ func initLogger(level string) (*zap.Logger, error) {
 		EncoderConfig:    zap.NewProductionEncoderConfig(),
 	}
 
-	return config.Build()
+	return zapCfg.Build()
 }

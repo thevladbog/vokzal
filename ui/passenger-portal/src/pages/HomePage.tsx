@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Button,
   Input,
@@ -9,29 +9,29 @@ import {
   makeStyles,
   tokens,
   Spinner,
-} from '@fluentui/react-components';
+} from "@fluentui/react-components";
 import {
   ArrowSwap24Regular,
   Search24Regular,
   CalendarLtr24Regular,
-} from '@fluentui/react-icons';
-import { useSearchStore } from '@/stores/searchStore';
-import { useBookingStore } from '@/stores/bookingStore';
-import { stationService } from '@/services/station';
-import { Station } from '@/types';
-import { TripCard } from '@/components/TripCard';
-import { formatDate } from '@/utils/format';
+} from "@fluentui/react-icons";
+import { useSearchStore } from "@/stores/searchStore";
+import { useBookingStore } from "@/stores/bookingStore";
+import { stationService } from "@/services/station";
+import { Station, Trip } from "@/types";
+import { TripCard } from "@/components/TripCard";
+import { formatDate } from "@/utils/format";
 
 const useStyles = makeStyles({
   container: {
-    minHeight: '100vh',
+    minHeight: "100vh",
     backgroundColor: tokens.colorNeutralBackground2,
   },
   header: {
     backgroundColor: tokens.colorBrandBackground,
     color: tokens.colorNeutralForegroundInverted,
     padding: tokens.spacingVerticalXXL,
-    textAlign: 'center',
+    textAlign: "center",
   },
   title: {
     fontSize: tokens.fontSizeHero900,
@@ -43,10 +43,10 @@ const useStyles = makeStyles({
     opacity: 0.9,
   },
   searchSection: {
-    maxWidth: '900px',
-    margin: '0 auto',
+    maxWidth: "900px",
+    margin: "0 auto",
     padding: tokens.spacingVerticalXXL,
-    transform: 'translateY(-50%)',
+    transform: "translateY(-50%)",
   },
   searchCard: {
     backgroundColor: tokens.colorNeutralBackground1,
@@ -55,23 +55,23 @@ const useStyles = makeStyles({
     boxShadow: tokens.shadow16,
   },
   searchForm: {
-    display: 'grid',
-    gridTemplateColumns: '1fr auto 1fr auto',
+    display: "grid",
+    gridTemplateColumns: "1fr auto 1fr auto",
     gap: tokens.spacingHorizontalM,
-    alignItems: 'end',
-    '@media (max-width: 768px)': {
-      gridTemplateColumns: '1fr',
+    alignItems: "end",
+    "@media (max-width: 768px)": {
+      gridTemplateColumns: "1fr",
     },
   },
   swapButton: {
-    alignSelf: 'end',
+    alignSelf: "end",
   },
   dateInput: {
-    width: '100%',
+    width: "100%",
   },
   resultsSection: {
-    maxWidth: '900px',
-    margin: '0 auto',
+    maxWidth: "900px",
+    margin: "0 auto",
     padding: `0 ${tokens.spacingVerticalXXL} ${tokens.spacingVerticalXXL}`,
   },
   resultsHeader: {
@@ -80,13 +80,13 @@ const useStyles = makeStyles({
     marginBottom: tokens.spacingVerticalL,
   },
   emptyState: {
-    textAlign: 'center',
+    textAlign: "center",
     padding: tokens.spacingVerticalXXL,
     color: tokens.colorNeutralForeground2,
   },
   loading: {
-    display: 'flex',
-    justifyContent: 'center',
+    display: "flex",
+    justifyContent: "center",
     padding: tokens.spacingVerticalXXL,
   },
 });
@@ -117,7 +117,7 @@ export const HomePage: React.FC = () => {
         const data = await stationService.getAll();
         setStations(data.filter((s) => s.active));
       } catch (error) {
-        console.error('Failed to load stations:', error);
+        console.error("Failed to load stations:", error);
       } finally {
         setLoadingStations(false);
       }
@@ -129,20 +129,22 @@ export const HomePage: React.FC = () => {
     try {
       await searchTrips();
     } catch (error) {
-      console.error('Search failed:', error);
+      console.error("Search failed:", error);
     }
   };
 
-  const handleTripSelect = (trip: any) => {
+  const handleTripSelect = (trip: Trip) => {
     selectTrip(trip);
-    navigate('/booking');
+    navigate("/booking");
   };
 
   return (
     <div className={styles.container}>
       <header className={styles.header}>
         <Text className={styles.title}>Вокзал.ТЕХ</Text>
-        <Text className={styles.subtitle}>Покупка автобусных билетов онлайн</Text>
+        <Text className={styles.subtitle}>
+          Покупка автобусных билетов онлайн
+        </Text>
       </header>
 
       <div className={styles.searchSection}>
@@ -152,15 +154,21 @@ export const HomePage: React.FC = () => {
               <Text weight="semibold">Откуда</Text>
               <Combobox
                 placeholder="Выберите станцию"
-                value={fromStation?.name || ''}
+                value={fromStation?.name || ""}
                 disabled={loadingStations}
                 onOptionSelect={(_, data) => {
-                  const station = stations.find((s) => s.id === data.optionValue);
+                  const station = stations.find(
+                    (s) => s.id === data.optionValue
+                  );
                   setFromStation(station || null);
                 }}
               >
                 {stations.map((station) => (
-                  <Option key={station.id} value={station.id} text={station.name}>
+                  <Option
+                    key={station.id}
+                    value={station.id}
+                    text={station.name}
+                  >
                     {station.name} ({station.code})
                   </Option>
                 ))}
@@ -178,15 +186,21 @@ export const HomePage: React.FC = () => {
               <Text weight="semibold">Куда</Text>
               <Combobox
                 placeholder="Выберите станцию"
-                value={toStation?.name || ''}
+                value={toStation?.name || ""}
                 disabled={loadingStations}
                 onOptionSelect={(_, data) => {
-                  const station = stations.find((s) => s.id === data.optionValue);
+                  const station = stations.find(
+                    (s) => s.id === data.optionValue
+                  );
                   setToStation(station || null);
                 }}
               >
                 {stations.map((station) => (
-                  <Option key={station.id} value={station.id} text={station.name}>
+                  <Option
+                    key={station.id}
+                    value={station.id}
+                    text={station.name}
+                  >
                     {station.name} ({station.code})
                   </Option>
                 ))}
@@ -198,10 +212,10 @@ export const HomePage: React.FC = () => {
               <Input
                 className={styles.dateInput}
                 type="date"
-                value={formatDate(date, 'yyyy-MM-dd')}
+                value={formatDate(date, "yyyy-MM-dd")}
                 onChange={(e) => setDate(new Date(e.target.value))}
                 contentBefore={<CalendarLtr24Regular />}
-                min={formatDate(new Date(), 'yyyy-MM-dd')}
+                min={formatDate(new Date(), "yyyy-MM-dd")}
               />
             </div>
           </div>
@@ -211,9 +225,9 @@ export const HomePage: React.FC = () => {
             icon={<Search24Regular />}
             onClick={handleSearch}
             disabled={!fromStation || !toStation || isSearching}
-            style={{ marginTop: tokens.spacingVerticalL, width: '100%' }}
+            style={{ marginTop: tokens.spacingVerticalL, width: "100%" }}
           >
-            {isSearching ? 'Поиск...' : 'Найти билеты'}
+            {isSearching ? "Поиск..." : "Найти билеты"}
           </Button>
         </div>
       </div>

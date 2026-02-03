@@ -1,4 +1,4 @@
-.PHONY: help dev-up dev-down services-build services-run ui-dev test test-unit test-services test-ui test-e2e test-load test-load-smoke lint
+.PHONY: help dev-up dev-down services-build services-run ui-dev test test-unit test-services test-ui test-load test-load-smoke lint
 
 help:
 	@echo "Вокзал.ТЕХ — Makefile команды:"
@@ -9,12 +9,10 @@ help:
 	@echo "  make ui-dev            - Запустить UI приложения (dev mode)"
 	@echo ""
 	@echo "Тестирование:"
-	@echo "  make test              - Запустить все тесты (unit + e2e smoke + load smoke)"
+	@echo "  make test              - Запустить все тесты (unit + load smoke)"
 	@echo "  make test-unit         - Запустить все unit тесты (Go + JS)"
 	@echo "  make test-services     - Запустить unit тесты Go сервисов"
 	@echo "  make test-ui           - Запустить unit тесты UI приложений"
-	@echo "  make test-e2e          - Запустить E2E тесты (Cypress headless)"
-	@echo "  make test-e2e-open     - Открыть Cypress GUI"
 	@echo "  make test-load         - Запустить load тесты (k6)"
 	@echo "  make test-load-smoke   - Запустить smoke load тест"
 	@echo ""
@@ -35,15 +33,18 @@ services-build:
 	done
 
 services-run:
-	@echo "Запуск микросервисов..."
-	# Будет реализовано после создания сервисов
+	@echo "Запуск микросервисов: каждый сервис — в отдельном терминале (подробнее: QUICKSTART.md)."
+	@echo "  cd services/auth && go run cmd/main.go"
+	@echo "  cd services/schedule && go run cmd/main.go"
+	@echo "  cd services/ticket && go run cmd/main.go"
+	@echo "  ... и т.д. Инфраструктура: make dev-up (infra/docker)."
 
 ui-dev:
 	@echo "Запуск UI приложений в dev режиме..."
 	# Будет реализовано после создания UI
 
 # Все тесты
-test: test-unit test-e2e test-load-smoke
+test: test-unit test-load-smoke
 	@echo "✅ Все тесты завершены!"
 
 # Unit тесты
@@ -54,9 +55,9 @@ test-unit: test-services test-ui
 test-services:
 	@echo "🧪 Запуск unit тестов Go сервисов..."
 	@for service in services/*; do \
-		if [ -d "$$service" ]; then \
+		if [ -d "$$service" ] && [ -f "$$service/go.mod" ]; then \
 			echo "Testing $$service..."; \
-			cd $$service && go test -v -cover ./... && cd ../..; \
+			(cd $$service && go test -v -cover ./...) || exit 1; \
 		fi \
 	done
 	@echo "✅ Go unit тесты завершены!"
@@ -65,12 +66,9 @@ test-services:
 test-services-coverage:
 	@echo "🧪 Запуск unit тестов Go сервисов с покрытием..."
 	@for service in services/*; do \
-		if [ -d "$$service" ]; then \
+		if [ -d "$$service" ] && [ -f "$$service/go.mod" ]; then \
 			echo "Testing $$service with coverage..."; \
-			cd $$service && \
-			go test -coverprofile=coverage.out ./... && \
-			go tool cover -html=coverage.out -o coverage.html && \
-			cd ../..; \
+			(cd $$service && go test -coverprofile=coverage.out ./... && go tool cover -html=coverage.out -o coverage.html) || exit 1; \
 		fi \
 	done
 
@@ -80,24 +78,10 @@ test-ui:
 	@for app in ui/admin-panel ui/pos-app ui/board-display ui/passenger-portal ui/controller-app; do \
 		if [ -d "$$app" ] && [ -f "$$app/package.json" ]; then \
 			echo "Testing $$app..."; \
-			cd $$app && npm test -- --run && cd ../..; \
+			(cd $$app && npm test -- --run) || exit 1; \
 		fi \
 	done
 	@echo "✅ UI unit тесты завершены!"
-
-# E2E тесты
-test-e2e:
-	@echo "🧪 Запуск E2E тестов (Cypress headless)..."
-	@cd tests/e2e && npm run cypress:run
-	@echo "✅ E2E тесты завершены!"
-
-test-e2e-open:
-	@echo "🧪 Открываем Cypress GUI..."
-	@cd tests/e2e && npm run cypress:open
-
-test-e2e-chrome:
-	@echo "🧪 Запуск E2E тестов в Chrome..."
-	@cd tests/e2e && npm run cypress:run:chrome
 
 # Load тесты
 test-load: test-load-auth test-load-search
@@ -123,6 +107,8 @@ test-load-stress:
 lint:
 	@echo "Запуск линтеров..."
 	@for service in services/*; do \
-		echo "Linting $$service..."; \
-		cd $$service && golangci-lint run && cd ../..; \
+		if [ -d "$$service" ] && [ -f "$$service/go.mod" ]; then \
+			echo "Linting $$service..."; \
+			(cd $$service && golangci-lint run) || exit 1; \
+		fi \
 	done

@@ -36,6 +36,9 @@ build/
 out/
 target/
 
+# Coverage (Istanbul/vitest)
+coverage/
+
 # Environment
 .env
 .env.local

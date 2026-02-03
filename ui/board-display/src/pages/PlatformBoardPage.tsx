@@ -21,6 +21,11 @@ const useStyles = makeStyles({
     paddingBottom: '24px',
     borderBottom: `3px solid ${tokens.colorBrandStroke1}`,
   },
+  logo: {
+    height: '56px',
+    width: 'auto',
+    display: 'block',
+  },
   platformTitle: {
     fontSize: '64px',
     fontWeight: 'bold',
@@ -167,7 +172,10 @@ export const PlatformBoardPage = () => {
 
       {/* Header */}
       <div className={styles.header}>
-        <div className={styles.platformTitle}>📍 {platformName}</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
+          <img src="/vokzal-logo.svg" alt="Вокзал.ТЕХ" className={styles.logo} />
+          <div className={styles.platformTitle}>📍 {platformName}</div>
+        </div>
         <div className={styles.clock}>
           {format(currentTime, 'HH:mm:ss', { locale: ru })}
           <div style={{ fontSize: '24px', opacity: 0.8 }}>

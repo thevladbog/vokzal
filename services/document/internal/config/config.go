@@ -1,11 +1,14 @@
+// Package config загружает конфигурацию Document Service.
 package config
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/spf13/viper"
 )
 
+// Config — корневая конфигурация сервиса.
 type Config struct {
 	Server   ServerConfig   `mapstructure:"server"`
 	Database DatabaseConfig `mapstructure:"database"`
@@ -14,30 +17,35 @@ type Config struct {
 	MinIO    MinIOConfig    `mapstructure:"minio"`
 }
 
+// ServerConfig — настройки HTTP-сервера.
 type ServerConfig struct {
 	Port string `mapstructure:"port"`
 	Mode string `mapstructure:"mode"`
 }
 
+// DatabaseConfig — настройки PostgreSQL.
 type DatabaseConfig struct {
 	Host     string `mapstructure:"host"`
-	Port     int    `mapstructure:"port"`
 	User     string `mapstructure:"user"`
 	Password string `mapstructure:"password"`
 	DBName   string `mapstructure:"dbname"`
 	SSLMode  string `mapstructure:"sslmode"`
+	Port     int    `mapstructure:"port"`
 }
 
+// NATSConfig — настройки NATS.
 type NATSConfig struct {
 	URL      string `mapstructure:"url"`
 	User     string `mapstructure:"user"`
 	Password string `mapstructure:"password"`
 }
 
+// LoggerConfig — настройки логгера.
 type LoggerConfig struct {
 	Level string `mapstructure:"level"`
 }
 
+// MinIOConfig — настройки MinIO.
 type MinIOConfig struct {
 	Endpoint  string `mapstructure:"endpoint"`
 	AccessKey string `mapstructure:"access_key"`
@@ -46,6 +54,7 @@ type MinIOConfig struct {
 	UseSSL    bool   `mapstructure:"use_ssl"`
 }
 
+// Load читает конфигурацию из файла и переменных окружения.
 func Load() (*Config, error) {
 	viper.SetConfigName("config")
 	viper.SetConfigType("yaml")
@@ -75,7 +84,8 @@ func Load() (*Config, error) {
 	viper.SetDefault("minio.use_ssl", false)
 
 	if err := viper.ReadInConfig(); err != nil {
-		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
+		var notFound viper.ConfigFileNotFoundError
+		if !errors.As(err, &notFound) {
 			return nil, fmt.Errorf("failed to read config: %w", err)
 		}
 	}
@@ -88,6 +98,7 @@ func Load() (*Config, error) {
 	return &config, nil
 }
 
+// DSN возвращает строку подключения к PostgreSQL.
 func (c *DatabaseConfig) DSN() string {
 	return fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=%s",
 		c.Host, c.Port, c.User, c.Password, c.DBName, c.SSLMode)

@@ -1,53 +1,63 @@
+// Package config загружает конфигурацию Ticket Service.
 package config
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/spf13/viper"
 )
 
+// Config — корневая конфигурация сервиса.
 type Config struct {
-	Server   ServerConfig   `mapstructure:"server"`
-	Database DatabaseConfig `mapstructure:"database"`
 	NATS     NATSConfig     `mapstructure:"nats"`
+	Server   ServerConfig   `mapstructure:"server"`
 	Logger   LoggerConfig   `mapstructure:"logger"`
+	Database DatabaseConfig `mapstructure:"database"`
 	Business BusinessConfig `mapstructure:"business"`
 }
 
+// ServerConfig — настройки HTTP-сервера.
 type ServerConfig struct {
 	Port string `mapstructure:"port"`
 	Mode string `mapstructure:"mode"`
 }
 
+// DatabaseConfig — настройки БД.
 type DatabaseConfig struct {
 	Host     string `mapstructure:"host"`
-	Port     int    `mapstructure:"port"`
 	User     string `mapstructure:"user"`
 	Password string `mapstructure:"password"`
 	DBName   string `mapstructure:"dbname"`
 	SSLMode  string `mapstructure:"sslmode"`
+	Port     int    `mapstructure:"port"`
 }
 
+// NATSConfig — настройки подключения к NATS.
 type NATSConfig struct {
 	URL      string `mapstructure:"url"`
 	User     string `mapstructure:"user"`
 	Password string `mapstructure:"password"`
 }
 
+// LoggerConfig — настройки логгера.
 type LoggerConfig struct {
 	Level string `mapstructure:"level"`
 }
 
+// BusinessConfig — бизнес-настройки (штрафы за возврат и т.п.).
 type BusinessConfig struct {
 	RefundPenalty RefundPenaltyConfig `mapstructure:"refund_penalty"`
 }
 
+// RefundPenaltyConfig — коэффициенты штрафа за возврат по времени до отправления.
 type RefundPenaltyConfig struct {
 	Over24Hours  float64 `mapstructure:"over_24_hours"`
 	Between12_24 float64 `mapstructure:"between_12_24"`
 	Under12Hours float64 `mapstructure:"under_12_hours"`
 }
 
+// Load загружает конфигурацию из файла и переменных окружения.
 func Load() (*Config, error) {
 	viper.SetConfigName("config")
 	viper.SetConfigType("yaml")
@@ -75,7 +85,8 @@ func Load() (*Config, error) {
 	viper.SetDefault("business.refund_penalty.under_12_hours", 0.30)
 
 	if err := viper.ReadInConfig(); err != nil {
-		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
+		var notFound viper.ConfigFileNotFoundError
+		if !errors.As(err, &notFound) {
 			return nil, fmt.Errorf("failed to read config: %w", err)
 		}
 	}
@@ -88,6 +99,7 @@ func Load() (*Config, error) {
 	return &config, nil
 }
 
+// DSN возвращает строку подключения к PostgreSQL.
 func (c *DatabaseConfig) DSN() string {
 	return fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=%s",
 		c.Host, c.Port, c.User, c.Password, c.DBName, c.SSLMode)

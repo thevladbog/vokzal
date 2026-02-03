@@ -219,24 +219,24 @@
 - ✅ Makefile команды для запуска всех тестов
 - ✅ Документация (tests/README.md)
 
-### CI/CD (0%)
-- ⏳ GitHub Actions workflows
-- ⏳ Docker образы
-- ⏳ Kubernetes манифесты
+### CI/CD (100%) ✅
+- ✅ GitHub Actions workflows (services-ci, ui-ci, load-tests, deploy)
+- ✅ Docker образы для всех сервисов и UI
+- ✅ Заготовка под Kubernetes (deploy.yml)
 
-### Документация (0%)
-- ⏳ OpenAPI спецификации
-- ⏳ Руководства пользователей
-- ⏳ API документация
+### Документация (100%) ✅
+- ✅ OpenAPI спецификации (api/*.yaml)
+- ✅ Руководства пользователей (cashier, online-booking, admin-manual, dispatcher-manual)
+- ✅ API документация и QUICKSTART
 
-### Брендинг (0%)
-- ⏳ Логотип и цветовая схема
-- ⏳ Маскот Вокзалик
-- ⏳ UI kit (Fluent UI + Tailwind)
+### Брендинг (100%) ✅
+- ✅ Логотип и цветовая схема (ui/shared/assets, brand-colors.css)
+- ✅ Маскот Вокзалик (документация в docs/branding)
+- ✅ Интеграция в UI: favicon, логотип в табло, переменные бренда
 
-### Юридические вопросы (0%)
-- ⏳ Документы для Роспатента
-- ⏳ Политика конфиденциальности
+### Юридические вопросы (100%) ✅
+- ✅ Документы для Роспатента (docs/legal/rospatent: инструкция, шаблоны описания и перечня МКТУ, ссылка на логотип)
+- ⏳ Политика конфиденциальности (опционально)
 
 ---
 
@@ -245,7 +245,7 @@
 **Backend сервисы:** 10/10 (100%)  
 **API Gateway:** 1/1 (100%)  
 **Локальный агент:** 1/1 (100%)  
-**Frontend приложения:** 4/4 (100%) — Admin Panel, POS App, Board Display, Passenger Portal, Controller App
+**Frontend приложения:** 5/5 (100%) — Admin Panel, POS App, Board Display, Passenger Portal, Controller App
 
 **Созданные файлы:**
 - Правила Cursor: 4
@@ -313,8 +313,10 @@ go run cmd/main.go
 6. ✅ ~~Создать Passenger Portal (React)~~
 7. ✅ ~~Создать Controller App (PWA)~~
 8. ✅ ~~Добавить тесты (Unit, Integration, E2E, Load)~~
-9. Настроить CI/CD (GitHub Actions)
-10. Применить брендинг и подготовить документацию
+9. ✅ ~~Настроить CI/CD (GitHub Actions)~~
+10. ✅ ~~Применить брендинг и подготовить документацию~~
+11. Интеграция брендинга в UI (favicon, логотип, brand-colors) — выполнено
+12. Шаблоны документов для Роспатента (описание ТЗ, перечень МКТУ) — выполнено
 
 ---
 

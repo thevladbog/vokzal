@@ -1,3 +1,4 @@
+// Package main — точка входа Geo Service (Yandex Geocoder, расстояния).
 package main
 
 import (
@@ -11,10 +12,12 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
+
 	"github.com/vokzal-tech/geo-service/internal/config"
 	"github.com/vokzal-tech/geo-service/internal/handlers"
 	"github.com/vokzal-tech/geo-service/internal/service"
 	"github.com/vokzal-tech/geo-service/internal/yandex"
+
 	"go.uber.org/zap"
 )
 
@@ -25,12 +28,20 @@ func main() {
 	}
 
 	var logger *zap.Logger
+	var errLog error
 	if cfg.Logger.Level == "production" {
-		logger, _ = zap.NewProduction()
+		logger, errLog = zap.NewProduction()
 	} else {
-		logger, _ = zap.NewDevelopment()
+		logger, errLog = zap.NewDevelopment()
 	}
-	defer logger.Sync()
+	if errLog != nil {
+		panic(fmt.Sprintf("Failed to create logger: %v", errLog))
+	}
+	defer func() {
+		if syncErr := logger.Sync(); syncErr != nil {
+			fmt.Fprintf(os.Stderr, "logger sync: %v\n", syncErr)
+		}
+	}()
 
 	logger.Info("Starting Geo Service", zap.String("version", "1.0.0"))
 
@@ -68,14 +79,10 @@ func main() {
 	})
 
 	v1 := router.Group("/v1")
-	{
-		geo := v1.Group("/geo")
-		{
-			geo.GET("/geocode", geoHandler.Geocode)
-			geo.GET("/reverse", geoHandler.ReverseGeocode)
-			geo.GET("/distance", geoHandler.GetDistance)
-		}
-	}
+	geo := v1.Group("/geo")
+	geo.GET("/geocode", geoHandler.Geocode)
+	geo.GET("/reverse", geoHandler.ReverseGeocode)
+	geo.GET("/distance", geoHandler.GetDistance)
 
 	srv := &http.Server{
 		Addr:         ":" + cfg.Server.Port,

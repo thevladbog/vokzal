@@ -1,3 +1,4 @@
+// Package yandex — клиент Yandex Geocoder API.
 package yandex
 
 import (
@@ -11,14 +12,15 @@ import (
 	"go.uber.org/zap"
 )
 
-// Client клиент для Yandex Geocoder API
+// Client — клиент для Yandex Geocoder API.
 type Client struct {
-	apiKey  string
-	baseURL string
 	client  *http.Client
 	logger  *zap.Logger
+	apiKey  string
+	baseURL string
 }
 
+// GeocodeResponse — ответ Yandex Geocoder API.
 type GeocodeResponse struct {
 	Response struct {
 		GeoObjectCollection struct {
@@ -40,12 +42,14 @@ type GeocodeResponse struct {
 	} `json:"response"`
 }
 
+// GeocodeResult — результат геокодирования.
 type GeocodeResult struct {
 	Address   string  `json:"address"`
 	Latitude  float64 `json:"latitude"`
 	Longitude float64 `json:"longitude"`
 }
 
+// NewClient создаёт новый Client.
 func NewClient(apiKey, baseURL string, logger *zap.Logger) *Client {
 	return &Client{
 		apiKey:  apiKey,
@@ -57,7 +61,7 @@ func NewClient(apiKey, baseURL string, logger *zap.Logger) *Client {
 	}
 }
 
-// Geocode преобразует адрес в координаты
+// Geocode преобразует адрес в координаты.
 func (c *Client) Geocode(address string) (*GeocodeResult, error) {
 	params := url.Values{}
 	params.Set("apikey", c.apiKey)
@@ -73,7 +77,11 @@ func (c *Client) Geocode(address string) (*GeocodeResult, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to send request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if closeErr := resp.Body.Close(); closeErr != nil {
+			c.logger.Debug("failed to close response body", zap.Error(closeErr))
+		}
+	}()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -107,7 +115,7 @@ func (c *Client) Geocode(address string) (*GeocodeResult, error) {
 	}, nil
 }
 
-// ReverseGeocode преобразует координаты в адрес
+// ReverseGeocode преобразует координаты в адрес.
 func (c *Client) ReverseGeocode(lat, lon float64) (*GeocodeResult, error) {
 	geocode := fmt.Sprintf("%f,%f", lon, lat)
 
@@ -125,7 +133,11 @@ func (c *Client) ReverseGeocode(lat, lon float64) (*GeocodeResult, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to send request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if closeErr := resp.Body.Close(); closeErr != nil {
+			c.logger.Debug("failed to close response body", zap.Error(closeErr))
+		}
+	}()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {

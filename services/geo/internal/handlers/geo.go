@@ -1,3 +1,4 @@
+// Package handlers — HTTP-обработчики Geo Service.
 package handlers
 
 import (
@@ -5,22 +6,27 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+
 	"github.com/vokzal-tech/geo-service/internal/service"
+
 	"go.uber.org/zap"
 )
 
+// GeoHandler обрабатывает HTTP-запросы к API геокодирования.
 type GeoHandler struct {
-	service service.GeoService
-	logger  *zap.Logger
+	svc    service.GeoService
+	logger *zap.Logger
 }
 
-func NewGeoHandler(service service.GeoService, logger *zap.Logger) *GeoHandler {
+// NewGeoHandler создаёт новый GeoHandler.
+func NewGeoHandler(svc service.GeoService, logger *zap.Logger) *GeoHandler {
 	return &GeoHandler{
-		service: service,
-		logger:  logger,
+		svc:    svc,
+		logger: logger,
 	}
 }
 
+// Geocode возвращает координаты по адресу.
 func (h *GeoHandler) Geocode(c *gin.Context) {
 	address := c.Query("address")
 	if address == "" {
@@ -28,7 +34,7 @@ func (h *GeoHandler) Geocode(c *gin.Context) {
 		return
 	}
 
-	result, err := h.service.Geocode(c.Request.Context(), address)
+	result, err := h.svc.Geocode(c.Request.Context(), address)
 	if err != nil {
 		h.logger.Error("Geocoding failed", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to geocode address"})
@@ -38,6 +44,7 @@ func (h *GeoHandler) Geocode(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"data": result})
 }
 
+// ReverseGeocode возвращает адрес по координатам.
 func (h *GeoHandler) ReverseGeocode(c *gin.Context) {
 	latStr := c.Query("lat")
 	lonStr := c.Query("lon")
@@ -59,7 +66,7 @@ func (h *GeoHandler) ReverseGeocode(c *gin.Context) {
 		return
 	}
 
-	result, err := h.service.ReverseGeocode(c.Request.Context(), lat, lon)
+	result, err := h.svc.ReverseGeocode(c.Request.Context(), lat, lon)
 	if err != nil {
 		h.logger.Error("Reverse geocoding failed", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to reverse geocode"})
@@ -69,6 +76,7 @@ func (h *GeoHandler) ReverseGeocode(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"data": result})
 }
 
+// GetDistance возвращает расстояние между двумя точками (км).
 func (h *GeoHandler) GetDistance(c *gin.Context) {
 	lat1Str := c.Query("lat1")
 	lon1Str := c.Query("lon1")
@@ -80,12 +88,28 @@ func (h *GeoHandler) GetDistance(c *gin.Context) {
 		return
 	}
 
-	lat1, _ := strconv.ParseFloat(lat1Str, 64)
-	lon1, _ := strconv.ParseFloat(lon1Str, 64)
-	lat2, _ := strconv.ParseFloat(lat2Str, 64)
-	lon2, _ := strconv.ParseFloat(lon2Str, 64)
+	lat1, err := strconv.ParseFloat(lat1Str, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid lat1 parameter"})
+		return
+	}
+	lon1, err := strconv.ParseFloat(lon1Str, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid lon1 parameter"})
+		return
+	}
+	lat2, err := strconv.ParseFloat(lat2Str, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid lat2 parameter"})
+		return
+	}
+	lon2, err := strconv.ParseFloat(lon2Str, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid lon2 parameter"})
+		return
+	}
 
-	distance := h.service.GetDistance(c.Request.Context(), lat1, lon1, lat2, lon2)
+	distance := h.svc.GetDistance(c.Request.Context(), lat1, lon1, lat2, lon2)
 
 	c.JSON(http.StatusOK, gin.H{
 		"distance_km": distance,

@@ -1,39 +1,49 @@
+// Package config загружает конфигурацию Geo Service.
 package config
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/spf13/viper"
 )
 
+// Config — корневая конфигурация сервиса.
+//
+//nolint:govet // fieldalignment: keep field order for mapstructure/config clarity
 type Config struct {
-	Server     ServerConfig     `mapstructure:"server"`
-	Redis      RedisConfig      `mapstructure:"redis"`
 	Logger     LoggerConfig     `mapstructure:"logger"`
+	Redis      RedisConfig      `mapstructure:"redis"`
+	Server     ServerConfig     `mapstructure:"server"`
 	YandexMaps YandexMapsConfig `mapstructure:"yandex_maps"`
 }
 
+// ServerConfig — настройки HTTP-сервера.
 type ServerConfig struct {
 	Port string `mapstructure:"port"`
 	Mode string `mapstructure:"mode"`
 }
 
+// RedisConfig — настройки Redis.
 type RedisConfig struct {
 	Host     string `mapstructure:"host"`
-	Port     int    `mapstructure:"port"`
 	Password string `mapstructure:"password"`
+	Port     int    `mapstructure:"port"`
 	DB       int    `mapstructure:"db"`
 }
 
+// LoggerConfig — настройки логгера.
 type LoggerConfig struct {
 	Level string `mapstructure:"level"`
 }
 
+// YandexMapsConfig — настройки Yandex Geocoder API.
 type YandexMapsConfig struct {
-	APIKey string `mapstructure:"api_key"`
+	APIKey  string `mapstructure:"api_key"`
 	BaseURL string `mapstructure:"base_url"`
 }
 
+// Load читает конфигурацию из файла и переменных окружения.
 func Load() (*Config, error) {
 	viper.SetConfigName("config")
 	viper.SetConfigType("yaml")
@@ -54,7 +64,8 @@ func Load() (*Config, error) {
 	viper.SetDefault("yandex_maps.base_url", "https://geocode-maps.yandex.ru/1.x/")
 
 	if err := viper.ReadInConfig(); err != nil {
-		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
+		var notFound viper.ConfigFileNotFoundError
+		if !errors.As(err, &notFound) {
 			return nil, fmt.Errorf("failed to read config: %w", err)
 		}
 	}
@@ -67,6 +78,7 @@ func Load() (*Config, error) {
 	return &config, nil
 }
 
+// Address возвращает адрес Redis.
 func (c *RedisConfig) Address() string {
 	return fmt.Sprintf("%s:%d", c.Host, c.Port)
 }

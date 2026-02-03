@@ -8,23 +8,27 @@ import (
 	"go.uber.org/zap"
 )
 
-// TTSClient клиент для голосовых оповещений
+// TTSClient — клиент для голосовых оповещений.
+//
+//nolint:revive // exported: имя TTSClient намеренно (Client слишком общее в пакете tts).
 type TTSClient struct {
+	logger  *zap.Logger
 	engine  string
 	voice   string
-	volume  int
-	enabled bool
-	logger  *zap.Logger
 	queue   []Announcement
+	volume  int
 	mu      sync.Mutex
+	enabled bool
 }
 
+// Announcement — голосовое оповещение в очереди.
 type Announcement struct {
 	Text     string `json:"text"`
 	Language string `json:"language"`
 	Priority string `json:"priority"` // high, normal, low
 }
 
+// NewTTSClient создаёт клиент TTS.
 func NewTTSClient(engine, voice string, volume int, enabled bool, logger *zap.Logger) *TTSClient {
 	client := &TTSClient{
 		engine:  engine,
@@ -34,14 +38,14 @@ func NewTTSClient(engine, voice string, volume int, enabled bool, logger *zap.Lo
 		logger:  logger,
 		queue:   make([]Announcement, 0),
 	}
-	
+
 	// Запустить worker для обработки очереди
 	go client.processQueue()
-	
+
 	return client
 }
 
-// Announce добавляет оповещение в очередь
+// Announce добавляет оповещение в очередь.
 func (t *TTSClient) Announce(text, language, priority string) error {
 	if !t.enabled {
 		t.logger.Info("TTS disabled, skipping announcement")
@@ -92,8 +96,9 @@ func (t *TTSClient) speak(text string) error {
 
 	switch t.engine {
 	case "rhvoice":
-		// RHVoice для русского языка
-		cmd = exec.Command("echo", text, "|", "RHVoice-test", "-p", t.voice)
+		// RHVoice для русского языка.
+		//nolint:gosec // G204: text/voice из конфига и очереди, не из сетевого ввода.
+		cmd = exec.Command("sh", "-c", "echo "+text+" | RHVoice-test -p "+t.voice)
 	case "espeak":
 		// eSpeak для английского
 		cmd = exec.Command("espeak", "-v", "en", text)
@@ -112,7 +117,7 @@ func (t *TTSClient) speak(text string) error {
 	return nil
 }
 
-// GetStatus возвращает статус TTS и очереди
+// GetStatus возвращает статус TTS и очереди.
 func (t *TTSClient) GetStatus() map[string]interface{} {
 	t.mu.Lock()
 	defer t.mu.Unlock()

@@ -1,3 +1,4 @@
+// Package service — бизнес-логика Audit Service.
 package service
 
 import (
@@ -6,11 +7,14 @@ import (
 	"fmt"
 
 	"github.com/nats-io/nats.go"
+
 	"github.com/vokzal-tech/audit-service/internal/models"
 	"github.com/vokzal-tech/audit-service/internal/repository"
+
 	"go.uber.org/zap"
 )
 
+// AuditService — интерфейс сервиса аудита.
 type AuditService interface {
 	CreateLog(ctx context.Context, req *CreateLogRequest) (*models.AuditLog, error)
 	GetLog(ctx context.Context, id string) (*models.AuditLog, error)
@@ -26,17 +30,21 @@ type auditService struct {
 	logger *zap.Logger
 }
 
+// CreateLogRequest — запрос на создание записи аудита.
+//
+//nolint:govet // fieldalignment: порядок полей для JSON binding
 type CreateLogRequest struct {
 	EntityType string      `json:"entity_type" binding:"required"`
 	EntityID   string      `json:"entity_id" binding:"required"`
 	Action     string      `json:"action" binding:"required"`
+	IPAddress  *string     `json:"ip_address"`
+	UserAgent  *string     `json:"user_agent"`
 	UserID     *string     `json:"user_id"`
 	OldValue   interface{} `json:"old_value"`
 	NewValue   interface{} `json:"new_value"`
-	IPAddress  *string     `json:"ip_address"`
-	UserAgent  *string     `json:"user_agent"`
 }
 
+// NewAuditService создаёт новый AuditService.
 func NewAuditService(repo repository.AuditRepository, logger *zap.Logger) AuditService {
 	return &auditService{
 		repo:   repo,
@@ -98,20 +106,28 @@ func (s *auditService) ListLogs(ctx context.Context, limit int) ([]*models.Audit
 	return s.repo.List(ctx, limit)
 }
 
-// SubscribeToEvents подписывается на NATS события для автоматического логирования
+// SubscribeToEvents подписывается на NATS-события для автоматического логирования.
 func (s *auditService) SubscribeToEvents(nc *nats.Conn) {
-	nc.Subscribe("audit.log", func(msg *nats.Msg) {
+	_, err := nc.Subscribe("audit.log", func(msg *nats.Msg) {
 		var data map[string]interface{}
-		if err := json.Unmarshal(msg.Data, &data); err != nil {
-			s.logger.Error("Failed to unmarshal audit.log event", zap.Error(err))
+		if unmarshalErr := json.Unmarshal(msg.Data, &data); unmarshalErr != nil {
+			s.logger.Error("Failed to unmarshal audit.log event", zap.Error(unmarshalErr))
+			return
+		}
+
+		entityType, ok1 := data["entity_type"].(string)
+		entityID, ok2 := data["entity_id"].(string)
+		action, ok3 := data["action"].(string)
+		if !ok1 || !ok2 || !ok3 || entityType == "" || entityID == "" || action == "" {
+			s.logger.Warn("audit.log event missing required fields")
 			return
 		}
 
 		ctx := context.Background()
 		req := &CreateLogRequest{
-			EntityType: data["entity_type"].(string),
-			EntityID:   data["entity_id"].(string),
-			Action:     data["action"].(string),
+			EntityType: entityType,
+			EntityID:   entityID,
+			Action:     action,
 			OldValue:   data["old_value"],
 			NewValue:   data["new_value"],
 		}
@@ -120,10 +136,13 @@ func (s *auditService) SubscribeToEvents(nc *nats.Conn) {
 			req.UserID = &userID
 		}
 
-		if _, err := s.CreateLog(ctx, req); err != nil {
-			s.logger.Error("Failed to create audit log from NATS", zap.Error(err))
+		if _, createErr := s.CreateLog(ctx, req); createErr != nil {
+			s.logger.Error("Failed to create audit log from NATS", zap.Error(createErr))
 		}
 	})
-
+	if err != nil {
+		s.logger.Error("Failed to subscribe to audit.log", zap.Error(err))
+		return
+	}
 	s.logger.Info("Subscribed to NATS events: audit.log")
 }

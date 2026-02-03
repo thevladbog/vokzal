@@ -10,16 +10,19 @@ import (
 	"go.uber.org/zap"
 )
 
-// ScannerClient клиент для работы со сканером
+// ScannerClient — клиент для работы со сканером.
+//
+//nolint:revive // exported: имя ScannerClient намеренно (Client слишком общее в пакете scanner).
 type ScannerClient struct {
+	lastTime   time.Time
+	logger     *zap.Logger
 	devicePath string
 	mode       string
-	enabled    bool
-	logger     *zap.Logger
 	lastScan   string
-	lastTime   time.Time
+	enabled    bool
 }
 
+// NewScannerClient создаёт клиент сканера.
 func NewScannerClient(devicePath, mode string, enabled bool, logger *zap.Logger) *ScannerClient {
 	return &ScannerClient{
 		devicePath: devicePath,
@@ -29,7 +32,7 @@ func NewScannerClient(devicePath, mode string, enabled bool, logger *zap.Logger)
 	}
 }
 
-// ReadBarcode читает штрихкод/QR код
+// ReadBarcode читает штрихкод/QR код.
 func (s *ScannerClient) ReadBarcode() (string, error) {
 	if !s.enabled {
 		s.logger.Debug("Scanner disabled")
@@ -41,7 +44,11 @@ func (s *ScannerClient) ReadBarcode() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("failed to open scanner device: %w", err)
 	}
-	defer file.Close()
+	defer func() {
+		if err := file.Close(); err != nil {
+			s.logger.Warn("failed to close scanner device", zap.Error(err))
+		}
+	}()
 
 	s.logger.Debug("Waiting for barcode scan")
 
@@ -61,33 +68,33 @@ func (s *ScannerClient) ReadBarcode() (string, error) {
 	return barcode, nil
 }
 
-// GetLastScan возвращает последний отсканированный код
+// GetLastScan возвращает последний отсканированный код.
 func (s *ScannerClient) GetLastScan() (string, time.Time) {
 	return s.lastScan, s.lastTime
 }
 
-// GetStatus получает статус сканера
+// GetStatus получает статус сканера.
 func (s *ScannerClient) GetStatus() map[string]interface{} {
 	if !s.enabled {
 		return map[string]interface{}{
-			"status":  "disabled",
-			"online":  false,
+			"status": "disabled",
+			"online": false,
 		}
 	}
 
 	// Проверить доступность устройства
 	if _, err := os.Stat(s.devicePath); os.IsNotExist(err) {
 		return map[string]interface{}{
-			"status":  "offline",
-			"online":  false,
-			"error":   "device not found",
+			"status": "offline",
+			"online": false,
+			"error":  "device not found",
 		}
 	}
 
 	return map[string]interface{}{
-		"status":     "online",
-		"online":     true,
-		"last_scan":  s.lastScan,
-		"last_time":  s.lastTime,
+		"status":    "online",
+		"online":    true,
+		"last_scan": s.lastScan,
+		"last_time": s.lastTime,
 	}
 }

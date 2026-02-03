@@ -1,3 +1,4 @@
+// Package service — бизнес-логика Auth Service.
 package service
 
 import (
@@ -9,19 +10,25 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+
 	"github.com/vokzal-tech/auth-service/internal/config"
 	"github.com/vokzal-tech/auth-service/internal/models"
 	"github.com/vokzal-tech/auth-service/internal/repository"
+
 	"go.uber.org/zap"
 	"golang.org/x/crypto/bcrypt"
 )
 
 var (
+	// ErrInvalidCredentials возвращается при неверном логине или пароле.
 	ErrInvalidCredentials = errors.New("invalid credentials")
-	ErrUserInactive       = errors.New("user is inactive")
-	ErrInvalidToken       = errors.New("invalid token")
+	// ErrUserInactive возвращается, когда пользователь деактивирован.
+	ErrUserInactive = errors.New("user is inactive")
+	// ErrInvalidToken возвращается при невалидном или истёкшем токене.
+	ErrInvalidToken = errors.New("invalid token")
 )
 
+// AuthService — интерфейс сервиса аутентификации.
 type AuthService interface {
 	Login(ctx context.Context, username, password, stationID string) (*LoginResponse, error)
 	Refresh(ctx context.Context, refreshToken string) (*LoginResponse, error)
@@ -29,6 +36,8 @@ type AuthService interface {
 	ValidateToken(ctx context.Context, token string) (*models.User, error)
 }
 
+//
+//nolint:govet // fieldalignment: порядок полей
 type authService struct {
 	userRepo    repository.UserRepository
 	sessionRepo repository.SessionRepository
@@ -36,6 +45,9 @@ type authService struct {
 	logger      *zap.Logger
 }
 
+// LoginResponse — ответ при успешном входе.
+//
+//nolint:govet // fieldalignment: порядок полей для JSON
 type LoginResponse struct {
 	AccessToken  string       `json:"access_token"`
 	RefreshToken string       `json:"refresh_token"`
@@ -43,6 +55,9 @@ type LoginResponse struct {
 	User         UserResponse `json:"user"`
 }
 
+// UserResponse — данные пользователя в ответе API.
+//
+//nolint:govet // fieldalignment: порядок полей для JSON
 type UserResponse struct {
 	ID        string  `json:"id"`
 	Username  string  `json:"username"`
@@ -51,6 +66,7 @@ type UserResponse struct {
 	StationID *string `json:"station_id,omitempty"`
 }
 
+// NewAuthService создаёт новый AuthService.
 func NewAuthService(
 	userRepo repository.UserRepository,
 	sessionRepo repository.SessionRepository,
@@ -75,7 +91,7 @@ func (s *authService) Login(ctx context.Context, username, password, stationID s
 	}
 
 	// Проверить пароль
-	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password)); err != nil {
+	if compareErr := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password)); compareErr != nil {
 		s.logger.Warn("Invalid password attempt",
 			zap.String("username", username),
 			zap.String("user_id", user.ID))
@@ -230,6 +246,7 @@ func (s *authService) ValidateToken(ctx context.Context, token string) (*models.
 	return user, nil
 }
 
+// Claims — JWT claims для access-токена.
 type Claims struct {
 	UserID    string `json:"user_id"`
 	Username  string `json:"username"`

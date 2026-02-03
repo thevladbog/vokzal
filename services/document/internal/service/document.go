@@ -1,3 +1,4 @@
+// Package service — бизнес-логика Document Service.
 package service
 
 import (
@@ -8,13 +9,15 @@ import (
 
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
+	"go.uber.org/zap"
+
 	"github.com/vokzal-tech/document-service/internal/config"
 	"github.com/vokzal-tech/document-service/internal/models"
 	"github.com/vokzal-tech/document-service/internal/pdf"
 	"github.com/vokzal-tech/document-service/internal/repository"
-	"go.uber.org/zap"
 )
 
+// DocumentService — интерфейс сервиса документов.
 type DocumentService interface {
 	GenerateTicket(ctx context.Context, data *pdf.TicketData) (*models.GeneratedDocument, error)
 	GeneratePD2(ctx context.Context, data *pdf.PD2Data) (*models.GeneratedDocument, error)
@@ -30,6 +33,7 @@ type documentService struct {
 	logger    *zap.Logger
 }
 
+// NewDocumentService создаёт новый DocumentService.
 func NewDocumentService(
 	repo repository.DocumentRepository,
 	generator *pdf.Generator,

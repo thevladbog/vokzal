@@ -4,15 +4,15 @@ on:
   push:
     branches: [main, develop]
     paths:
-      - 'ui/**'
-      - '.github/workflows/ui-ci.yml'
+      - "ui/**"
+      - ".github/workflows/ui-ci.yml"
   pull_request:
     branches: [main, develop]
     paths:
-      - 'ui/**'
+      - "ui/**"
 
 env:
-  NODE_VERSION: '20'
+  NODE_VERSION: "20"
 
 jobs:
   detect-changes:
@@ -22,7 +22,7 @@ jobs:
       apps: ${{ steps.filter.outputs.changes }}
     steps:
       - uses: actions/checkout@v4
-      
+
       - uses: dorny/paths-filter@v3
         id: filter
         with:
@@ -35,6 +35,8 @@ jobs:
               - 'ui/passenger-portal/**'
             controller-app:
               - 'ui/controller-app/**'
+            pos-app:
+              - 'ui/pos-app/**'
 
   lint-and-test:
     name: Lint & Test
@@ -44,7 +46,7 @@ jobs:
     strategy:
       matrix:
         app: ${{ fromJSON(needs.detect-changes.outputs.apps) }}
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -53,16 +55,17 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-          cache-dependency-path: ui/${{ matrix.app }}/package-lock.json
+
+      - name: Set up npm version
+        run: npm install -g npm@9
 
       - name: Install dependencies
         working-directory: ui/${{ matrix.app }}
-        run: npm ci
+        run: npm install
 
       - name: Run ESLint
         working-directory: ui/${{ matrix.app }}
-        run: npm run lint
+        run: node node_modules/eslint/bin/eslint.js . --max-warnings 0
 
       - name: Run TypeScript check
         working-directory: ui/${{ matrix.app }}
@@ -70,18 +73,9 @@ jobs:
 
       - name: Run tests
         working-directory: ui/${{ matrix.app }}
-        run: npm test -- --coverage --watchAll=false
+        run: ./node_modules/.bin/vitest run --coverage
         env:
           CI: true
-
-      - name: Upload coverage
-        uses: codecov/codecov-action@v4
-        with:
-          file: ./ui/${{ matrix.app }}/coverage/coverage-final.json
-          flags: ${{ matrix.app }}
-          name: ${{ matrix.app }}-coverage
-          token: ${{ secrets.CODECOV_TOKEN }}
-        if: always()
 
   build:
     name: Build Applications
@@ -91,7 +85,7 @@ jobs:
     strategy:
       matrix:
         app: ${{ fromJSON(needs.detect-changes.outputs.apps) }}
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -100,12 +94,13 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-          cache-dependency-path: ui/${{ matrix.app }}/package-lock.json
+
+      - name: Set up npm version
+        run: npm install -g npm@9
 
       - name: Install dependencies
         working-directory: ui/${{ matrix.app }}
-        run: npm ci
+        run: npm install
 
       - name: Build application
         working-directory: ui/${{ matrix.app }}
@@ -128,7 +123,7 @@ jobs:
     strategy:
       matrix:
         app: ${{ fromJSON(needs.detect-changes.outputs.apps) }}
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -149,7 +144,7 @@ jobs:
           images: vokzaltech/${{ matrix.app }}
           tags: |
             type=ref,event=branch
-            type=sha,prefix={{branch}}-
+            type=sha,prefix=sha-
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
 

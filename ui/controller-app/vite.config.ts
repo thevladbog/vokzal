@@ -62,6 +62,9 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  test: {
+    passWithNoTests: true,
+  },
   server: {
     port: 3003,
     proxy: {

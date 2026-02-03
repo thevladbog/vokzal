@@ -1,18 +1,23 @@
+// Package repository — слой доступа к данным Fiscal Service.
 package repository
 
 import (
 	"context"
 	"errors"
 
-	"github.com/vokzal-tech/fiscal-service/internal/models"
 	"gorm.io/gorm"
+
+	"github.com/vokzal-tech/fiscal-service/internal/models"
 )
 
 var (
+	// ErrReceiptNotFound возвращается, когда чек не найден.
 	ErrReceiptNotFound = errors.New("receipt not found")
+	// ErrZReportNotFound возвращается, когда Z-отчёт не найден.
 	ErrZReportNotFound = errors.New("z-report not found")
 )
 
+// FiscalRepository — интерфейс репозитория фискальных данных.
 type FiscalRepository interface {
 	// Receipts
 	CreateReceipt(ctx context.Context, receipt *models.FiscalReceipt) error
@@ -31,24 +36,29 @@ type fiscalRepository struct {
 	db *gorm.DB
 }
 
+// NewFiscalRepository создаёт новый FiscalRepository.
 func NewFiscalRepository(db *gorm.DB) FiscalRepository {
 	return &fiscalRepository{db: db}
 }
 
-// Receipts
+// CreateReceipt создаёт запись чека.
 func (r *fiscalRepository) CreateReceipt(ctx context.Context, receipt *models.FiscalReceipt) error {
 	return r.db.WithContext(ctx).Create(receipt).Error
 }
 
-func (r *fiscalRepository) FindReceiptByID(ctx context.Context, id string) (*models.FiscalReceipt, error) {
-	var receipt models.FiscalReceipt
-	if err := r.db.WithContext(ctx).First(&receipt, "id = ?", id).Error; err != nil {
+func findFirstBy[T any](db *gorm.DB, ctx context.Context, query string, arg any, notFoundErr error) (*T, error) {
+	var t T
+	if err := db.WithContext(ctx).First(&t, query, arg).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, ErrReceiptNotFound
+			return nil, notFoundErr
 		}
 		return nil, err
 	}
-	return &receipt, nil
+	return &t, nil
+}
+
+func (r *fiscalRepository) FindReceiptByID(ctx context.Context, id string) (*models.FiscalReceipt, error) {
+	return findFirstBy[models.FiscalReceipt](r.db, ctx, "id = ?", id, ErrReceiptNotFound)
 }
 
 func (r *fiscalRepository) FindReceiptByTicketID(ctx context.Context, ticketID string) ([]*models.FiscalReceipt, error) {
@@ -63,20 +73,13 @@ func (r *fiscalRepository) UpdateReceipt(ctx context.Context, receipt *models.Fi
 	return r.db.WithContext(ctx).Save(receipt).Error
 }
 
-// Z-Reports
+// CreateZReport создаёт запись Z-отчёта.
 func (r *fiscalRepository) CreateZReport(ctx context.Context, report *models.ZReport) error {
 	return r.db.WithContext(ctx).Create(report).Error
 }
 
 func (r *fiscalRepository) FindZReportByDate(ctx context.Context, date string) (*models.ZReport, error) {
-	var report models.ZReport
-	if err := r.db.WithContext(ctx).First(&report, "date = ?", date).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, ErrZReportNotFound
-		}
-		return nil, err
-	}
-	return &report, nil
+	return findFirstBy[models.ZReport](r.db, ctx, "date = ?", date, ErrZReportNotFound)
 }
 
 func (r *fiscalRepository) FindAllZReports(ctx context.Context, limit int) ([]*models.ZReport, error) {

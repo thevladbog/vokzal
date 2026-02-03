@@ -1,19 +1,25 @@
+// Package repository содержит слой доступа к данным маршрутов, расписаний и рейсов.
 package repository
 
 import (
 	"context"
 	"errors"
 
-	"github.com/vokzal-tech/schedule-service/internal/models"
 	"gorm.io/gorm"
+
+	"github.com/vokzal-tech/schedule-service/internal/models"
 )
 
 var (
-	ErrRouteNotFound    = errors.New("route not found")
+	// ErrRouteNotFound возвращается, когда маршрут не найден.
+	ErrRouteNotFound = errors.New("route not found")
+	// ErrScheduleNotFound возвращается, когда расписание не найдено.
 	ErrScheduleNotFound = errors.New("schedule not found")
-	ErrTripNotFound     = errors.New("trip not found")
+	// ErrTripNotFound возвращается, когда рейс не найден.
+	ErrTripNotFound = errors.New("trip not found")
 )
 
+// RouteRepository — интерфейс репозитория маршрутов.
 type RouteRepository interface {
 	Create(ctx context.Context, route *models.Route) error
 	FindByID(ctx context.Context, id string) (*models.Route, error)
@@ -22,6 +28,7 @@ type RouteRepository interface {
 	Delete(ctx context.Context, id string) error
 }
 
+// ScheduleRepository — интерфейс репозитория расписаний.
 type ScheduleRepository interface {
 	Create(ctx context.Context, schedule *models.Schedule) error
 	FindByID(ctx context.Context, id string) (*models.Schedule, error)
@@ -30,6 +37,7 @@ type ScheduleRepository interface {
 	Delete(ctx context.Context, id string) error
 }
 
+// TripRepository — интерфейс репозитория рейсов.
 type TripRepository interface {
 	Create(ctx context.Context, trip *models.Trip) error
 	FindByID(ctx context.Context, id string) (*models.Trip, error)
@@ -51,19 +59,22 @@ type tripRepository struct {
 	db *gorm.DB
 }
 
+// NewRouteRepository создаёт репозиторий маршрутов.
 func NewRouteRepository(db *gorm.DB) RouteRepository {
 	return &routeRepository{db: db}
 }
 
+// NewScheduleRepository создаёт репозиторий расписаний.
 func NewScheduleRepository(db *gorm.DB) ScheduleRepository {
 	return &scheduleRepository{db: db}
 }
 
+// NewTripRepository создаёт репозиторий рейсов.
 func NewTripRepository(db *gorm.DB) TripRepository {
 	return &tripRepository{db: db}
 }
 
-// Route Repository
+// Create создаёт маршрут.
 func (r *routeRepository) Create(ctx context.Context, route *models.Route) error {
 	return r.db.WithContext(ctx).Create(route).Error
 }
@@ -106,11 +117,12 @@ func (r *routeRepository) Delete(ctx context.Context, id string) error {
 	return nil
 }
 
-// Schedule Repository
+// Create создаёт расписание.
 func (r *scheduleRepository) Create(ctx context.Context, schedule *models.Schedule) error {
 	return r.db.WithContext(ctx).Create(schedule).Error
 }
 
+//nolint:dupl // FindByID с Preload для Schedule и Trip — одинаковая структура.
 func (r *scheduleRepository) FindByID(ctx context.Context, id string) (*models.Schedule, error) {
 	var schedule models.Schedule
 	if err := r.db.WithContext(ctx).Preload("Route").First(&schedule, "id = ?", id).Error; err != nil {
@@ -145,11 +157,12 @@ func (r *scheduleRepository) Delete(ctx context.Context, id string) error {
 	return nil
 }
 
-// Trip Repository
+// Create создаёт рейс.
 func (r *tripRepository) Create(ctx context.Context, trip *models.Trip) error {
 	return r.db.WithContext(ctx).Create(trip).Error
 }
 
+//nolint:dupl // FindByID с Preload для Schedule и Trip — одинаковая структура.
 func (r *tripRepository) FindByID(ctx context.Context, id string) (*models.Trip, error) {
 	var trip models.Trip
 	if err := r.db.WithContext(ctx).Preload("Schedule.Route").First(&trip, "id = ?", id).Error; err != nil {

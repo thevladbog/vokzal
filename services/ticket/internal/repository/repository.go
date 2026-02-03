@@ -1,20 +1,28 @@
+// Package repository содержит слой доступа к данным билетов и посадки.
 package repository
 
 import (
 	"context"
 	"errors"
+	"time"
+
+	"gorm.io/gorm"
 
 	"github.com/vokzal-tech/ticket-service/internal/models"
-	"gorm.io/gorm"
 )
 
 var (
-	ErrTicketNotFound        = errors.New("ticket not found")
-	ErrSeatAlreadyTaken      = errors.New("seat already taken")
+	// ErrTicketNotFound возвращается, когда билет не найден.
+	ErrTicketNotFound = errors.New("ticket not found")
+	// ErrSeatAlreadyTaken возвращается, когда место уже занято.
+	ErrSeatAlreadyTaken = errors.New("seat already taken")
+	// ErrBoardingAlreadyStarted возвращается, когда посадка уже начата.
 	ErrBoardingAlreadyStarted = errors.New("boarding already started")
-	ErrBoardingNotStarted    = errors.New("boarding not started")
+	// ErrBoardingNotStarted возвращается, когда посадка ещё не начата.
+	ErrBoardingNotStarted = errors.New("boarding not started")
 )
 
+// TicketRepository — интерфейс репозитория билетов.
 type TicketRepository interface {
 	Create(ctx context.Context, ticket *models.Ticket) error
 	FindByID(ctx context.Context, id string) (*models.Ticket, error)
@@ -23,8 +31,10 @@ type TicketRepository interface {
 	CheckSeatAvailability(ctx context.Context, tripID, seatID string) (bool, error)
 	Update(ctx context.Context, ticket *models.Ticket) error
 	Delete(ctx context.Context, id string) error
+	GetTripDepartureTime(ctx context.Context, tripID string) (*time.Time, error)
 }
 
+// BoardingRepository — интерфейс репозитория событий и отметок посадки.
 type BoardingRepository interface {
 	CreateEvent(ctx context.Context, event *models.BoardingEvent) error
 	FindEventByTripID(ctx context.Context, tripID string) (*models.BoardingEvent, error)
@@ -41,39 +51,38 @@ type boardingRepository struct {
 	db *gorm.DB
 }
 
+// NewTicketRepository создаёт репозиторий билетов.
 func NewTicketRepository(db *gorm.DB) TicketRepository {
 	return &ticketRepository{db: db}
 }
 
+// NewBoardingRepository создаёт репозиторий посадки.
 func NewBoardingRepository(db *gorm.DB) BoardingRepository {
 	return &boardingRepository{db: db}
 }
 
-// Ticket Repository
+// Create создаёт билет.
 func (r *ticketRepository) Create(ctx context.Context, ticket *models.Ticket) error {
 	return r.db.WithContext(ctx).Create(ticket).Error
 }
 
-func (r *ticketRepository) FindByID(ctx context.Context, id string) (*models.Ticket, error) {
-	var ticket models.Ticket
-	if err := r.db.WithContext(ctx).First(&ticket, "id = ?", id).Error; err != nil {
+func findFirstBy[T any](db *gorm.DB, ctx context.Context, query string, arg any, notFoundErr error) (*T, error) {
+	var t T
+	if err := db.WithContext(ctx).First(&t, query, arg).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, ErrTicketNotFound
+			return nil, notFoundErr
 		}
 		return nil, err
 	}
-	return &ticket, nil
+	return &t, nil
+}
+
+func (r *ticketRepository) FindByID(ctx context.Context, id string) (*models.Ticket, error) {
+	return findFirstBy[models.Ticket](r.db, ctx, "id = ?", id, ErrTicketNotFound)
 }
 
 func (r *ticketRepository) FindByQRCode(ctx context.Context, qrCode string) (*models.Ticket, error) {
-	var ticket models.Ticket
-	if err := r.db.WithContext(ctx).First(&ticket, "qr_code = ?", qrCode).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, ErrTicketNotFound
-		}
-		return nil, err
-	}
-	return &ticket, nil
+	return findFirstBy[models.Ticket](r.db, ctx, "qr_code = ?", qrCode, ErrTicketNotFound)
 }
 
 func (r *ticketRepository) FindByTripID(ctx context.Context, tripID string) ([]*models.Ticket, error) {
@@ -110,7 +119,23 @@ func (r *ticketRepository) Delete(ctx context.Context, id string) error {
 	return nil
 }
 
-// Boarding Repository
+// GetTripDepartureTime возвращает время отправления рейса (date + schedule.departure_time из БД).
+func (r *ticketRepository) GetTripDepartureTime(ctx context.Context, tripID string) (*time.Time, error) {
+	var dep time.Time
+	err := r.db.WithContext(ctx).Raw(
+		"SELECT (t.date + s.departure_time) AS dep FROM trips t JOIN schedules s ON s.id = t.schedule_id WHERE t.id = ?",
+		tripID,
+	).Scan(&dep).Error
+	if err != nil {
+		return nil, err
+	}
+	if dep.IsZero() {
+		return nil, nil
+	}
+	return &dep, nil
+}
+
+// CreateEvent создаёт событие начала посадки.
 func (r *boardingRepository) CreateEvent(ctx context.Context, event *models.BoardingEvent) error {
 	return r.db.WithContext(ctx).Create(event).Error
 }

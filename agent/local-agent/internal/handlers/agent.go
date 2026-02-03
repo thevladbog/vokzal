@@ -4,13 +4,15 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
+
 	"github.com/vokzal-tech/local-agent/internal/kkt"
 	"github.com/vokzal-tech/local-agent/internal/printer"
 	"github.com/vokzal-tech/local-agent/internal/scanner"
 	"github.com/vokzal-tech/local-agent/internal/tts"
-	"go.uber.org/zap"
 )
 
+// AgentHandler — HTTP-обработчики локального агента (ККТ, принтер, сканер, TTS).
 type AgentHandler struct {
 	kkt     *kkt.ATOLClient
 	printer *printer.PrinterClient
@@ -19,33 +21,34 @@ type AgentHandler struct {
 	logger  *zap.Logger
 }
 
+// NewAgentHandler создаёт обработчик агента.
 func NewAgentHandler(
-	kkt *kkt.ATOLClient,
-	printer *printer.PrinterClient,
-	scanner *scanner.ScannerClient,
-	tts *tts.TTSClient,
+	kktClient *kkt.ATOLClient,
+	printerClient *printer.PrinterClient,
+	scannerClient *scanner.ScannerClient,
+	ttsClient *tts.TTSClient,
 	logger *zap.Logger,
 ) *AgentHandler {
 	return &AgentHandler{
-		kkt:     kkt,
-		printer: printer,
-		scanner: scanner,
-		tts:     tts,
+		kkt:     kktClient,
+		printer: printerClient,
+		scanner: scannerClient,
+		tts:     ttsClient,
 		logger:  logger,
 	}
 }
 
-// Health check
+// Health returns agent health status.
 func (h *AgentHandler) Health(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
-		"status": "ok",
+		"status":  "ok",
 		"service": "local-agent",
 	})
 }
 
 // ============= KKT Endpoints =============
 
-// PrintReceipt печатает чек на ККТ
+// PrintReceipt печатает чек на ККТ.
 func (h *AgentHandler) PrintReceipt(c *gin.Context) {
 	var req kkt.ReceiptRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -64,7 +67,7 @@ func (h *AgentHandler) PrintReceipt(c *gin.Context) {
 	c.JSON(http.StatusOK, resp)
 }
 
-// CreateZReport создаёт Z-отчёт
+// CreateZReport создаёт Z-отчёт.
 func (h *AgentHandler) CreateZReport(c *gin.Context) {
 	resp, err := h.kkt.CreateZReport()
 	if err != nil {
@@ -76,7 +79,7 @@ func (h *AgentHandler) CreateZReport(c *gin.Context) {
 	c.JSON(http.StatusOK, resp)
 }
 
-// GetKKTStatus возвращает статус ККТ
+// GetKKTStatus возвращает статус ККТ.
 func (h *AgentHandler) GetKKTStatus(c *gin.Context) {
 	status, err := h.kkt.GetStatus()
 	if err != nil {
@@ -90,7 +93,7 @@ func (h *AgentHandler) GetKKTStatus(c *gin.Context) {
 
 // ============= Printer Endpoints =============
 
-// PrintTicket печатает билет
+// PrintTicket печатает билет.
 func (h *AgentHandler) PrintTicket(c *gin.Context) {
 	var req printer.TicketData
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -108,7 +111,7 @@ func (h *AgentHandler) PrintTicket(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"success": true})
 }
 
-// GetPrinterStatus возвращает статус принтера
+// GetPrinterStatus возвращает статус принтера.
 func (h *AgentHandler) GetPrinterStatus(c *gin.Context) {
 	status, err := h.printer.GetStatus()
 	if err != nil {
@@ -122,7 +125,7 @@ func (h *AgentHandler) GetPrinterStatus(c *gin.Context) {
 
 // ============= Scanner Endpoints =============
 
-// ScanBarcode запускает чтение штрихкода
+// ScanBarcode запускает чтение штрихкода.
 func (h *AgentHandler) ScanBarcode(c *gin.Context) {
 	barcode, err := h.scanner.ReadBarcode()
 	if err != nil {
@@ -134,7 +137,7 @@ func (h *AgentHandler) ScanBarcode(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"barcode": barcode})
 }
 
-// GetScannerStatus возвращает статус сканера
+// GetScannerStatus возвращает статус сканера.
 func (h *AgentHandler) GetScannerStatus(c *gin.Context) {
 	status := h.scanner.GetStatus()
 	c.JSON(http.StatusOK, status)
@@ -142,7 +145,7 @@ func (h *AgentHandler) GetScannerStatus(c *gin.Context) {
 
 // ============= TTS Endpoints =============
 
-// Announce добавляет голосовое оповещение
+// Announce добавляет голосовое оповещение.
 func (h *AgentHandler) Announce(c *gin.Context) {
 	var req tts.Announcement
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -168,7 +171,7 @@ func (h *AgentHandler) Announce(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"success": true})
 }
 
-// GetTTSStatus возвращает статус TTS
+// GetTTSStatus возвращает статус TTS.
 func (h *AgentHandler) GetTTSStatus(c *gin.Context) {
 	status := h.tts.GetStatus()
 	c.JSON(http.StatusOK, status)
@@ -176,10 +179,16 @@ func (h *AgentHandler) GetTTSStatus(c *gin.Context) {
 
 // ============= Common Status Endpoint =============
 
-// GetAgentStatus возвращает статус всех компонентов агента
+// GetAgentStatus возвращает статус всех компонентов агента.
 func (h *AgentHandler) GetAgentStatus(c *gin.Context) {
-	kktStatus, _ := h.kkt.GetStatus()
-	printerStatus, _ := h.printer.GetStatus()
+	kktStatus, err := h.kkt.GetStatus()
+	if err != nil {
+		kktStatus = gin.H{"error": err.Error()}
+	}
+	printerStatus, err := h.printer.GetStatus()
+	if err != nil {
+		printerStatus = gin.H{"error": err.Error()}
+	}
 	scannerStatus := h.scanner.GetStatus()
 	ttsStatus := h.tts.GetStatus()
 

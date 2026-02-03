@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import React, { useState } from "react";
+import { useNavigate, Link } from "react-router-dom";
 import {
   Card,
   CardHeader,
@@ -8,32 +8,32 @@ import {
   Text,
   makeStyles,
   tokens,
-} from '@fluentui/react-components';
-import { useAuthStore } from '@/stores/authStore';
+} from "@fluentui/react-components";
+import { useAuthStore } from "@/stores/authStore";
 
 const useStyles = makeStyles({
   container: {
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'center',
-    minHeight: '100vh',
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    minHeight: "100vh",
     backgroundColor: tokens.colorNeutralBackground2,
     padding: tokens.spacingVerticalXXL,
   },
   card: {
-    width: '100%',
-    maxWidth: '400px',
+    width: "100%",
+    maxWidth: "400px",
   },
   form: {
-    display: 'flex',
-    flexDirection: 'column',
+    display: "flex",
+    flexDirection: "column",
     gap: tokens.spacingVerticalM,
     padding: tokens.spacingVerticalL,
   },
   title: {
     fontSize: tokens.fontSizeBase600,
     fontWeight: tokens.fontWeightSemibold,
-    textAlign: 'center',
+    textAlign: "center",
     marginBottom: tokens.spacingVerticalM,
   },
   error: {
@@ -41,7 +41,7 @@ const useStyles = makeStyles({
     fontSize: tokens.fontSizeBase300,
   },
   link: {
-    textAlign: 'center',
+    textAlign: "center",
     marginTop: tokens.spacingVerticalS,
   },
 });
@@ -51,21 +51,21 @@ export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
   const login = useAuthStore((state) => state.login);
 
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+    setError("");
     setLoading(true);
 
     try {
       await login(email, password);
-      navigate('/my-tickets');
-    } catch (err) {
-      setError('Неверный email или пароль');
+      navigate("/my-tickets");
+    } catch {
+      setError("Неверный email или пароль");
     } finally {
       setLoading(false);
     }
@@ -74,7 +74,9 @@ export const LoginPage: React.FC = () => {
   return (
     <div className={styles.container}>
       <Card className={styles.card}>
-        <CardHeader header={<Text className={styles.title}>Вход в личный кабинет</Text>} />
+        <CardHeader
+          header={<Text className={styles.title}>Вход в личный кабинет</Text>}
+        />
         <form className={styles.form} onSubmit={handleSubmit}>
           <Input
             type="email"
@@ -92,7 +94,7 @@ export const LoginPage: React.FC = () => {
           />
           {error && <Text className={styles.error}>{error}</Text>}
           <Button type="submit" appearance="primary" disabled={loading}>
-            {loading ? 'Вход...' : 'Войти'}
+            {loading ? "Вход..." : "Войти"}
           </Button>
           <div className={styles.link}>
             <Text>

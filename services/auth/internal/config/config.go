@@ -1,12 +1,17 @@
+// Package config загружает конфигурацию Auth Service из YAML и переменных окружения.
 package config
 
 import (
+	"errors"
 	"fmt"
 	"time"
 
 	"github.com/spf13/viper"
 )
 
+// Config — корневая конфигурация сервиса.
+//
+//nolint:govet // fieldalignment: порядок полей для mapstructure
 type Config struct {
 	Server   ServerConfig   `mapstructure:"server"`
 	Database DatabaseConfig `mapstructure:"database"`
@@ -14,11 +19,15 @@ type Config struct {
 	Logger   LoggerConfig   `mapstructure:"logger"`
 }
 
+// ServerConfig — настройки HTTP-сервера.
 type ServerConfig struct {
 	Port string `mapstructure:"port"`
 	Mode string `mapstructure:"mode"` // debug, release
 }
 
+// DatabaseConfig — настройки подключения к PostgreSQL.
+//
+//nolint:govet // fieldalignment: порядок полей для DSN
 type DatabaseConfig struct {
 	Host     string `mapstructure:"host"`
 	Port     int    `mapstructure:"port"`
@@ -28,17 +37,20 @@ type DatabaseConfig struct {
 	SSLMode  string `mapstructure:"sslmode"`
 }
 
+// JWTConfig — настройки JWT.
 type JWTConfig struct {
-	Secret           string        `mapstructure:"secret"`
-	Issuer           string        `mapstructure:"issuer"`
-	AccessExpiration time.Duration `mapstructure:"access_expiration"`
+	Secret            string        `mapstructure:"secret"`
+	Issuer            string        `mapstructure:"issuer"`
+	AccessExpiration  time.Duration `mapstructure:"access_expiration"`
 	RefreshExpiration time.Duration `mapstructure:"refresh_expiration"`
 }
 
+// LoggerConfig — настройки логгера.
 type LoggerConfig struct {
 	Level string `mapstructure:"level"` // debug, info, warn, error
 }
 
+// Load читает конфигурацию из файла и переменных окружения.
 func Load() (*Config, error) {
 	viper.SetConfigName("config")
 	viper.SetConfigType("yaml")
@@ -66,7 +78,8 @@ func Load() (*Config, error) {
 	viper.SetDefault("logger.level", "debug")
 
 	if err := viper.ReadInConfig(); err != nil {
-		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
+		var notFound viper.ConfigFileNotFoundError
+		if !errors.As(err, &notFound) {
 			return nil, fmt.Errorf("failed to read config: %w", err)
 		}
 		// Файл не найден - используем значения по умолчанию
@@ -80,6 +93,7 @@ func Load() (*Config, error) {
 	return &config, nil
 }
 
+// DSN возвращает строку подключения к PostgreSQL.
 func (c *DatabaseConfig) DSN() string {
 	return fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=%s",
 		c.Host, c.Port, c.User, c.Password, c.DBName, c.SSLMode)

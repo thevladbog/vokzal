@@ -1,3 +1,4 @@
+// Package service содержит бизнес-логику продажи, возврата и посадки по билетам.
 package service
 
 import (
@@ -7,12 +8,14 @@ import (
 	"time"
 
 	"github.com/nats-io/nats.go"
+	"go.uber.org/zap"
+
 	"github.com/vokzal-tech/ticket-service/internal/config"
 	"github.com/vokzal-tech/ticket-service/internal/models"
 	"github.com/vokzal-tech/ticket-service/internal/repository"
-	"go.uber.org/zap"
 )
 
+// TicketService — интерфейс сервиса билетов (продажа, возврат, посадка).
 type TicketService interface {
 	// Продажа
 	SellTicket(ctx context.Context, req *SellTicketRequest) (*models.Ticket, error)
@@ -37,37 +40,42 @@ type ticketService struct {
 	logger       *zap.Logger
 }
 
+// SellTicketRequest — запрос на продажу билета.
 type SellTicketRequest struct {
-	TripID        string  `json:"trip_id" binding:"required"`
 	SeatID        *string `json:"seat_id"`
 	PassengerName *string `json:"passenger_name"`
 	PassengerDoc  *string `json:"passenger_doc"`
 	Phone         *string `json:"phone"`
 	Email         *string `json:"email"`
-	Price         float64 `json:"price" binding:"required,gt=0"`
+	TripID        string  `json:"trip_id" binding:"required"`
 	PaymentMethod string  `json:"payment_method" binding:"required"`
+	Price         float64 `json:"price" binding:"required,gt=0"`
 }
 
+// RefundResult — результат возврата билета.
 type RefundResult struct {
 	OriginalAmount float64 `json:"original_amount"`
 	Penalty        float64 `json:"penalty"`
 	RefundAmount   float64 `json:"refund_amount"`
 }
 
+// MarkBoardingRequest — запрос на отметку посадки.
 type MarkBoardingRequest struct {
 	TicketID   string `json:"ticket_id" binding:"required"`
 	UserID     string `json:"user_id" binding:"required"`
 	ScanMethod string `json:"scan_method"`
 }
 
+// BoardingStatus — статус посадки по рейсу.
 type BoardingStatus struct {
-	TripID         string    `json:"trip_id"`
-	BoardingActive bool      `json:"boarding_active"`
 	StartedAt      *time.Time `json:"started_at,omitempty"`
-	TotalTickets   int       `json:"total_tickets"`
-	BoardedCount   int       `json:"boarded_count"`
+	TripID         string     `json:"trip_id"`
+	TotalTickets   int        `json:"total_tickets"`
+	BoardedCount   int        `json:"boarded_count"`
+	BoardingActive bool       `json:"boarding_active"`
 }
 
+// NewTicketService создаёт сервис билетов.
 func NewTicketService(
 	ticketRepo repository.TicketRepository,
 	boardingRepo repository.BoardingRepository,
@@ -84,7 +92,7 @@ func NewTicketService(
 	}
 }
 
-// Продажа билета
+// SellTicket продаёт билет.
 func (s *ticketService) SellTicket(ctx context.Context, req *SellTicketRequest) (*models.Ticket, error) {
 	// Проверить доступность места
 	if req.SeatID != nil {
@@ -137,8 +145,8 @@ func (s *ticketService) ListTicketsByTrip(ctx context.Context, tripID string) ([
 	return s.ticketRepo.FindByTripID(ctx, tripID)
 }
 
-// Возврат билета
-func (s *ticketService) RefundTicket(ctx context.Context, ticketID string, userID string) (*RefundResult, error) {
+// RefundTicket возвращает билет.
+func (s *ticketService) RefundTicket(ctx context.Context, ticketID, userID string) (*RefundResult, error) {
 	// Получить билет
 	ticket, err := s.ticketRepo.FindByID(ctx, ticketID)
 	if err != nil {
@@ -159,8 +167,12 @@ func (s *ticketService) RefundTicket(ctx context.Context, ticketID string, userI
 		return nil, repository.ErrBoardingAlreadyStarted
 	}
 
-	// Рассчитать штраф
-	penalty := s.calculateRefundPenalty(ticket.Price)
+	departureTime, err := s.ticketRepo.GetTripDepartureTime(ctx, ticket.TripID)
+	if err != nil {
+		s.logger.Error("GetTripDepartureTime failed, refusing refund", zap.Error(err), zap.String("trip_id", ticket.TripID))
+		return nil, fmt.Errorf("failed to get trip departure time for penalty calculation: %w", err)
+	}
+	penalty := s.calculateRefundPenalty(ticket.Price, departureTime)
 
 	// Обновить билет
 	now := time.Now()
@@ -193,26 +205,30 @@ func (s *ticketService) RefundTicket(ctx context.Context, ticketID string, userI
 	}, nil
 }
 
-// Расчёт штрафа за возврат
-func (s *ticketService) calculateRefundPenalty(price float64) float64 {
-	// TODO: получить время отправления рейса из Schedule service
-	// Для упрощения используем конфигурацию по умолчанию
-	hoursUntilDeparture := 25.0 // Заглушка
-
-	var penaltyRate float64
-	if hoursUntilDeparture > 24 {
-		penaltyRate = s.cfg.Business.RefundPenalty.Over24Hours
-	} else if hoursUntilDeparture >= 12 {
-		penaltyRate = s.cfg.Business.RefundPenalty.Between12_24
-	} else {
-		penaltyRate = s.cfg.Business.RefundPenalty.Under12Hours
+// Расчёт штрафа за возврат (время отправления рейса из БД trips+schedules).
+func (s *ticketService) calculateRefundPenalty(price float64, departureTime *time.Time) float64 {
+	hoursUntilDeparture := 25.0
+	if departureTime != nil && !departureTime.IsZero() {
+		hoursUntilDeparture = time.Until(*departureTime).Hours()
+		if hoursUntilDeparture < 0 {
+			hoursUntilDeparture = 0
+		}
 	}
 
+	var penaltyRate float64
+	switch {
+	case hoursUntilDeparture > 24:
+		penaltyRate = s.cfg.Business.RefundPenalty.Over24Hours
+	case hoursUntilDeparture >= 12:
+		penaltyRate = s.cfg.Business.RefundPenalty.Between12_24
+	default:
+		penaltyRate = s.cfg.Business.RefundPenalty.Under12Hours
+	}
 	return price * penaltyRate
 }
 
-// Начать посадку (блокировка возвратов)
-func (s *ticketService) StartBoarding(ctx context.Context, tripID string, userID string) error {
+// StartBoarding начинает посадку (блокировка возвратов).
+func (s *ticketService) StartBoarding(ctx context.Context, tripID, userID string) error {
 	// Проверить, не началась ли уже посадка
 	existing, err := s.boardingRepo.FindEventByTripID(ctx, tripID)
 	if err != nil {
@@ -245,7 +261,7 @@ func (s *ticketService) StartBoarding(ctx context.Context, tripID string, userID
 	return nil
 }
 
-// Отметить посадку пассажира
+// MarkBoarding отмечает посадку пассажира.
 func (s *ticketService) MarkBoarding(ctx context.Context, req *MarkBoardingRequest) error {
 	// Получить билет
 	ticket, err := s.ticketRepo.FindByID(ctx, req.TicketID)
@@ -295,7 +311,7 @@ func (s *ticketService) MarkBoarding(ctx context.Context, req *MarkBoardingReque
 	return nil
 }
 
-// Получить статус посадки
+// GetBoardingStatus возвращает статус посадки.
 func (s *ticketService) GetBoardingStatus(ctx context.Context, tripID string) (*BoardingStatus, error) {
 	// Проверить событие посадки
 	event, err := s.boardingRepo.FindEventByTripID(ctx, tripID)
@@ -330,7 +346,7 @@ func (s *ticketService) GetBoardingStatus(ctx context.Context, tripID string) (*
 	return status, nil
 }
 
-// NATS Events
+// publishTicketEvent публикует событие по билету в NATS.
 func (s *ticketService) publishTicketEvent(subject string, ticket *models.Ticket) {
 	data, err := json.Marshal(ticket)
 	if err != nil {
@@ -355,7 +371,7 @@ func (s *ticketService) publishBoardingEvent(subject string, data map[string]int
 	}
 }
 
-func (s *ticketService) publishAuditEvent(ctx context.Context, entityType, entityID, action, userID string, oldValue, newValue interface{}) {
+func (s *ticketService) publishAuditEvent(_ context.Context, entityType, entityID, action, userID string, oldValue, newValue interface{}) {
 	event := map[string]interface{}{
 		"entity_type": entityType,
 		"entity_id":   entityID,

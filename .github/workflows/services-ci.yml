@@ -4,15 +4,15 @@ on:
   push:
     branches: [main, develop]
     paths:
-      - 'services/**'
-      - '.github/workflows/services-ci.yml'
+      - "services/**"
+      - ".github/workflows/services-ci.yml"
   pull_request:
     branches: [main, develop]
     paths:
-      - 'services/**'
+      - "services/**"
 
 env:
-  GO_VERSION: '1.23'
+  GO_VERSION: "1.24"
 
 jobs:
   detect-changes:
@@ -22,7 +22,7 @@ jobs:
       services: ${{ steps.filter.outputs.changes }}
     steps:
       - uses: actions/checkout@v4
-      
+
       - uses: dorny/paths-filter@v3
         id: filter
         with:
@@ -56,7 +56,7 @@ jobs:
     strategy:
       matrix:
         service: ${{ fromJSON(needs.detect-changes.outputs.services) }}
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -71,25 +71,20 @@ jobs:
         working-directory: services/${{ matrix.service }}
         run: go mod download
 
+      - name: Verify go.mod and go.sum
+        working-directory: services/${{ matrix.service }}
+        run: go mod tidy && git diff --exit-code go.mod go.sum
+
       - name: Run golangci-lint
-        uses: golangci/golangci-lint-action@v4
+        uses: golangci/golangci-lint-action@v8
         with:
-          version: latest
+          version: v2.1.1
           working-directory: services/${{ matrix.service }}
           args: --timeout=5m
 
       - name: Run tests
         working-directory: services/${{ matrix.service }}
         run: go test -v -race -coverprofile=coverage.out -covermode=atomic ./...
-
-      - name: Upload coverage
-        uses: codecov/codecov-action@v4
-        with:
-          file: ./services/${{ matrix.service }}/coverage.out
-          flags: ${{ matrix.service }}
-          name: ${{ matrix.service }}-coverage
-          token: ${{ secrets.CODECOV_TOKEN }}
-        if: always()
 
   build:
     name: Build Docker Images
@@ -99,7 +94,7 @@ jobs:
     strategy:
       matrix:
         service: ${{ fromJSON(needs.detect-changes.outputs.services) }}
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -122,7 +117,7 @@ jobs:
           tags: |
             type=ref,event=branch
             type=ref,event=pr
-            type=sha,prefix={{branch}}-
+            type=sha,prefix=sha-
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
 
@@ -144,20 +139,20 @@ jobs:
     strategy:
       matrix:
         service: ${{ fromJSON(needs.detect-changes.outputs.services) }}
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@0.33.1
         with:
-          scan-type: 'fs'
-          scan-ref: 'services/${{ matrix.service }}'
-          format: 'sarif'
-          output: 'trivy-results.sarif'
+          scan-type: "fs"
+          scan-ref: "services/${{ matrix.service }}"
+          format: "sarif"
+          output: "trivy-results.sarif"
 
       - name: Upload Trivy results to GitHub Security
         uses: github/codeql-action/upload-sarif@v3
         with:
-          sarif_file: 'trivy-results.sarif'
+          sarif_file: "trivy-results.sarif"

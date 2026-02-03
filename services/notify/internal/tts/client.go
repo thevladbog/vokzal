@@ -1,3 +1,4 @@
+// Package tts предоставляет клиент для голосовых оповещений (TTS) через локальный агент.
 package tts
 
 import (
@@ -11,19 +12,25 @@ import (
 	"go.uber.org/zap"
 )
 
-// TTSClient клиент для отправки TTS запросов на локальный агент
+// TTSClient — клиент для отправки TTS-запросов на локальный агент.
+//
+//nolint:revive // Имя сохраняем для ясности при использовании (tts.Client).
 type TTSClient struct {
-	agentURL string
 	client   *http.Client
 	logger   *zap.Logger
+	agentURL string
 }
 
+// TTSRequest — тело запроса к TTS-агенту.
+//
+//nolint:revive // Имя сохраняем для ясности (tts.Request).
 type TTSRequest struct {
 	Text     string `json:"text"`
 	Language string `json:"language"`
 	Priority string `json:"priority"`
 }
 
+// NewTTSClient создаёт клиент TTS.
 func NewTTSClient(agentURL string, logger *zap.Logger) *TTSClient {
 	return &TTSClient{
 		agentURL: agentURL,
@@ -34,7 +41,7 @@ func NewTTSClient(agentURL string, logger *zap.Logger) *TTSClient {
 	}
 }
 
-// Announce отправляет голосовое оповещение
+// Announce отправляет голосовое оповещение (TTS).
 func (c *TTSClient) Announce(text, language, priority string) error {
 	req := &TTSRequest{
 		Text:     text,
@@ -60,10 +67,17 @@ func (c *TTSClient) Announce(text, language, priority string) error {
 	if err != nil {
 		return fmt.Errorf("failed to send request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if closeErr := resp.Body.Close(); closeErr != nil {
+			c.logger.Warn("failed to close response body", zap.Error(closeErr))
+		}
+	}()
 
 	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
+		body, readErr := io.ReadAll(resp.Body)
+		if readErr != nil {
+			return fmt.Errorf("TTS returned status %d (body read failed: %w)", resp.StatusCode, readErr)
+		}
 		return fmt.Errorf("TTS returned status %d: %s", resp.StatusCode, string(body))
 	}
 

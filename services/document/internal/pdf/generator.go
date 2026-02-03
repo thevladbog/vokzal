@@ -1,3 +1,4 @@
+// Package pdf — генерация PDF-документов (билеты, ПД-2).
 package pdf
 
 import (
@@ -10,16 +11,17 @@ import (
 	"go.uber.org/zap"
 )
 
-// Generator генератор PDF документов
+// Generator — генератор PDF-документов.
 type Generator struct {
 	logger *zap.Logger
 }
 
+// NewGenerator создаёт новый Generator.
 func NewGenerator(logger *zap.Logger) *Generator {
 	return &Generator{logger: logger}
 }
 
-// TicketData данные для билета
+// TicketData — данные для билета.
 type TicketData struct {
 	TicketID     string
 	PassengerFIO string
@@ -29,12 +31,12 @@ type TicketData struct {
 	Time         string
 	Platform     string
 	Seat         string
-	Price        float64
 	QRCode       string
 	BarCode      string
+	Price        float64
 }
 
-// GenerateTicket генерирует билет в PDF
+// GenerateTicket генерирует билет в PDF.
 func (g *Generator) GenerateTicket(data *TicketData) ([]byte, error) {
 	pdf := gofpdf.New("P", "mm", "A4", "")
 	pdf.AddPage()
@@ -98,22 +100,22 @@ func (g *Generator) GenerateTicket(data *TicketData) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-// PD2Data данные для ПД-2 (проездной документ)
+// PD2Data — данные для ПД-2 (проездной документ).
 type PD2Data struct {
-	Number        string
-	Series        string
-	PassengerFIO  string
-	PassengerDoc  string
-	RouteFrom     string
-	RouteTo       string
-	Date          string
-	Price         float64
-	IssueDate     string
-	IssuerName    string
-	BusNumber     string
+	Number       string
+	Series       string
+	PassengerFIO string
+	PassengerDoc string
+	RouteFrom    string
+	RouteTo      string
+	Date         string
+	IssueDate    string
+	IssuerName   string
+	BusNumber    string
+	Price        float64
 }
 
-// GeneratePD2 генерирует форму ПД-2
+// GeneratePD2 генерирует форму ПД-2.
 func (g *Generator) GeneratePD2(data *PD2Data) ([]byte, error) {
 	pdf := gofpdf.New("P", "mm", "A4", "")
 	pdf.AddPage()

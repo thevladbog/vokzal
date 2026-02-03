@@ -1,3 +1,4 @@
+// Package main — точка входа Ticket Service.
 package main
 
 import (
@@ -11,31 +12,39 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/nats-io/nats.go"
+	"go.uber.org/zap"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
+
 	"github.com/vokzal-tech/ticket-service/internal/config"
 	"github.com/vokzal-tech/ticket-service/internal/handlers"
 	"github.com/vokzal-tech/ticket-service/internal/models"
 	"github.com/vokzal-tech/ticket-service/internal/repository"
 	"github.com/vokzal-tech/ticket-service/internal/service"
-	"go.uber.org/zap"
-	"gorm.io/driver/postgres"
-	"gorm.io/gorm"
 )
 
+func initLogger(cfg *config.Config) (*zap.Logger, error) {
+	if cfg.Logger.Level == "production" {
+		return zap.NewProduction()
+	}
+	return zap.NewDevelopment()
+}
+
 func main() {
-	// Загрузить конфигурацию
 	cfg, err := config.Load()
 	if err != nil {
 		panic(fmt.Sprintf("Failed to load config: %v", err))
 	}
 
-	// Инициализировать логгер
-	var logger *zap.Logger
-	if cfg.Logger.Level == "production" {
-		logger, _ = zap.NewProduction()
-	} else {
-		logger, _ = zap.NewDevelopment()
+	logger, errLog := initLogger(cfg)
+	if errLog != nil {
+		panic(fmt.Sprintf("Failed to create logger: %v", errLog))
 	}
-	defer logger.Sync()
+	defer func() {
+		if syncErr := logger.Sync(); syncErr != nil {
+			fmt.Fprintf(os.Stderr, "logger sync: %v\n", syncErr)
+		}
+	}()
 
 	logger.Info("Starting Ticket Service", zap.String("version", "1.0.0"))
 
@@ -54,9 +63,8 @@ func main() {
 	sqlDB.SetMaxOpenConns(100)
 	sqlDB.SetConnMaxLifetime(time.Hour)
 
-	// Auto-migrate (опционально для dev)
-	if err := db.AutoMigrate(&models.Ticket{}, &models.BoardingEvent{}, &models.BoardingMark{}); err != nil {
-		logger.Warn("Auto-migration failed", zap.Error(err))
+	if migErr := db.AutoMigrate(&models.Ticket{}, &models.BoardingEvent{}, &models.BoardingMark{}); migErr != nil {
+		logger.Warn("Auto-migration failed", zap.Error(migErr))
 	}
 
 	// Подключиться к NATS
@@ -95,27 +103,17 @@ func main() {
 		})
 	})
 
-	// API routes
 	v1 := router.Group("/v1")
-	{
-		// Tickets
-		tickets := v1.Group("/tickets")
-		{
-			tickets.POST("/sell", ticketHandler.SellTicket)
-			tickets.GET("", ticketHandler.ListTicketsByTrip)
-			tickets.GET("/:id", ticketHandler.GetTicket)
-			tickets.GET("/qr", ticketHandler.GetTicketByQR)
-			tickets.POST("/:id/refund", ticketHandler.RefundTicket)
-		}
-
-		// Boarding
-		boarding := v1.Group("/boarding")
-		{
-			boarding.POST("/start", ticketHandler.StartBoarding)
-			boarding.POST("/mark", ticketHandler.MarkBoarding)
-			boarding.GET("/status", ticketHandler.GetBoardingStatus)
-		}
-	}
+	tickets := v1.Group("/tickets")
+	tickets.POST("/sell", ticketHandler.SellTicket)
+	tickets.GET("", ticketHandler.ListTicketsByTrip)
+	tickets.GET("/:id", ticketHandler.GetTicket)
+	tickets.GET("/qr", ticketHandler.GetTicketByQR)
+	tickets.POST("/:id/refund", ticketHandler.RefundTicket)
+	boarding := v1.Group("/boarding")
+	boarding.POST("/start", ticketHandler.StartBoarding)
+	boarding.POST("/mark", ticketHandler.MarkBoarding)
+	boarding.GET("/status", ticketHandler.GetBoardingStatus)
 
 	// Создать HTTP сервер
 	srv := &http.Server{

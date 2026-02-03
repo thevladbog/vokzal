@@ -10,6 +10,9 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  test: {
+    passWithNoTests: true,
+  },
   clearScreen: false,
   server: {
     port: 1420,

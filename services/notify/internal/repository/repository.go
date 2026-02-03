@@ -1,17 +1,19 @@
+// Package repository содержит слой доступа к данным уведомлений.
 package repository
 
 import (
 	"context"
 	"errors"
 
-	"github.com/vokzal-tech/notify-service/internal/models"
 	"gorm.io/gorm"
+
+	"github.com/vokzal-tech/notify-service/internal/models"
 )
 
-var (
-	ErrNotificationNotFound = errors.New("notification not found")
-)
+// ErrNotificationNotFound возвращается, когда уведомление не найдено.
+var ErrNotificationNotFound = errors.New("notification not found")
 
+// NotificationRepository — интерфейс репозитория уведомлений.
 type NotificationRepository interface {
 	Create(ctx context.Context, notification *models.Notification) error
 	FindByID(ctx context.Context, id string) (*models.Notification, error)
@@ -24,6 +26,7 @@ type notificationRepository struct {
 	db *gorm.DB
 }
 
+// NewNotificationRepository создаёт репозиторий уведомлений.
 func NewNotificationRepository(db *gorm.DB) NotificationRepository {
 	return &notificationRepository{db: db}
 }

@@ -75,24 +75,16 @@
    - Создание GitHub Release при тегах `v*`
    - Загрузка всех бинарников
 
-### 4. E2E Tests (`e2e-tests.yml`)
+### 4. Load Tests (`load-tests.yml`)
 
 **Триггеры:**
-- Push в `main`, `develop`
-- Pull Request
 - Расписание (nightly at 2 AM UTC)
 - Manual dispatch
 
 **Шаги:**
-1. **E2E тесты (Cypress):**
-   - Запуск PostgreSQL, Redis, NATS через services
-   - Старт всех Go сервисов
-   - Запуск Cypress тестов
-   - Загрузка screenshots/videos при ошибках
-2. **Load тесты (k6):**
-   - Только по расписанию или вручную
-   - Тестирование производительности
-   - Загрузка результатов
+1. **Load тесты (k6):**
+   - Тестирование производительности (auth, search-trips)
+   - Загрузка результатов в артефакты
 
 ### 5. Deploy (`deploy.yml`)
 

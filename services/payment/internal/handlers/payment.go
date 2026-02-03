@@ -1,3 +1,4 @@
+// Package handlers содержит HTTP-обработчики API платежей.
 package handlers
 
 import (
@@ -5,80 +6,66 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
-	"github.com/vokzal-tech/payment-service/internal/service"
 	"go.uber.org/zap"
+
+	"github.com/vokzal-tech/payment-service/internal/service"
 )
 
+// PaymentHandler — обработчик HTTP-запросов для платежей.
 type PaymentHandler struct {
-	service service.PaymentService
-	logger  *zap.Logger
+	svc    service.PaymentService
+	logger *zap.Logger
 }
 
-func NewPaymentHandler(service service.PaymentService, logger *zap.Logger) *PaymentHandler {
+// NewPaymentHandler создаёт обработчик платежей.
+func NewPaymentHandler(svc service.PaymentService, logger *zap.Logger) *PaymentHandler {
 	return &PaymentHandler{
-		service: service,
-		logger:  logger,
+		svc:    svc,
+		logger: logger,
 	}
 }
 
-// Инициализировать Tinkoff платёж
+// initPayment вызывает bind InitPaymentRequest, затем do(), при ошибке — 500, иначе 201.
+func (h *PaymentHandler) initPayment(c *gin.Context, do func(*service.InitPaymentRequest) (interface{}, error), errMsg string) {
+	var req service.InitPaymentRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	payment, err := do(&req)
+	if err != nil {
+		h.logger.Error(errMsg, zap.Error(err))
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusCreated, gin.H{"data": payment})
+}
+
+// InitTinkoff инициализирует платёж через Tinkoff.
 func (h *PaymentHandler) InitTinkoff(c *gin.Context) {
-	var req service.InitPaymentRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	payment, err := h.service.InitTinkoffPayment(c.Request.Context(), &req)
-	if err != nil {
-		h.logger.Error("Failed to init Tinkoff payment", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-
-	c.JSON(http.StatusCreated, gin.H{"data": payment})
+	h.initPayment(c, func(req *service.InitPaymentRequest) (interface{}, error) {
+		return h.svc.InitTinkoffPayment(c.Request.Context(), req)
+	}, "Failed to init Tinkoff payment")
 }
 
-// Инициализировать СБП платёж
+// InitSBP инициализирует платёж через СБП.
 func (h *PaymentHandler) InitSBP(c *gin.Context) {
-	var req service.InitPaymentRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	payment, err := h.service.InitSBPPayment(c.Request.Context(), &req)
-	if err != nil {
-		h.logger.Error("Failed to init SBP payment", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-
-	c.JSON(http.StatusCreated, gin.H{"data": payment})
+	h.initPayment(c, func(req *service.InitPaymentRequest) (interface{}, error) {
+		return h.svc.InitSBPPayment(c.Request.Context(), req)
+	}, "Failed to init SBP payment")
 }
 
-// Создать наличную оплату
+// InitCash создаёт запись о наличной оплате.
 func (h *PaymentHandler) InitCash(c *gin.Context) {
-	var req service.InitPaymentRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	payment, err := h.service.InitCashPayment(c.Request.Context(), &req)
-	if err != nil {
-		h.logger.Error("Failed to create cash payment", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-
-	c.JSON(http.StatusCreated, gin.H{"data": payment})
+	h.initPayment(c, func(req *service.InitPaymentRequest) (interface{}, error) {
+		return h.svc.InitCashPayment(c.Request.Context(), req)
+	}, "Failed to create cash payment")
 }
 
-// Получить платёж по ID
+// GetPayment возвращает платёж по ID.
 func (h *PaymentHandler) GetPayment(c *gin.Context) {
 	id := c.Param("id")
-	payment, err := h.service.GetPayment(c.Request.Context(), id)
+	payment, err := h.svc.GetPayment(c.Request.Context(), id)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Payment not found"})
 		return
@@ -87,10 +74,10 @@ func (h *PaymentHandler) GetPayment(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"data": payment})
 }
 
-// Проверить статус платежа
+// CheckStatus проверяет статус платежа у провайдера.
 func (h *PaymentHandler) CheckStatus(c *gin.Context) {
 	id := c.Param("id")
-	payment, err := h.service.CheckPaymentStatus(c.Request.Context(), id)
+	payment, err := h.svc.CheckPaymentStatus(c.Request.Context(), id)
 	if err != nil {
 		h.logger.Error("Failed to check payment status", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check status"})
@@ -100,7 +87,7 @@ func (h *PaymentHandler) CheckStatus(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"data": payment})
 }
 
-// Получить платежи по билету
+// GetPaymentsByTicket возвращает платежи по билету.
 func (h *PaymentHandler) GetPaymentsByTicket(c *gin.Context) {
 	ticketID := c.Query("ticket_id")
 	if ticketID == "" {
@@ -108,7 +95,7 @@ func (h *PaymentHandler) GetPaymentsByTicket(c *gin.Context) {
 		return
 	}
 
-	payments, err := h.service.GetPaymentByTicket(c.Request.Context(), ticketID)
+	payments, err := h.svc.GetPaymentByTicket(c.Request.Context(), ticketID)
 	if err != nil {
 		h.logger.Error("Failed to get payments", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get payments"})
@@ -118,7 +105,7 @@ func (h *PaymentHandler) GetPaymentsByTicket(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"data": payments})
 }
 
-// Webhook от Tinkoff
+// TinkoffWebhook обрабатывает webhook от Tinkoff.
 func (h *PaymentHandler) TinkoffWebhook(c *gin.Context) {
 	var data map[string]interface{}
 	if err := c.ShouldBindJSON(&data); err != nil {
@@ -126,7 +113,7 @@ func (h *PaymentHandler) TinkoffWebhook(c *gin.Context) {
 		return
 	}
 
-	if err := h.service.HandleTinkoffWebhook(c.Request.Context(), data); err != nil {
+	if err := h.svc.HandleTinkoffWebhook(c.Request.Context(), data); err != nil {
 		h.logger.Error("Failed to handle Tinkoff webhook", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -135,12 +122,15 @@ func (h *PaymentHandler) TinkoffWebhook(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"status": "ok"})
 }
 
-// Список платежей
+// ListPayments возвращает список платежей.
 func (h *PaymentHandler) ListPayments(c *gin.Context) {
 	limitStr := c.DefaultQuery("limit", "50")
-	limit, _ := strconv.Atoi(limitStr)
+	limit, err := strconv.Atoi(limitStr)
+	if err != nil {
+		limit = 50
+	}
 
-	payments, err := h.service.ListPayments(c.Request.Context(), limit)
+	payments, err := h.svc.ListPayments(c.Request.Context(), limit)
 	if err != nil {
 		h.logger.Error("Failed to list payments", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to list payments"})

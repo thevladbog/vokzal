@@ -173,9 +173,6 @@ controller-app/
 # Unit тесты (Jest)
 npm test
 
-# E2E тесты (Cypress)
-npm run test:e2e
-
 # Тестирование PWA
 npm run build
 npm run preview

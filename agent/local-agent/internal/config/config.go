@@ -1,57 +1,66 @@
 package config
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/spf13/viper"
 )
 
+// Config — конфигурация локального агента.
 type Config struct {
-	Server  ServerConfig  `mapstructure:"server"`
 	KKT     KKTConfig     `mapstructure:"kkt"`
 	Printer PrinterConfig `mapstructure:"printer"`
 	Scanner ScannerConfig `mapstructure:"scanner"`
-	TTS     TTSConfig     `mapstructure:"tts"`
+	Server  ServerConfig  `mapstructure:"server"`
 	Logger  LoggerConfig  `mapstructure:"logger"`
+	TTS     TTSConfig     `mapstructure:"tts"`
 }
 
+// ServerConfig — настройки HTTP-сервера агента.
 type ServerConfig struct {
 	Port string `mapstructure:"port"`
 	Mode string `mapstructure:"mode"`
 }
 
+// KKTConfig — настройки ККТ (АТОЛ).
 type KKTConfig struct {
-	Enabled    bool   `mapstructure:"enabled"`
 	DevicePath string `mapstructure:"device_path"`
-	ATOLDriver string `mapstructure:"atol_driver"` // path to ATOL driver
+	ATOLDriver string `mapstructure:"atol_driver"`
 	INN        string `mapstructure:"inn"`
 	OFDUrl     string `mapstructure:"ofd_url"`
+	Enabled    bool   `mapstructure:"enabled"`
 }
 
+// PrinterConfig — настройки принтера билетов.
 type PrinterConfig struct {
-	Enabled    bool   `mapstructure:"enabled"`
 	DevicePath string `mapstructure:"device_path"`
-	Type       string `mapstructure:"type"` // escpos, cups
+	Type       string `mapstructure:"type"`
 	Name       string `mapstructure:"name"`
-}
-
-type ScannerConfig struct {
 	Enabled    bool   `mapstructure:"enabled"`
+}
+
+// ScannerConfig — настройки сканера штрихкодов.
+type ScannerConfig struct {
 	DevicePath string `mapstructure:"device_path"`
-	Mode       string `mapstructure:"mode"` // hid, serial
+	Mode       string `mapstructure:"mode"`
+	Enabled    bool   `mapstructure:"enabled"`
 }
 
+// TTSConfig — настройки голосовых оповещений.
 type TTSConfig struct {
+	Engine  string `mapstructure:"engine"`
+	Voice   string `mapstructure:"voice"`
+	Volume  int    `mapstructure:"volume"`
 	Enabled bool   `mapstructure:"enabled"`
-	Engine  string `mapstructure:"engine"` // rhvoice, espeak
-	Voice   string `mapstructure:"voice"`  // alena, david
-	Volume  int    `mapstructure:"volume"` // 0-100
 }
 
+// LoggerConfig — настройки логгера.
 type LoggerConfig struct {
 	Level string `mapstructure:"level"`
 }
 
+// Load загружает конфигурацию из файла и переменных окружения.
 func Load() (*Config, error) {
 	viper.SetConfigName("config")
 	viper.SetConfigType("yaml")
@@ -79,7 +88,8 @@ func Load() (*Config, error) {
 	viper.SetDefault("logger.level", "debug")
 
 	if err := viper.ReadInConfig(); err != nil {
-		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
+		var notFound viper.ConfigFileNotFoundError
+		if !errors.As(err, &notFound) {
 			return nil, fmt.Errorf("failed to read config: %w", err)
 		}
 	}
