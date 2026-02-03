@@ -8,6 +8,7 @@
     "cypress:run:chrome": "cypress run --browser chrome",
     "cypress:run:firefox": "cypress run --browser firefox",
     "test": "cypress run",
+    "test:ci": "cypress run",
     "test:headed": "cypress run --headed",
     "test:record": "cypress run --record --key ${CYPRESS_RECORD_KEY}"
   },

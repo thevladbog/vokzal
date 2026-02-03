@@ -1,7 +1,7 @@
 repos:
-  # Go
+  # Go (golangci-lint v2, config: .golangci.yml version 2)
   - repo: https://github.com/golangci/golangci-lint
-    rev: v1.56.0
+    rev: v2.1.0
     hooks:
       - id: golangci-lint
         args: [--timeout=5m]

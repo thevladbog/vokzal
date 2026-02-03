@@ -34,9 +34,9 @@ jobs:
         run: go mod download
 
       - name: Run golangci-lint
-        uses: golangci/golangci-lint-action@v4
+        uses: golangci/golangci-lint-action@v8
         with:
-          version: v2
+          version: v2.1.0
           working-directory: agent
           args: --timeout=5m
 
