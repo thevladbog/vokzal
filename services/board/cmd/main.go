@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -141,8 +142,16 @@ func main() {
 
 	logger.Info("Subscribed to NATS events: trip.created, trip.status_changed")
 
+	// Разрешить origins для WebSocket (из конфига, через запятую)
+	var allowedOrigins []string
+	for _, o := range strings.Split(cfg.WebSocket.AllowedOrigins, ",") {
+		if trimmed := strings.TrimSpace(o); trimmed != "" {
+			allowedOrigins = append(allowedOrigins, trimmed)
+		}
+	}
+
 	// Создать handlers
-	boardHandler := handlers.NewBoardHandler(db, hub, logger)
+	boardHandler := handlers.NewBoardHandler(db, hub, logger, allowedOrigins, cfg.WebSocket.AllowAllOriginsInDev)
 
 	// Настроить Gin
 	if cfg.Server.Mode == "release" {

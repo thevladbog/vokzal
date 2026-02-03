@@ -35,18 +35,18 @@ type PaymentService interface {
 
 	// Webhooks
 	HandleTinkoffWebhook(ctx context.Context, data map[string]interface{}) error
-	
+
 	// List
 	ListPayments(ctx context.Context, limit int) ([]*models.Payment, error)
 }
 
 type paymentService struct {
-	repo           repository.PaymentRepository
-	tinkoffClient  *tinkoff.TinkoffClient
-	sbpClient      *sbp.SBPClient
-	natsConn       *nats.Conn
-	cfg            *config.Config
-	logger         *zap.Logger
+	repo          repository.PaymentRepository
+	tinkoffClient *tinkoff.TinkoffClient
+	sbpClient     *sbp.SBPClient
+	natsConn      *nats.Conn
+	cfg           *config.Config
+	logger        *zap.Logger
 }
 
 // InitPaymentRequest — запрос на инициализацию платежа.
@@ -311,6 +311,13 @@ const paymentConfirmedSubject = "payment.confirmed"
 
 // publishPaymentEvent публикует событие подтверждения платежа в NATS.
 func (s *paymentService) publishPaymentEvent(payment *models.Payment) {
+	if s.natsConn == nil || !s.natsConn.IsConnected() {
+		s.logger.Warn("NATS connection unavailable, skipping payment event",
+			zap.String("payment_id", payment.ID),
+			zap.String("subject", paymentConfirmedSubject))
+		return
+	}
+
 	data, err := json.Marshal(payment)
 	if err != nil {
 		s.logger.Error("Failed to marshal payment event", zap.Error(err))

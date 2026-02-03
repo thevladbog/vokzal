@@ -10,11 +10,19 @@ import (
 
 // Config — корневая конфигурация сервиса.
 type Config struct {
-	Server   ServerConfig   `mapstructure:"server"`
-	Database DatabaseConfig `mapstructure:"database"`
-	Redis    RedisConfig    `mapstructure:"redis"`
-	NATS     NATSConfig     `mapstructure:"nats"`
-	Logger   LoggerConfig   `mapstructure:"logger"`
+	Server    ServerConfig    `mapstructure:"server"`
+	Database  DatabaseConfig  `mapstructure:"database"`
+	Redis     RedisConfig     `mapstructure:"redis"`
+	NATS      NATSConfig      `mapstructure:"nats"`
+	Logger    LoggerConfig    `mapstructure:"logger"`
+	WebSocket WebSocketConfig `mapstructure:"websocket"`
+}
+
+// WebSocketConfig — настройки WebSocket (в т.ч. проверка Origin).
+type WebSocketConfig struct {
+	// AllowedOrigins — разрешённые origins через запятую (например, "http://localhost:3000,https://board.example.com").
+	AllowedOrigins      string `mapstructure:"allowed_origins"`
+	AllowAllOriginsInDev bool  `mapstructure:"allow_all_origins_in_dev"`
 }
 
 // ServerConfig — настройки HTTP-сервера.
@@ -80,6 +88,8 @@ func Load() (*Config, error) {
 	viper.SetDefault("nats.user", "vokzal")
 	viper.SetDefault("nats.password", "nats_secret_2026")
 	viper.SetDefault("logger.level", "debug")
+	viper.SetDefault("websocket.allowed_origins", "http://localhost:3000,http://localhost:8086")
+	viper.SetDefault("websocket.allow_all_origins_in_dev", true)
 
 	if err := viper.ReadInConfig(); err != nil {
 		var notFound viper.ConfigFileNotFoundError

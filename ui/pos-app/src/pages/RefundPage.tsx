@@ -54,12 +54,14 @@ export const RefundPage: React.FC = () => {
   const [processing, setProcessing] = useState(false);
 
   const handleSearch = async () => {
-    if (!ticketId.trim()) return;
+    const normalized = ticketId.trim();
+    if (!normalized) return;
 
+    setTicketId(normalized);
     setLoading(true);
     setTicket(null);
     try {
-      const found = await ticketService.getTicket(ticketId.trim());
+      const found = await ticketService.getTicket(normalized);
       if (found.status !== "active") {
         alert(`Билет в статусе «${found.status}», возврат невозможен.`);
         return;

@@ -3,6 +3,7 @@ package handlers
 
 import (
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -12,31 +13,52 @@ import (
 	"gorm.io/gorm"
 )
 
-// BoardHandler обрабатывает HTTP-запросы к API табло.
-type BoardHandler struct {
-	db     *gorm.DB
-	hub    *ws.Hub
-	logger *zap.Logger
+// isAllowedOrigin возвращает true, если origin разрешён: либо allowAllInDev включён (для разработки),
+// либо origin совпадает с одним из записей в allowed (точное совпадение).
+func isAllowedOrigin(origin string, allowed []string, allowAllInDev bool) bool {
+	if allowAllInDev {
+		return true
+	}
+	origin = strings.TrimSpace(origin)
+	if origin == "" {
+		return false
+	}
+	for _, a := range allowed {
+		if strings.TrimSpace(a) == origin {
+			return true
+		}
+	}
+	return false
 }
 
-// NewBoardHandler создаёт новый BoardHandler.
-func NewBoardHandler(db *gorm.DB, hub *ws.Hub, logger *zap.Logger) *BoardHandler {
-	return &BoardHandler{
+// BoardHandler обрабатывает HTTP-запросы к API табло.
+type BoardHandler struct {
+	db       *gorm.DB
+	hub      *ws.Hub
+	logger   *zap.Logger
+	upgrader websocket.Upgrader
+}
+
+// NewBoardHandler создаёт новый BoardHandler. allowedOrigins — whitelist origins для WebSocket CheckOrigin;
+// allowAllOriginsInDev при true отключает проверку (удобно для разработки).
+func NewBoardHandler(db *gorm.DB, hub *ws.Hub, logger *zap.Logger, allowedOrigins []string, allowAllOriginsInDev bool) *BoardHandler {
+	h := &BoardHandler{
 		db:     db,
 		hub:    hub,
 		logger: logger,
+		upgrader: websocket.Upgrader{
+			CheckOrigin: func(r *http.Request) bool {
+				origin := r.Header.Get("Origin")
+				return isAllowedOrigin(origin, allowedOrigins, allowAllOriginsInDev)
+			},
+		},
 	}
-}
-
-var wsUpgrader = websocket.Upgrader{
-	CheckOrigin: func(_ *http.Request) bool {
-		return true
-	},
+	return h
 }
 
 // HandleWebSocket обрабатывает WebSocket-подключение для табло.
 func (h *BoardHandler) HandleWebSocket(c *gin.Context) {
-	conn, err := wsUpgrader.Upgrade(c.Writer, c.Request, nil)
+	conn, err := h.upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
 		h.logger.Error("Failed to upgrade to WebSocket", zap.Error(err))
 		return

@@ -1,4 +1,4 @@
-version: 2
+version: "2"
 
 run:
   timeout: 5m
@@ -31,84 +31,81 @@ linters:
     - prealloc
     - predeclared
     - whitespace
-
-linters-settings:
-  errcheck:
-    check-type-assertions: true
-    check-blank: true
-
-  govet:
-    check-shadowing: true
-    enable-all: true
-
-  gofmt:
-    simplify: true
-
-  goimports:
-    local-prefixes: github.com/vokzal-tech
-
-  gocritic:
-    enabled-tags:
-      - diagnostic
-      - style
-      - performance
-      - experimental
-
-  revive:
+  settings:
+    errcheck:
+      check-type-assertions: true
+      check-blank: true
+    govet:
+      enable-all: true
+      enable:
+        - shadow
+    gocritic:
+      enabled-tags:
+        - diagnostic
+        - style
+        - performance
+        - experimental
+    revive:
+      rules:
+        - name: exported
+          severity: warning
+        - name: unexported-return
+          severity: warning
+        - name: var-naming
+          severity: warning
+    gosec:
+      excludes:
+        - G104 # Audit errors not checked
+        - G304 # File path provided as taint input
+    gocyclo:
+      min-complexity: 15
+    dupl:
+      threshold: 75
+    goconst:
+      min-len: 3
+      min-occurrences: 3
+    misspell:
+      locale: US
+    nestif:
+      min-complexity: 4
+    nolintlint:
+      allow-unused: false
+      require-explanation: true
+      require-specific: true
+  exclusions:
     rules:
-      - name: exported
-        severity: warning
-      - name: unexported-return
-        severity: warning
-      - name: var-naming
-        severity: warning
+      # Exclude some linters from running on tests files
+      - path: _test\.go
+        linters:
+          - gocyclo
+          - errcheck
+          - dupl
+          - gosec
+          - goconst
+      # Exclude known linters from partially hard-vendored code
+      - path: vendor/
+        linters:
+          - all
 
-  gosec:
-    excludes:
-      - G104 # Audit errors not checked
-      - G304 # File path provided as taint input
-
-  gocyclo:
-    min-complexity: 15
-
-  dupl:
-    threshold: 75
-
-  goconst:
-    min-len: 3
-    min-occurrences: 3
-
-  misspell:
-    locale: US
-
-  nestif:
-    min-complexity: 4
-
-  nolintlint:
-    allow-unused: false
-    require-explanation: true
-    require-specific: true
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  settings:
+    gofmt:
+      simplify: true
+    goimports:
+      local-prefixes:
+        - github.com/vokzal-tech
 
 issues:
-  exclude-rules:
-    # Exclude some linters from running on tests files
-    - path: _test\.go
-      linters:
-        - gocyclo
-        - errcheck
-        - dupl
-        - gosec
-        - goconst
-
-    # Exclude known linters from partially hard-vendored code
-    - path: vendor/
-      linters:
-        - all
-
   max-same-issues: 0
   max-issues-per-linter: 0
 
 output:
-  format: colored-line-number
-  print-issued-lines: true
-  print-linter-name: true
+  formats:
+    text:
+      path: stdout
+      colors: true
+      print-issued-lines: true
+      print-linter-name: true
