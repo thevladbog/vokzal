@@ -56,9 +56,6 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
 
-      - name: Set up npm version
-        run: npm install -g npm@11
-
       - name: Install dependencies
         working-directory: ui/${{ matrix.app }}
         run: npm ci
@@ -94,9 +91,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-
-      - name: Set up npm version
-        run: npm install -g npm@11
 
       - name: Install dependencies
         working-directory: ui/${{ matrix.app }}
