@@ -73,7 +73,7 @@ jobs:
 
       - name: Run tests
         working-directory: ui/${{ matrix.app }}
-        run: npm test -- --coverage --watchAll=false
+        run: ./node_modules/.bin/vitest run --coverage
         env:
           CI: true
 
