@@ -12,7 +12,7 @@ on:
       - "ui/**"
 
 env:
-  NODE_VERSION: "20"
+  NODE_VERSION: "22"
 
 jobs:
   detect-changes:
@@ -57,7 +57,7 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
 
       - name: Set up npm version
-        run: npm install -g npm@9
+        run: npm install -g npm@11
 
       - name: Install dependencies
         working-directory: ui/${{ matrix.app }}
@@ -96,7 +96,7 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
 
       - name: Set up npm version
-        run: npm install -g npm@9
+        run: npm install -g npm@11
 
       - name: Install dependencies
         working-directory: ui/${{ matrix.app }}
