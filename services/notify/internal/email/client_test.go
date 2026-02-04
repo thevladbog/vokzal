@@ -52,6 +52,62 @@ func TestSanitizeHeader(t *testing.T) {
 	}
 }
 
+func TestSanitizeBody(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{
+			name:     "clean single line",
+			input:    "Hello, world!",
+			expected: "Hello, world!",
+		},
+		{
+			name:     "multi-line with newlines",
+			input:    "Line 1\nLine 2\nLine 3",
+			expected: "Line 1\nLine 2\nLine 3",
+		},
+		{
+			name:     "multi-line with CRLF",
+			input:    "Line 1\r\nLine 2\r\nLine 3",
+			expected: "Line 1\r\nLine 2\r\nLine 3",
+		},
+		{
+			name:     "text with tabs",
+			input:    "Column1\tColumn2\tColumn3",
+			expected: "Column1\tColumn2\tColumn3",
+		},
+		{
+			name:     "null byte removal",
+			input:    "Text\x00WithNull",
+			expected: "TextWithNull",
+		},
+		{
+			name:     "bell character removal",
+			input:    "Text\x07WithBell",
+			expected: "TextWithBell",
+		},
+		{
+			name:     "multiple control chars removed but newlines preserved",
+			input:    "Line 1\x00\x01\x02\nLine 2\x07\x08\r\nLine 3",
+			expected: "Line 1\nLine 2\r\nLine 3",
+		},
+		{
+			name:     "mixed whitespace preserved",
+			input:    "  Line with spaces  \n\tTabbed line\n",
+			expected: "  Line with spaces  \n\tTabbed line\n",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := sanitizeBody(tt.input)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
 func TestValidateEmail(t *testing.T) {
 	tests := []struct {
 		name    string

@@ -47,21 +47,24 @@ func sanitizeHeader(input string) string {
 	return strings.TrimSpace(sanitized)
 }
 
-// sanitizeBody removes control characters from the email body to prevent content injection
-// while preserving regular text. The body is treated as plain text.
+// sanitizeBody removes dangerous control characters from the email body while
+// preserving legitimate line breaks. This allows multi-line email bodies.
 func sanitizeBody(input string) string {
-	// Map over runes and drop ASCII control characters (0x00–0x1F) except tab.
+	// Map over runes and drop dangerous ASCII control characters (0x00–0x1F)
+	// but explicitly allow newline (\n), carriage return (\r), and tab (\t).
 	sanitized := strings.Map(func(r rune) rune {
-		if r == '\t' {
+		// Allow newline, carriage return, and tab
+		if r == '\n' || r == '\r' || r == '\t' {
 			return r
 		}
+		// Drop other control characters (especially null bytes and other dangerous chars)
 		if r < 0x20 {
-			// Drop other control characters including CR and LF
 			return -1
 		}
 		return r
 	}, input)
-	return strings.TrimSpace(sanitized)
+	// Don't use TrimSpace as it would remove legitimate trailing newlines
+	return sanitized
 }
 
 // validateEmail validates email address format.

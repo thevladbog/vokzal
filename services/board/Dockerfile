@@ -1,13 +1,13 @@
-FROM golang:1.24-alpine AS builder
+FROM golang:1.24.13-alpine AS builder
 
 WORKDIR /app
 
 COPY go.mod go.sum ./
-RUN GOTOOLCHAIN=auto go mod download
+RUN go mod download
 
 COPY . .
 
-RUN GOTOOLCHAIN=auto CGO_ENABLED=0 GOOS=linux go build -o bin/board cmd/main.go
+RUN CGO_ENABLED=0 GOOS=linux go build -o bin/board cmd/main.go
 
 FROM alpine:latest
 
