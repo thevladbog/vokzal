@@ -22,7 +22,7 @@ type TinkoffClient struct {
 	client      *http.Client
 	logger      *zap.Logger
 	terminalKey string
-	password    string
+	apiSecret   string // API secret (не пароль пользователя) для подписи запросов
 	apiURL      string
 }
 
@@ -66,10 +66,11 @@ type GetStateResponse struct {
 }
 
 // NewTinkoffClient создаёт клиент Tinkoff Acquiring.
-func NewTinkoffClient(terminalKey, password, apiURL string, logger *zap.Logger) *TinkoffClient {
+// apiSecret — это не пароль пользователя, а секретный ключ терминала для подписи API-запросов.
+func NewTinkoffClient(terminalKey, apiSecret, apiURL string, logger *zap.Logger) *TinkoffClient {
 	return &TinkoffClient{
 		terminalKey: terminalKey,
-		password:    password,
+		apiSecret:   apiSecret,
 		apiURL:      apiURL,
 		client: &http.Client{
 			Timeout: 30 * time.Second,
@@ -184,10 +185,14 @@ func (c *TinkoffClient) GetState(paymentID string) (*GetStateResponse, error) {
 	return &result, nil
 }
 
-// generateToken генерирует токен для подписи запроса.
+// generateToken генерирует токен для подписи запроса согласно спецификации Tinkoff Acquiring API.
+//
+// SECURITY NOTE: SHA-256 используется здесь для генерации подписи API-запросов (HMAC-подобный механизм),
+// а НЕ для хеширования паролей пользователей. Это соответствует официальной документации Tinkoff.
+// SHA-256 является криптографически стойкой хеш-функцией для данного применения.
 func (c *TinkoffClient) generateToken(params map[string]interface{}) string {
-	// Добавляем Password к параметрам
-	params["Password"] = c.password
+	// Добавляем API secret к параметрам (требование Tinkoff API)
+	params["Password"] = c.apiSecret
 
 	// Сортируем ключи
 	keys := make([]string, 0, len(params))
@@ -203,7 +208,7 @@ func (c *TinkoffClient) generateToken(params map[string]interface{}) string {
 	}
 	str := strings.Join(parts, "")
 
-	// SHA-256
+	// SHA-256 хеширование (требование Tinkoff Acquiring API)
 	hash := sha256.Sum256([]byte(str))
 	return fmt.Sprintf("%x", hash)
 }
