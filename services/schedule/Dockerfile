@@ -2,12 +2,10 @@ FROM golang:1.24-alpine AS builder
 
 WORKDIR /app
 
-COPY go.mod go.sum ./
-RUN go mod download
-
+# go-common is replaced by ../../shared/go-common; CI runs `go mod vendor` so vendor/ is in context.
 COPY . .
 
-RUN CGO_ENABLED=0 GOOS=linux go build -o bin/schedule cmd/main.go
+RUN CGO_ENABLED=0 GOOS=linux go build -mod=vendor -o bin/schedule cmd/main.go
 
 FROM alpine:latest
 
