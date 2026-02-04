@@ -1,0 +1,94 @@
+import{_ as t,o as l,c as o,j as n}from"./chunks/framework.D5T0pHrq.js";const u=JSON.parse('{"title":"","description":"","frontmatter":{},"headers":[],"relativePath":"initial/15.md","filePath":"initial/15.md"}'),a={name:"initial/15.md"};function i(r,e,c,h,s,d){return l(),o("div",null,[...e[0]||(e[0]=[n("p",null,'graph TD subgraph "Вокзал.ТЕХ — Контейнеры" direction TB',-1),n("pre",null,[n("code",null,`    subgraph "Фронтенд (UI)"
+        A[Пассажирский портал<br>vokzal.tech] --> API
+        B[Админ-панель<br>admin.vokzal.tech] --> API
+        C[POS-приложение<br>Tauri] --> Agent
+        D[Табло<br>board.vokzal.tech] --> WS
+        E[Контролёр<br>controller.vokzal.tech] --> API
+    end
+
+    subgraph "Бэкенд (Микросервисы)"
+        API[API Gateway<br>api.vokzal.tech]
+        Auth[(auth.vokzal.tech)]
+        Schedule[(schedule.vokzal.tech)]
+        Ticket[(ticket.vokzal.tech)]
+        Fiscal[(fiscal.vokzal.tech)]
+        Payment[(payment.vokzal.tech)]
+        Board[(board.vokzal.tech)]
+        Notify[(notify.vokzal.tech)]
+        Audit[(audit.vokzal.tech)]
+        Document[(document.vokzal.tech)]
+        Geo[(geo.vokzal.tech)]
+
+        API --> Auth
+        API --> Schedule
+        API --> Ticket
+        API --> Fiscal
+        API --> Payment
+        API --> Board
+        API --> Notify
+        API --> Audit
+        API --> Document
+        API --> Geo
+    end
+
+    subgraph "Инфраструктура"
+        DB[(PostgreSQL<br>Основная БД)]
+        Cache[(Redis<br>Кэш, сессии)]
+        MQ[(NATS<br>Очереди событий)]
+        MinIO[(MinIO<br>Документы)]
+    end
+
+    subgraph "Локальное оборудование"
+        Agent[Локальный агент (Go)]
+        KKT[ККТ (АТОЛ)]
+        Printer[Принтер билетов]
+        Scanner[Сканер ШК]
+        PA[Аудиосистема]
+        Agent --> KKT
+        Agent --> Printer
+        Agent --> Scanner
+        Board --> PA
+    end
+
+    subgraph "Внешние системы"
+        Yandex[Yandex Maps API]
+        Tinkoff[Tinkoff Acquiring]
+        SBP[СБП]
+        Telegram[Telegram Bot API]
+        SMS[SMS.ru]
+        Email[SMTP]
+        Other[Другие вокзалы<br>rostov.vokzal.tech]
+    end
+
+    Auth --> DB
+    Schedule --> DB
+    Ticket --> DB
+    Fiscal --> DB
+    Audit --> DB
+    Document --> MinIO
+    Ticket --> MQ
+    Audit --> MQ
+    Notify --> MQ
+    MQ --> Notify
+    Notify --> Telegram
+    Notify --> SMS
+    Notify --> Email
+    Geo --> Yandex
+    Payment --> Tinkoff
+    Payment --> SBP
+    Schedule --> Other
+    Ticket --> Other
+end
+
+style API fill:#1E40AF,color:white
+style DB fill:#059669,color:white
+style Cache fill:#D97706,color:white
+style MQ fill:#7C3AED,color:white
+style MinIO fill:#059669,color:white
+style Agent fill:#DC2626,color:white
+style KKT fill:#B91C1C,color:white
+style Printer fill:#B91C1C,color:white
+style Scanner fill:#B91C1C,color:white
+style PA fill:#7C3AED,color:white
+style Other fill:#059669,color:white,stroke-dasharray: 5 5
+`)],-1)])])}const P=t(a,[["render",i]]);export{u as __pageData,P as default};
