@@ -1,6 +1,8 @@
 module github.com/vokzal-tech/auth-service
 
-go 1.24.0
+go 1.25
+
+toolchain go1.25.6
 
 require (
 	github.com/gin-gonic/gin v1.9.1
