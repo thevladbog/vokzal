@@ -88,12 +88,11 @@ func main() {
 		})
 	})
 
-	v1 := router.Group("/v1")
-	doc := v1.Group("/document")
-	doc.POST("/ticket", docHandler.GenerateTicket)
-	doc.POST("/pd2", docHandler.GeneratePD2)
-	doc.GET("/:id", docHandler.GetDocument)
-	doc.GET("/list", docHandler.ListDocuments)
+	// Traefik strips /v1/document prefix, service receives /ticket, /pd2, /:id, /list
+	router.POST("/ticket", docHandler.GenerateTicket)
+	router.POST("/pd2", docHandler.GeneratePD2)
+	router.GET("/:id", docHandler.GetDocument)
+	router.GET("/list", docHandler.ListDocuments)
 
 	srv := &http.Server{
 		Addr:         ":" + cfg.Server.Port,

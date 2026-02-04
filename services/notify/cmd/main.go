@@ -107,14 +107,13 @@ func main() {
 		})
 	})
 
-	v1 := router.Group("/v1")
-	notify := v1.Group("/notify")
-	notify.POST("/sms", notifyHandler.SendSMS)
-	notify.POST("/email", notifyHandler.SendEmail)
-	notify.POST("/telegram", notifyHandler.SendTelegram)
-	notify.POST("/tts", notifyHandler.SendTTS)
-	notify.GET("/:id", notifyHandler.GetNotification)
-	notify.GET("/list", notifyHandler.ListNotifications)
+	// Traefik strips /v1/notify prefix, service receives /sms, /email, /telegram, /tts, /:id, /list
+	router.POST("/sms", notifyHandler.SendSMS)
+	router.POST("/email", notifyHandler.SendEmail)
+	router.POST("/telegram", notifyHandler.SendTelegram)
+	router.POST("/tts", notifyHandler.SendTTS)
+	router.GET("/:id", notifyHandler.GetNotification)
+	router.GET("/list", notifyHandler.ListNotifications)
 
 	srv := &http.Server{
 		Addr:         ":" + cfg.Server.Port,

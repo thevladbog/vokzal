@@ -36,6 +36,25 @@ func (j *JSONB) Scan(value interface{}) error {
 	return nil
 }
 
+// MarshalJSON реализует json.Marshaler для JSONB.
+// Возвращает сырой JSON вместо base64.
+func (j JSONB) MarshalJSON() ([]byte, error) {
+	if len(j) == 0 {
+		return []byte("null"), nil
+	}
+	return j, nil
+}
+
+// UnmarshalJSON реализует json.Unmarshaler для JSONB.
+func (j *JSONB) UnmarshalJSON(data []byte) error {
+	if string(data) == "null" {
+		*j = nil
+		return nil
+	}
+	*j = data
+	return nil
+}
+
 // Station — модель станции (автовокзала).
 //
 //nolint:govet // fieldalignment: GORM/JSON order

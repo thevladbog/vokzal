@@ -27,7 +27,7 @@
     network = "vokzal-network"
   
   [providers.file]
-    directory = "/etc/traefik/dynamic"
+    directory = "/etc/traefik/config/dynamic"
     watch = true
 
 [metrics]

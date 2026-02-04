@@ -4,7 +4,7 @@ server:
 
 database:
   host: "localhost"
-  port: 5432
+  port: 5440
   user: "admin"
   password: "vokzal_secret_2026"
   dbname: "vokzal"
@@ -24,4 +24,4 @@ atol:
   tax_system: "osn"  # osn, usn_income, usn_income_outcome, esn, patent
 
 local_agent:
-  url: "http://localhost:8081"
+  url: "http://172.20.0.7:8081"

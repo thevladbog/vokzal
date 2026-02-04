@@ -4,7 +4,7 @@ server:
 
 database:
   host: "localhost"
-  port: 5432
+  port: 5440
   user: "admin"
   password: "vokzal_secret_2026"
   dbname: "vokzal"
@@ -20,7 +20,7 @@ logger:
 
 minio:
   endpoint: "localhost:9000"
-  access_key: "minioadmin"
-  secret_key: "minioadmin"
+  access_key: "vokzal"
+  secret_key: "minio_secret_2026"
   bucket: "vokzal-documents"
   use_ssl: false

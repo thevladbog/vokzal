@@ -2,133 +2,189 @@
   [http.routers]
     # Auth Service
     [http.routers.auth]
-      rule = "Host(`api.vokzal.tech`) && PathPrefix(`/v1/auth`)"
+      rule = "Host(`api.vokzal.tech`) && (PathPrefix(`/v1/auth`) || PathPrefix(`/v1/users`))"
       service = "auth-service"
-      middlewares = ["cors-headers"]
+      middlewares = ["cors-headers", "strip-v1-auth"]
       entryPoints = ["web", "websecure"]
     
-    # Schedule Service
+    # Schedule Service (handles stations, routes, trips, buses, drivers, schedules)
     [http.routers.schedule]
-      rule = "Host(`api.vokzal.tech`) && PathPrefix(`/v1/schedule`, `/v1/routes`, `/v1/trips`)"
+      rule = "Host(`api.vokzal.tech`) && (PathPrefix(`/v1/schedule`) || PathPrefix(`/v1/stations`) || PathPrefix(`/v1/routes`) || PathPrefix(`/v1/trips`) || PathPrefix(`/v1/buses`) || PathPrefix(`/v1/drivers`) || PathPrefix(`/v1/schedules`))"
       service = "schedule-service"
-      middlewares = ["cors-headers"]
+      middlewares = ["cors-headers", "strip-v1-schedule"]
       entryPoints = ["web", "websecure"]
     
     # Ticket Service: /v1/ticket/ (stats only; trailing slash avoids matching /v1/tickets), /v1/tickets, /v1/boarding
     [http.routers.ticket]
-      rule = "Host(`api.vokzal.tech`) && PathPrefix(`/v1/ticket/`, `/v1/tickets`, `/v1/boarding`)"
+      rule = "Host(`api.vokzal.tech`) && (PathPrefix(`/v1/ticket/`) || PathPrefix(`/v1/tickets`) || PathPrefix(`/v1/boarding`))"
       service = "ticket-service"
-      middlewares = ["cors-headers"]
+      middlewares = ["cors-headers", "strip-v1-ticket"]
       entryPoints = ["web", "websecure"]
     
     # Fiscal Service
     [http.routers.fiscal]
-      rule = "Host(`api.vokzal.tech`) && PathPrefix(`/v1/receipts`, `/v1/z-reports`, `/v1/kkt`)"
+      rule = "Host(`api.vokzal.tech`) && (PathPrefix(`/v1/receipts`) || PathPrefix(`/v1/z-reports`) || PathPrefix(`/v1/kkt`))"
       service = "fiscal-service"
-      middlewares = ["cors-headers"]
+      middlewares = ["cors-headers", "strip-v1-fiscal"]
       entryPoints = ["web", "websecure"]
     
     # Payment Service
     [http.routers.payment]
       rule = "Host(`api.vokzal.tech`) && PathPrefix(`/v1/payment`)"
       service = "payment-service"
-      middlewares = ["cors-headers"]
+      middlewares = ["cors-headers", "strip-v1-payment"]
       entryPoints = ["web", "websecure"]
     
     # Board Service
     [http.routers.board]
       rule = "Host(`api.vokzal.tech`) && PathPrefix(`/v1/board`)"
       service = "board-service"
-      middlewares = ["cors-headers"]
+      middlewares = ["cors-headers", "strip-v1-board"]
       entryPoints = ["web", "websecure"]
     
     # Notify Service
     [http.routers.notify]
       rule = "Host(`api.vokzal.tech`) && PathPrefix(`/v1/notify`)"
       service = "notify-service"
-      middlewares = ["cors-headers"]
+      middlewares = ["cors-headers", "strip-v1-notify"]
       entryPoints = ["web", "websecure"]
     
     # Audit Service
     [http.routers.audit]
       rule = "Host(`api.vokzal.tech`) && PathPrefix(`/v1/audit`)"
       service = "audit-service"
-      middlewares = ["cors-headers"]
+      middlewares = ["cors-headers", "strip-v1-audit"]
       entryPoints = ["web", "websecure"]
     
     # Document Service
     [http.routers.document]
       rule = "Host(`api.vokzal.tech`) && PathPrefix(`/v1/document`)"
       service = "document-service"
-      middlewares = ["cors-headers"]
+      middlewares = ["cors-headers", "strip-v1-document"]
       entryPoints = ["web", "websecure"]
     
     # Geo Service
     [http.routers.geo]
       rule = "Host(`api.vokzal.tech`) && PathPrefix(`/v1/geo`)"
       service = "geo-service"
-      middlewares = ["cors-headers"]
+      middlewares = ["cors-headers", "strip-v1-geo"]
       entryPoints = ["web", "websecure"]
+    
+    # Admin Panel UI
+    [http.routers.admin-panel]
+      rule = "Host(`localhost`) && PathPrefix(`/admin`)"
+      service = "admin-panel-service"
+      middlewares = ["cors-headers", "strip-admin"]
+      entryPoints = ["web"]
 
   [http.services]
     # Auth Service (port 8081)
     [http.services.auth-service.loadBalancer]
       [[http.services.auth-service.loadBalancer.servers]]
-        url = "http://auth:8081"
+        url = "http://host.docker.internal:8081"
     
     # Schedule Service (port 8082)
     [http.services.schedule-service.loadBalancer]
       [[http.services.schedule-service.loadBalancer.servers]]
-        url = "http://schedule:8082"
+        url = "http://host.docker.internal:8082"
     
     # Ticket Service (port 8083)
     [http.services.ticket-service.loadBalancer]
       [[http.services.ticket-service.loadBalancer.servers]]
-        url = "http://ticket:8083"
+        url = "http://host.docker.internal:8083"
     
     # Fiscal Service (port 8084)
     [http.services.fiscal-service.loadBalancer]
       [[http.services.fiscal-service.loadBalancer.servers]]
-        url = "http://fiscal:8084"
+        url = "http://host.docker.internal:8084"
     
     # Payment Service (port 8085)
     [http.services.payment-service.loadBalancer]
       [[http.services.payment-service.loadBalancer.servers]]
-        url = "http://payment:8085"
+        url = "http://host.docker.internal:8085"
     
     # Board Service (port 8086)
     [http.services.board-service.loadBalancer]
       [[http.services.board-service.loadBalancer.servers]]
-        url = "http://board:8086"
+        url = "http://host.docker.internal:8086"
     
     # Notify Service (port 8087)
     [http.services.notify-service.loadBalancer]
       [[http.services.notify-service.loadBalancer.servers]]
-        url = "http://notify:8087"
+        url = "http://host.docker.internal:8087"
     
-    # Audit Service (port 8088)
+    # Audit Service (port 8098)
     [http.services.audit-service.loadBalancer]
       [[http.services.audit-service.loadBalancer.servers]]
-        url = "http://audit:8088"
+        url = "http://host.docker.internal:8098"
     
     # Document Service (port 8089)
     [http.services.document-service.loadBalancer]
       [[http.services.document-service.loadBalancer.servers]]
-        url = "http://document:8089"
+        url = "http://host.docker.internal:8089"
     
     # Geo Service (port 8090)
     [http.services.geo-service.loadBalancer]
       [[http.services.geo-service.loadBalancer.servers]]
-        url = "http://geo:8090"
+        url = "http://host.docker.internal:8090"
+    
+    # Admin Panel (port 3001)
+    [http.services.admin-panel-service.loadBalancer]
+      [[http.services.admin-panel-service.loadBalancer.servers]]
+        url = "http://host.docker.internal:3001"
 
   [http.middlewares]
     # CORS headers
     [http.middlewares.cors-headers.headers]
       accessControlAllowMethods = ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
-      accessControlAllowOriginList = ["http://localhost:5173", "http://localhost:3000", "https://vokzal.tech", "https://*.vokzal.tech"]
+      accessControlAllowOriginList = ["http://localhost:3001", "http://localhost:5173", "http://localhost:3000", "https://vokzal.tech", "https://*.vokzal.tech"]
       accessControlAllowHeaders = ["Authorization", "Content-Type", "X-Requested-With"]
       accessControlAllowCredentials = true
       accessControlMaxAge = 3600
+    
+    # Strip API version prefix from paths
+    # Only strip /v1, services handle their own resource prefixes
+    [http.middlewares.strip-v1-auth.stripPrefix]
+      prefixes = ["/v1/auth", "/v1/users"]
+    
+    [http.middlewares.strip-admin.stripPrefix]
+      prefixes = ["/admin"]
+    
+    # Schedule service: strips full path prefix
+    [http.middlewares.strip-v1-schedule.stripPrefix]
+      prefixes = ["/v1/schedule", "/v1/stations", "/v1/routes", "/v1/trips", "/v1/buses", "/v1/drivers", "/v1/schedules"]
+    
+    # Ticket service: strips full path prefix
+    [http.middlewares.strip-v1-ticket.stripPrefix]
+      prefixes = ["/v1/ticket", "/v1/tickets", "/v1/boarding"]
+    
+    # Fiscal service: strips full path prefix
+    [http.middlewares.strip-v1-fiscal.stripPrefix]
+      prefixes = ["/v1/receipts", "/v1/z-reports", "/v1/kkt"]
+    
+    # Payment service: strips /v1/payment
+    [http.middlewares.strip-v1-payment.stripPrefix]
+      prefixes = ["/v1/payment"]
+    
+    # Board service: strips /v1/board
+    [http.middlewares.strip-v1-board.stripPrefix]
+      prefixes = ["/v1/board"]
+    
+    # Notify service: strips /v1/notify
+    [http.middlewares.strip-v1-notify.stripPrefix]
+      prefixes = ["/v1/notify"]
+    
+    # Audit service: strips /v1/audit
+    [http.middlewares.strip-v1-audit.stripPrefix]
+      prefixes = ["/v1/audit"]
+    
+    # Document service: strips /v1/document
+    [http.middlewares.strip-v1-document.stripPrefix]
+      prefixes = ["/v1/document"]
+    
+    # Geo service: strips /v1/geo
+    [http.middlewares.strip-v1-geo.stripPrefix]
+      prefixes = ["/v1/geo"]
     
     # Rate limiting
     [http.middlewares.rate-limit.rateLimit]

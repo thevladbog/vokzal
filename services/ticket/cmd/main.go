@@ -103,16 +103,22 @@ func main() {
 		})
 	})
 
-	v1 := router.Group("/v1")
-	ticketStats := v1.Group("/ticket")
-	ticketStats.GET("/stats/dashboard", ticketHandler.GetDashboardStats)
-	tickets := v1.Group("/tickets")
-	tickets.POST("/sell", ticketHandler.SellTicket)
+	// Traefik strips /v1/ticket, /v1/tickets, /v1/boarding - service receives / for each
+
+	// Ticket stats and sell routes - Traefik strips /v1/ticket
+	router.GET("/stats/dashboard", ticketHandler.GetDashboardStats)
+	router.POST("/sell", ticketHandler.SellTicket)
+
+	// Tickets CRUD routes - Traefik strips /v1/tickets
+	tickets := router.Group("/")
 	tickets.GET("", ticketHandler.ListTicketsByTrip)
-	tickets.GET("/:id", ticketHandler.GetTicket)
 	tickets.GET("/qr", ticketHandler.GetTicketByQR)
+	tickets.GET("/:id", ticketHandler.GetTicket)
 	tickets.POST("/:id/refund", ticketHandler.RefundTicket)
-	boarding := v1.Group("/boarding")
+
+	// Boarding routes
+	// Boarding routes - Traefik strips /v1/boarding
+	boarding := router.Group("/")
 	boarding.POST("/start", ticketHandler.StartBoarding)
 	boarding.POST("/mark", ticketHandler.MarkBoarding)
 	boarding.GET("/status", ticketHandler.GetBoardingStatus)
