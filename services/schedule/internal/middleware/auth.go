@@ -7,8 +7,9 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
-	commonjwt "github.com/vokzal-tech/go-common/jwt"
 	"go.uber.org/zap"
+
+	commonjwt "github.com/vokzal-tech/go-common/jwt"
 )
 
 // AuthMiddleware возвращает gin.HandlerFunc, проверяющий JWT в заголовке Authorization.

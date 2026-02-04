@@ -1,6 +1,20 @@
 import http from 'k6/http';
+import crypto from 'k6/crypto';
 import { check, sleep } from 'k6';
 import { Rate, Trend } from 'k6/metrics';
+
+/** Cryptographically secure random index in [0, max). */
+function secureRandomIndex(max) {
+  const buf = new Uint8Array(crypto.randomBytes(4));
+  const n = (buf[0] * 0x1000000 + buf[1] * 0x10000 + buf[2] * 0x100 + buf[3]) >>> 0;
+  return n % max;
+}
+
+/** Cryptographically secure random boolean (50% true). */
+function secureRandomBoolean() {
+  const buf = new Uint8Array(crypto.randomBytes(1));
+  return buf[0] < 128;
+}
 
 // Кастомные метрики
 const loginFailureRate = new Rate('login_failures');
@@ -33,8 +47,8 @@ const users = [
 ];
 
 export default function () {
-  // Выбираем случайного пользователя
-  const user = users[Math.floor(Math.random() * users.length)];
+  // Выбираем случайного пользователя (CSPRNG)
+  const user = users[secureRandomIndex(users.length)];
 
   // 1. Логин
   const loginStart = new Date();
@@ -119,8 +133,8 @@ export default function () {
 
   sleep(1);
 
-  // 3. Refresh токена (50% вероятность)
-  if (Math.random() > 0.5) {
+  // 3. Refresh токена (50% вероятность, CSPRNG)
+  if (secureRandomBoolean()) {
     const refreshRes = http.post(
       `${BASE_URL}/auth/refresh`,
       JSON.stringify({ refreshToken }),
