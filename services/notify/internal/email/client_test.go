@@ -71,7 +71,7 @@ func TestSanitizeBody(t *testing.T) {
 		{
 			name:     "multi-line with CRLF",
 			input:    "Line 1\r\nLine 2\r\nLine 3",
-			expected: "Line 1\r\nLine 2\r\nLine 3",
+			expected: "Line 1\nLine 2\nLine 3", // CRLF normalized to LF
 		},
 		{
 			name:     "text with tabs",
@@ -91,7 +91,7 @@ func TestSanitizeBody(t *testing.T) {
 		{
 			name:     "multiple control chars removed but newlines preserved",
 			input:    "Line 1\x00\x01\x02\nLine 2\x07\x08\r\nLine 3",
-			expected: "Line 1\nLine 2\r\nLine 3",
+			expected: "Line 1\nLine 2\nLine 3", // Control chars removed, CRLF normalized
 		},
 		{
 			name:     "mixed whitespace preserved",

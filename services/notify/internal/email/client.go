@@ -106,6 +106,7 @@ func (c *EmailClient) Send(to, subject, body string) error {
 
 	// Sanitize headers to prevent header injection
 	sanitizedTo := sanitizeHeader(to)
+	sanitizedFrom := sanitizeHeader(c.from)
 	sanitizedSubject := sanitizeHeader(subject)
 
 	// Safely encode subject using MIME Q-encoding
@@ -120,7 +121,7 @@ func (c *EmailClient) Send(to, subject, body string) error {
 
 	// Email headers
 	headers := map[string]string{
-		"From":                      c.from,
+		"From":                      sanitizedFrom,
 		"To":                        sanitizedTo,
 		"Subject":                   encodedSubject,
 		"MIME-Version":              "1.0",
