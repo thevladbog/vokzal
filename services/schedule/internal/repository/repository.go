@@ -11,6 +11,8 @@ import (
 )
 
 var (
+	// ErrStationNotFound возвращается, когда станция не найдена.
+	ErrStationNotFound = errors.New("station not found")
 	// ErrRouteNotFound возвращается, когда маршрут не найден.
 	ErrRouteNotFound = errors.New("route not found")
 	// ErrScheduleNotFound возвращается, когда расписание не найдено.
@@ -18,6 +20,15 @@ var (
 	// ErrTripNotFound возвращается, когда рейс не найден.
 	ErrTripNotFound = errors.New("trip not found")
 )
+
+// StationRepository — интерфейс репозитория станций.
+type StationRepository interface {
+	Create(ctx context.Context, station *models.Station) error
+	FindByID(ctx context.Context, id string) (*models.Station, error)
+	FindAll(ctx context.Context, city string, active *bool) ([]*models.Station, error)
+	Update(ctx context.Context, station *models.Station) error
+	Delete(ctx context.Context, id string) error
+}
 
 // RouteRepository — интерфейс репозитория маршрутов.
 type RouteRepository interface {
@@ -47,6 +58,10 @@ type TripRepository interface {
 	Delete(ctx context.Context, id string) error
 }
 
+type stationRepository struct {
+	db *gorm.DB
+}
+
 type routeRepository struct {
 	db *gorm.DB
 }
@@ -57,6 +72,11 @@ type scheduleRepository struct {
 
 type tripRepository struct {
 	db *gorm.DB
+}
+
+// NewStationRepository создаёт репозиторий станций.
+func NewStationRepository(db *gorm.DB) StationRepository {
+	return &stationRepository{db: db}
 }
 
 // NewRouteRepository создаёт репозиторий маршрутов.
@@ -74,11 +94,56 @@ func NewTripRepository(db *gorm.DB) TripRepository {
 	return &tripRepository{db: db}
 }
 
+// Station repository implementation.
+func (r *stationRepository) Create(ctx context.Context, station *models.Station) error {
+	return r.db.WithContext(ctx).Create(station).Error
+}
+
+//nolint:dupl // FindByID pattern is the same across repositories
+func (r *stationRepository) FindByID(ctx context.Context, id string) (*models.Station, error) {
+	var station models.Station
+	if err := r.db.WithContext(ctx).First(&station, "id = ?", id).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrStationNotFound
+		}
+		return nil, err
+	}
+	return &station, nil
+}
+
+func (r *stationRepository) FindAll(ctx context.Context, city string, _ *bool) ([]*models.Station, error) {
+	var stations []*models.Station
+	query := r.db.WithContext(ctx)
+	if city != "" {
+		query = query.Where("name ILIKE ? OR address ILIKE ?", "%"+city+"%", "%"+city+"%")
+	}
+	if err := query.Order("name ASC").Find(&stations).Error; err != nil {
+		return nil, err
+	}
+	return stations, nil
+}
+
+func (r *stationRepository) Update(ctx context.Context, station *models.Station) error {
+	return r.db.WithContext(ctx).Save(station).Error
+}
+
+func (r *stationRepository) Delete(ctx context.Context, id string) error {
+	result := r.db.WithContext(ctx).Delete(&models.Station{}, "id = ?", id)
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return ErrStationNotFound
+	}
+	return nil
+}
+
 // Create создаёт маршрут.
 func (r *routeRepository) Create(ctx context.Context, route *models.Route) error {
 	return r.db.WithContext(ctx).Create(route).Error
 }
 
+//nolint:dupl // FindByID pattern is the same across repositories
 func (r *routeRepository) FindByID(ctx context.Context, id string) (*models.Route, error) {
 	var route models.Route
 	if err := r.db.WithContext(ctx).First(&route, "id = ?", id).Error; err != nil {

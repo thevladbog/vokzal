@@ -9,11 +9,19 @@ import (
 )
 
 // Config — корневая конфигурация сервиса.
+//
+//nolint:govet // fieldalignment: keep mapstructure order for readability
 type Config struct {
 	NATS     NATSConfig     `mapstructure:"nats"`
 	Server   ServerConfig   `mapstructure:"server"`
 	Logger   LoggerConfig   `mapstructure:"logger"`
 	Database DatabaseConfig `mapstructure:"database"`
+	JWT      JWTConfig      `mapstructure:"jwt"`
+}
+
+// JWTConfig — настройки JWT для проверки токенов (тот же секрет, что в Auth Service).
+type JWTConfig struct {
+	Secret string `mapstructure:"secret"`
 }
 
 // ServerConfig — настройки HTTP-сервера.
@@ -67,6 +75,7 @@ func Load() (*Config, error) {
 	viper.SetDefault("nats.user", "vokzal")
 	viper.SetDefault("nats.password", "nats_secret_2026")
 	viper.SetDefault("logger.level", "debug")
+	viper.SetDefault("jwt.secret", "vokzal_jwt_secret_change_in_production")
 
 	if err := viper.ReadInConfig(); err != nil {
 		var notFound viper.ConfigFileNotFoundError

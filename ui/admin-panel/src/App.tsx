@@ -1,10 +1,19 @@
+import { useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { FluentProvider, webLightTheme } from '@fluentui/react-components';
+import { FluentProvider, webLightTheme, Toaster, Spinner } from '@fluentui/react-components';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { LoginPage } from '@/pages/LoginPage';
 import { DashboardPage } from '@/pages/DashboardPage';
 import { SchedulesPage } from '@/pages/SchedulesPage';
+import { UsersPage } from '@/pages/UsersPage';
+import { StationsPage } from '@/pages/StationsPage';
+import { RoutesPage } from '@/pages/RoutesPage';
+import { TripsPage } from '@/pages/TripsPage';
+import { AuditPage } from '@/pages/AuditPage';
+import { ReportsPage } from '@/pages/ReportsPage';
+import { MonitoringPage } from '@/pages/MonitoringPage';
+import { authService } from '@/services/auth';
 import { useAuthStore } from '@/stores/authStore';
 
 const queryClient = new QueryClient({
@@ -17,11 +26,27 @@ const queryClient = new QueryClient({
 });
 
 function App() {
-  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const isAuthenticated = useAuthStore((state) => !!state.accessToken);
+  const [sessionRestored, setSessionRestored] = useState(false);
+
+  useEffect(() => {
+    authService.restoreSession().finally(() => setSessionRestored(true));
+  }, []);
+
+  if (!sessionRestored) {
+    return (
+      <FluentProvider theme={webLightTheme}>
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
+          <Spinner labelPosition="after" />
+        </div>
+      </FluentProvider>
+    );
+  }
 
   return (
     <QueryClientProvider client={queryClient}>
       <FluentProvider theme={webLightTheme}>
+        <Toaster />
         <BrowserRouter>
           <Routes>
             <Route 
@@ -45,6 +70,69 @@ function App() {
               element={
                 <ProtectedRoute allowedRoles={['admin', 'dispatcher']}>
                   <SchedulesPage />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/users"
+              element={
+                <ProtectedRoute allowedRoles={['admin']}>
+                  <UsersPage />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/stations"
+              element={
+                <ProtectedRoute allowedRoles={['admin', 'dispatcher']}>
+                  <StationsPage />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/routes"
+              element={
+                <ProtectedRoute allowedRoles={['admin', 'dispatcher']}>
+                  <RoutesPage />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/trips"
+              element={
+                <ProtectedRoute allowedRoles={['admin', 'dispatcher']}>
+                  <TripsPage />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/audit"
+              element={
+                <ProtectedRoute allowedRoles={['admin']}>
+                  <AuditPage />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/reports"
+              element={
+                <ProtectedRoute allowedRoles={['admin', 'dispatcher']}>
+                  <ReportsPage />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/monitoring"
+              element={
+                <ProtectedRoute allowedRoles={['admin']}>
+                  <MonitoringPage />
                 </ProtectedRoute>
               }
             />

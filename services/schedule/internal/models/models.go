@@ -36,6 +36,32 @@ func (j *JSONB) Scan(value interface{}) error {
 	return nil
 }
 
+// Station — модель станции (автовокзала).
+//
+//nolint:govet // fieldalignment: GORM/JSON order
+type Station struct {
+	ID        string    `gorm:"type:uuid;primary_key" json:"id"`
+	Name      string    `gorm:"type:varchar(100);not null" json:"name"`
+	Code      string    `gorm:"type:varchar(10);uniqueIndex;not null" json:"code"`
+	Address   string    `gorm:"type:text" json:"address,omitempty"`
+	Timezone  string    `gorm:"type:varchar(50);default:'Europe/Moscow'" json:"timezone"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+// TableName возвращает имя таблицы для Station.
+func (Station) TableName() string {
+	return "stations"
+}
+
+// BeforeCreate генерирует UUID для Station.
+func (s *Station) BeforeCreate(_ *gorm.DB) error {
+	if s.ID == "" {
+		s.ID = uuid.New().String()
+	}
+	return nil
+}
+
 // Route — модель маршрута.
 type Route struct {
 	CreatedAt   time.Time `json:"created_at"`
@@ -101,7 +127,7 @@ func (Trip) TableName() string {
 }
 
 // BeforeCreate генерирует UUID для новой записи (Route).
-func (r *Route) BeforeCreate(_ *gorm.DB) error {
+func (r *Route) BeforeCreate(tx *gorm.DB) error {
 	if r.ID == "" {
 		r.ID = uuid.New().String()
 	}

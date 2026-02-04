@@ -18,6 +18,7 @@ import (
 
 	"github.com/vokzal-tech/schedule-service/internal/config"
 	"github.com/vokzal-tech/schedule-service/internal/handlers"
+	"github.com/vokzal-tech/schedule-service/internal/middleware"
 	"github.com/vokzal-tech/schedule-service/internal/models"
 	"github.com/vokzal-tech/schedule-service/internal/repository"
 	"github.com/vokzal-tech/schedule-service/internal/service"
@@ -54,7 +55,7 @@ func main() {
 		logger.Fatal("Failed to connect to database", zap.Error(err))
 	}
 
-	if migErr := db.AutoMigrate(&models.Route{}, &models.Schedule{}, &models.Trip{}); migErr != nil {
+	if migErr := db.AutoMigrate(&models.Station{}, &models.Route{}, &models.Schedule{}, &models.Trip{}); migErr != nil {
 		logger.Warn("Auto-migration failed", zap.Error(migErr))
 	}
 
@@ -70,12 +71,13 @@ func main() {
 	logger.Info("Connected to NATS", zap.String("url", cfg.NATS.URL))
 
 	// Создать репозитории
+	stationRepo := repository.NewStationRepository(db)
 	routeRepo := repository.NewRouteRepository(db)
 	scheduleRepo := repository.NewScheduleRepository(db)
 	tripRepo := repository.NewTripRepository(db)
 
 	// Создать сервис
-	scheduleService := service.NewScheduleService(routeRepo, scheduleRepo, tripRepo, natsConn, logger)
+	scheduleService := service.NewScheduleService(stationRepo, routeRepo, scheduleRepo, tripRepo, natsConn, logger)
 
 	// Создать handlers
 	scheduleHandler := handlers.NewScheduleHandler(scheduleService, logger)
@@ -86,7 +88,7 @@ func main() {
 	}
 	router := gin.Default()
 
-	// Health check
+	// Health check (public, no auth)
 	router.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"status":  "ok",
@@ -96,6 +98,13 @@ func main() {
 	})
 
 	v1 := router.Group("/v1")
+	v1.Use(middleware.AuthMiddleware(cfg.JWT.Secret, logger))
+	stations := v1.Group("/stations")
+	stations.POST("", scheduleHandler.CreateStation)
+	stations.GET("", scheduleHandler.ListStations)
+	stations.GET("/:id", scheduleHandler.GetStation)
+	stations.PATCH("/:id", scheduleHandler.UpdateStation)
+	stations.DELETE("/:id", scheduleHandler.DeleteStation)
 	routes := v1.Group("/routes")
 	routes.POST("", scheduleHandler.CreateRoute)
 	routes.GET("", scheduleHandler.ListRoutes)

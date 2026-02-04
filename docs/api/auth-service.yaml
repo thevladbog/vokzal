@@ -169,7 +169,7 @@ paths:
           in: query
           schema:
             type: string
-            enum: [admin, dispatcher, cashier, controller]
+            enum: [admin, dispatcher, cashier, controller, accountant]
         - name: station_id
           in: query
           schema:
@@ -348,7 +348,7 @@ components:
           type: string
         role:
           type: string
-          enum: [admin, dispatcher, cashier, controller]
+          enum: [admin, dispatcher, cashier, controller, accountant]
         station_id:
           type: string
           format: uuid
@@ -399,7 +399,7 @@ components:
           maxLength: 100
         role:
           type: string
-          enum: [admin, dispatcher, cashier, controller]
+          enum: [admin, dispatcher, cashier, controller, accountant]
         station_id:
           type: string
           format: uuid
@@ -417,7 +417,7 @@ components:
           minLength: 8
         role:
           type: string
-          enum: [admin, dispatcher, cashier, controller]
+          enum: [admin, dispatcher, cashier, controller, accountant]
         station_id:
           type: string
           format: uuid

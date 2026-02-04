@@ -1,6 +1,20 @@
 import http from 'k6/http';
+import crypto from 'k6/crypto';
 import { check, sleep } from 'k6';
 import { Rate, Trend } from 'k6/metrics';
+
+/** Cryptographically secure random index in [0, max). */
+function secureRandomIndex(max) {
+  const buf = new Uint8Array(crypto.randomBytes(4));
+  const n = (buf[0] * 0x1000000 + buf[1] * 0x10000 + buf[2] * 0x100 + buf[3]) >>> 0;
+  return n % max;
+}
+
+/** Cryptographically secure random boolean (50% true). */
+function secureRandomBoolean() {
+  const buf = new Uint8Array(crypto.randomBytes(1));
+  return buf[0] < 128;
+}
 
 // Кастомные метрики
 const loginFailureRate = new Rate('login_failures');
@@ -33,15 +47,15 @@ const users = [
 ];
 
 export default function () {
-  // Выбираем случайного пользователя
-  const user = users[Math.floor(Math.random() * users.length)];
+  // Выбираем случайного пользователя (CSPRNG)
+  const user = users[secureRandomIndex(users.length)];
 
   // 1. Логин
   const loginStart = new Date();
   const loginRes = http.post(
     `${BASE_URL}/auth/login`,
     JSON.stringify({
-      login: user.login,
+      username: user.login,
       password: user.password,
     }),
     {
@@ -53,12 +67,22 @@ export default function () {
   const loginSuccess = check(loginRes, {
     'login status is 200': (r) => r.status === 200,
     'login returns access token': (r) => {
-      const body = JSON.parse(r.body);
-      return body.data && body.data.accessToken;
+      if (!r.body) return false;
+      try {
+        const body = JSON.parse(r.body);
+        return body && body.data && !!body.data.access_token;
+      } catch {
+        return false;
+      }
     },
     'login returns refresh token': (r) => {
-      const body = JSON.parse(r.body);
-      return body.data && body.data.refreshToken;
+      if (!r.body) return false;
+      try {
+        const body = JSON.parse(r.body);
+        return body && body.data && !!body.data.refresh_token;
+      } catch {
+        return false;
+      }
     },
   });
 
@@ -67,15 +91,24 @@ export default function () {
   loginDuration.add(new Date() - loginStart);
 
   if (!loginSuccess) {
-    console.error(`Login failed for user ${user.login}`);
     sleep(1);
     return;
   }
 
-  // Извлекаем токены
-  const tokens = JSON.parse(loginRes.body).data;
-  const accessToken = tokens.accessToken;
-  const refreshToken = tokens.refreshToken;
+  // Извлекаем токены (API: access_token, refresh_token)
+  let accessToken, refreshToken;
+  try {
+    const body = JSON.parse(loginRes.body);
+    accessToken = body && body.data && body.data.access_token;
+    refreshToken = body && body.data && body.data.refresh_token;
+  } catch {
+    sleep(1);
+    return;
+  }
+  if (!accessToken || !refreshToken) {
+    sleep(1);
+    return;
+  }
 
   // 2. Проверка профиля
   const meRes = http.get(`${BASE_URL}/auth/me`, {
@@ -88,15 +121,20 @@ export default function () {
   check(meRes, {
     'get profile status is 200': (r) => r.status === 200,
     'profile has correct role': (r) => {
-      const body = JSON.parse(r.body);
-      return body.data && body.data.role === user.role;
+      if (!r.body) return false;
+      try {
+        const body = JSON.parse(r.body);
+        return body && body.data && body.data.role === user.role;
+      } catch {
+        return false;
+      }
     },
   });
 
   sleep(1);
 
-  // 3. Refresh токена (50% вероятность)
-  if (Math.random() > 0.5) {
+  // 3. Refresh токена (50% вероятность, CSPRNG)
+  if (secureRandomBoolean()) {
     const refreshRes = http.post(
       `${BASE_URL}/auth/refresh`,
       JSON.stringify({ refreshToken }),
@@ -109,22 +147,27 @@ export default function () {
     check(refreshRes, {
       'refresh status is 200': (r) => r.status === 200,
       'refresh returns new access token': (r) => {
-        const body = JSON.parse(r.body);
-        return body.data && body.data.accessToken;
+        if (!r.body) return false;
+        try {
+          const body = JSON.parse(r.body);
+          return body && body.data && !!body.data.access_token;
+        } catch {
+          return false;
+        }
       },
     });
 
     sleep(1);
   }
 
-  // 4. Logout
+  // 4. Logout (backend expects X-Refresh-Token header)
   const logoutRes = http.post(
     `${BASE_URL}/auth/logout`,
-    JSON.stringify({ refreshToken }),
+    '{}',
     {
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${accessToken}`,
+        'X-Refresh-Token': refreshToken,
       },
       tags: { name: 'logout' },
     }

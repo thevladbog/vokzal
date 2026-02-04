@@ -12,9 +12,10 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   children, 
   allowedRoles 
 }) => {
-  const { isAuthenticated, user } = useAuthStore();
+  const accessToken = useAuthStore((s) => s.accessToken);
+  const user = useAuthStore((s) => s.user);
 
-  if (!isAuthenticated) {
+  if (!accessToken) {
     return <Navigate to="/login" replace />;
   }
 

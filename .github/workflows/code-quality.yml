@@ -26,15 +26,15 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@v3
+        uses: github/codeql-action/init@e6985fd516cce3b1a0e8db34a4013d2e50a1e252 # v4.32.0
         with:
           languages: ${{ matrix.language }}
 
       - name: Autobuild
-        uses: github/codeql-action/autobuild@v3
+        uses: github/codeql-action/autobuild@e6985fd516cce3b1a0e8db34a4013d2e50a1e252 # v4.32.0
 
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v3
+        uses: github/codeql-action/analyze@e6985fd516cce3b1a0e8db34a4013d2e50a1e252 # v4.32.0
 
   dependency-review:
     name: Dependency Review
@@ -53,7 +53,7 @@ jobs:
   sonarcloud:
     name: SonarCloud Analysis
     runs-on: ubuntu-latest
-    if: ${{ secrets.SONAR_TOKEN != '' }}
+    if: ${{ vars.SONARCLOUD_ENABLED == 'true' }}
 
     steps:
       - name: Checkout code

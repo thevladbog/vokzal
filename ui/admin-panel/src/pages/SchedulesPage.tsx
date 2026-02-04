@@ -15,6 +15,7 @@ import {
 } from '@fluentui/react-components';
 import { Add24Regular } from '@fluentui/react-icons';
 import { scheduleService } from '@/services/schedule';
+import type { Schedule } from '@/types';
 
 const useStyles = makeStyles({
   container: {
@@ -37,7 +38,7 @@ const useStyles = makeStyles({
 export const SchedulesPage: React.FC = () => {
   const styles = useStyles();
 
-  const { data: schedules, isLoading, error } = useQuery({
+  const { data: schedules, isLoading, error } = useQuery<Schedule[]>({
     queryKey: ['schedules'],
     queryFn: () => scheduleService.getSchedules(),
   });
@@ -86,10 +87,10 @@ export const SchedulesPage: React.FC = () => {
           <TableBody>
             {schedules?.map((schedule) => (
               <TableRow key={schedule.id}>
-                <TableCell>{schedule.route_name || schedule.route_id}</TableCell>
+                <TableCell>{schedule.route?.name ?? schedule.route_id}</TableCell>
                 <TableCell>{schedule.departure_time}</TableCell>
-                <TableCell>{formatDaysOfWeek(schedule.days_of_week)}</TableCell>
-                <TableCell>{schedule.price} ₽</TableCell>
+                <TableCell>{formatDaysOfWeek(schedule.days_of_week ?? [])}</TableCell>
+                <TableCell>{schedule.price != null ? `${schedule.price} ₽` : 'N/A'}</TableCell>
                 <TableCell>{schedule.is_active ? 'Активно' : 'Неактивно'}</TableCell>
               </TableRow>
             ))}

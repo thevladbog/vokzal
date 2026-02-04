@@ -99,11 +99,11 @@ func main() {
 	v1 := router.Group("/v1")
 	audit := v1.Group("/audit")
 	audit.POST("/log", auditHandler.CreateLog)
-	audit.GET("/:id", auditHandler.GetLog)
+	audit.GET("/list", auditHandler.ListLogs)
 	audit.GET("/entity", auditHandler.GetLogsByEntity)
 	audit.GET("/user", auditHandler.GetLogsByUser)
 	audit.GET("/date-range", auditHandler.GetLogsByDateRange)
-	audit.GET("/list", auditHandler.ListLogs)
+	audit.GET("/:id", auditHandler.GetLog)
 
 	srv := &http.Server{
 		Addr:         ":" + cfg.Server.Port,

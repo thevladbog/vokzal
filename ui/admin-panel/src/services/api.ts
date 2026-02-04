@@ -1,19 +1,23 @@
 import axios from 'axios';
+import { REFRESH_TOKEN_STORAGE_KEY } from '@/constants/auth';
+import { useAuthStore } from '@/stores/authStore';
+import type { User } from '@/types';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || '/api/v1';
 
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
   timeout: 30000,
+  withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
-// Request interceptor для добавления токена
+// Request interceptor: add in-memory access token to Authorization header
 apiClient.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('access_token');
+    const token = useAuthStore.getState().accessToken;
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -22,36 +26,55 @@ apiClient.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Response interceptor для обработки ошибок
+// Response interceptor: on 401, try refresh using token from sessionStorage then retry
 apiClient.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
 
-    // Если 401 и это не запрос на refresh
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
 
-      const refreshToken = localStorage.getItem('refresh_token');
+      let refreshToken: string | null = null;
+      try {
+        refreshToken = sessionStorage.getItem(REFRESH_TOKEN_STORAGE_KEY);
+      } catch {
+        // sessionStorage unavailable
+      }
+
+      let refreshed = false;
       if (refreshToken) {
         try {
-          const response = await axios.post(`${API_BASE_URL}/auth/refresh`, {
-            refresh_token: refreshToken,
-          });
+          const response = await apiClient.post<{
+            success?: boolean;
+            data?: { access_token: string; refresh_token: string; user: unknown };
+          }>('/auth/refresh', { refresh_token: refreshToken });
 
-          const { access_token } = response.data;
-          localStorage.setItem('access_token', access_token);
-
-          originalRequest.headers.Authorization = `Bearer ${access_token}`;
-          return apiClient(originalRequest);
-        } catch (refreshError) {
-          // Refresh токен невалиден
-          localStorage.clear();
-          window.location.href = '/login';
-          return Promise.reject(refreshError);
+          const data = response.data?.data;
+          if (response.data?.success === true && data?.access_token && data?.user) {
+            useAuthStore.getState().setAuth(data.user as User, data.access_token);
+            try {
+              sessionStorage.setItem(REFRESH_TOKEN_STORAGE_KEY, data.refresh_token);
+            } catch {
+              // ignore
+            }
+            originalRequest.headers.Authorization = `Bearer ${data.access_token}`;
+            refreshed = true;
+            return apiClient(originalRequest);
+          }
+        } catch {
+          // Refresh failed (network or 4xx): fall through to clear and redirect
         }
-      } else {
-        localStorage.clear();
+      }
+
+      // Only clear and redirect when we did not successfully refresh (no token, failed, or bad response)
+      if (!refreshed) {
+        try {
+          sessionStorage.removeItem(REFRESH_TOKEN_STORAGE_KEY);
+        } catch {
+          // ignore
+        }
+        useAuthStore.getState().clearAuth();
         window.location.href = '/login';
       }
     }
