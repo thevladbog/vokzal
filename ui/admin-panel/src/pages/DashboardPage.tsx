@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { useQuery } from '@tanstack/react-query';
 import {
   FluentProvider,
   webLightTheme,
@@ -11,8 +12,11 @@ import {
   Button,
   Select,
   Option,
+  Spinner,
 } from '@fluentui/react-components';
 import { useAuthStore } from '@/stores/authStore';
+import { scheduleService } from '@/services/schedule';
+import { ticketService } from '@/services/ticket';
 import i18n from '@/i18n';
 
 const useStyles = makeStyles({
@@ -45,10 +49,35 @@ const useStyles = makeStyles({
   },
 });
 
+const today = () => new Date().toISOString().slice(0, 10);
+
 export const DashboardPage: React.FC = () => {
   const styles = useStyles();
   const { t } = useTranslation();
   const user = useAuthStore((state) => state.user);
+  const todayStr = today();
+
+  const { data: scheduleStats, isLoading: scheduleLoading } = useQuery({
+    queryKey: ['dashboard', 'schedule', todayStr],
+    queryFn: () => scheduleService.getDashboardStats(todayStr),
+  });
+
+  const { data: ticketStats, isLoading: ticketLoading } = useQuery({
+    queryKey: ['dashboard', 'ticket', todayStr],
+    queryFn: () => ticketService.getDashboardStats(todayStr),
+  });
+
+  const isLoading = scheduleLoading || ticketLoading;
+  const tripsTotal = scheduleStats?.trips_total ?? 0;
+  const totalCapacity = scheduleStats?.total_capacity ?? 0;
+  const ticketsSold = ticketStats?.tickets_sold ?? 0;
+  const ticketsReturned = ticketStats?.tickets_returned ?? 0;
+  const revenue = ticketStats?.revenue ?? 0;
+  const totalSeats = totalCapacity > 0 ? totalCapacity : (tripsTotal > 0 ? tripsTotal * 40 : 40);
+  const occupancyPercent =
+    (ticketStats as { occupancy?: number } | undefined)?.occupancy ??
+    (scheduleStats as { occupancy?: number } | undefined)?.occupancy ??
+    (totalSeats > 0 ? Math.round((ticketsSold / totalSeats) * 100) : 0);
 
   return (
     <FluentProvider theme={webLightTheme}>
@@ -73,6 +102,12 @@ export const DashboardPage: React.FC = () => {
           <Link to="/trips">
             <Button appearance="secondary">{t('nav.trips')}</Button>
           </Link>
+          <Link to="/buses">
+            <Button appearance="secondary">{t('nav.buses')}</Button>
+          </Link>
+          <Link to="/drivers">
+            <Button appearance="secondary">{t('nav.drivers')}</Button>
+          </Link>
           <Link to="/reports">
             <Button appearance="secondary">{t('nav.reports')}</Button>
           </Link>
@@ -93,36 +128,45 @@ export const DashboardPage: React.FC = () => {
             value={i18n.language}
             onChange={(_, v) => v.value && i18n.changeLanguage(v.value)}
             className={styles.langSwitcher}
-            aria-label="Язык"
+            aria-label={t('common.language')}
           >
             <Option value="ru" text="RU">RU</Option>
             <Option value="en" text="EN">EN</Option>
           </Select>
         </div>
 
-        <Title2 style={{ marginBottom: '16px' }}>Статистика за сегодня</Title2>
+        <Title2 style={{ marginBottom: '16px' }}>{t('dashboard.statsTitle')}</Title2>
 
-        <div className={styles.stats}>
-          <Card className={styles.statCard}>
-            <Text size={600} weight="bold">0</Text>
-            <Text block>{t('dashboard.statsTrips')}</Text>
-          </Card>
+        {isLoading ? (
+          <Spinner label={t('dashboard.loading')} />
+        ) : (
+          <div className={styles.stats}>
+            <Card className={styles.statCard}>
+              <Text size={600} weight="bold">{tripsTotal}</Text>
+              <Text block>{t('dashboard.statsTrips')}</Text>
+            </Card>
 
-          <Card className={styles.statCard}>
-            <Text size={600} weight="bold">0</Text>
-            <Text block>{t('dashboard.statsTickets')}</Text>
-          </Card>
+            <Card className={styles.statCard}>
+              <Text size={600} weight="bold">{ticketsSold}</Text>
+              <Text block>{t('dashboard.statsTickets')}</Text>
+            </Card>
 
-          <Card className={styles.statCard}>
-            <Text size={600} weight="bold">0 ₽</Text>
-            <Text block>{t('dashboard.statsRevenue')}</Text>
-          </Card>
+            <Card className={styles.statCard}>
+              <Text size={600} weight="bold">{revenue.toLocaleString(i18n.language === 'en' ? 'en-US' : 'ru-RU')} ₽</Text>
+              <Text block>{t('dashboard.statsRevenue')}</Text>
+            </Card>
 
-          <Card className={styles.statCard}>
-            <Text size={600} weight="bold">0%</Text>
-            <Text block>{t('dashboard.statsOccupancy')}</Text>
-          </Card>
-        </div>
+            <Card className={styles.statCard}>
+              <Text size={600} weight="bold">{ticketsReturned}</Text>
+              <Text block>{t('dashboard.statsReturns')}</Text>
+            </Card>
+
+            <Card className={styles.statCard}>
+              <Text size={600} weight="bold">{occupancyPercent}%</Text>
+              <Text block>{t('dashboard.statsOccupancy')}</Text>
+            </Card>
+          </div>
+        )}
       </div>
     </FluentProvider>
   );

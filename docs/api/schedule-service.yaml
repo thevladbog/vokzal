@@ -20,8 +20,8 @@ info:
 servers:
   - url: http://localhost:8082
     description: Development
-  - url: https://api.vokzal.tech/schedule
-    description: Production
+  - url: https://api.vokzal.tech
+    description: Production (paths under /v1/)
 
 tags:
   - name: Stations
@@ -32,6 +32,10 @@ tags:
     description: Управление расписаниями
   - name: Trips
     description: Управление рейсами
+  - name: Buses
+    description: Справочник автобусов
+  - name: Drivers
+    description: Справочник водителей
   - name: Search
     description: Поиск рейсов
 
@@ -45,7 +49,7 @@ paths:
         '200':
           description: Сервис работает
 
-  /api/v1/stations:
+  /v1/stations:
     get:
       tags:
         - Stations
@@ -91,7 +95,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Station'
 
-  /api/v1/stations/{id}:
+  /v1/stations/{id}:
     get:
       tags:
         - Stations
@@ -138,7 +142,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Station'
 
-  /api/v1/routes:
+  /v1/routes:
     get:
       tags:
         - Routes
@@ -190,7 +194,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Route'
 
-  /api/v1/routes/{id}:
+  /v1/routes/{id}:
     get:
       tags:
         - Routes
@@ -210,7 +214,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Route'
 
-  /api/v1/schedules:
+  /v1/schedules:
     get:
       tags:
         - Schedules
@@ -257,7 +261,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Schedule'
 
-  /api/v1/trips:
+  /v1/trips:
     get:
       tags:
         - Trips
@@ -315,7 +319,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Trip'
 
-  /api/v1/trips/{id}:
+  /v1/trips/{id}:
     get:
       tags:
         - Trips
@@ -338,7 +342,7 @@ paths:
     put:
       tags:
         - Trips
-      summary: Обновить рейс
+      summary: Обновить рейс (полностью)
       security:
         - bearerAuth: []
       parameters:
@@ -362,7 +366,43 @@ paths:
               schema:
                 $ref: '#/components/schemas/Trip'
 
-  /api/v1/trips/{id}/status:
+    patch:
+      tags:
+        - Trips
+      summary: Обновить рейс (перрон, автобус, водитель)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                platform:
+                  type: integer
+                bus_id:
+                  type: string
+                  format: uuid
+                driver_id:
+                  type: string
+                  format: uuid
+      responses:
+        '200':
+          description: Рейс обновлен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Trip'
+
+  /v1/trips/{id}/status:
     patch:
       tags:
         - Trips
@@ -396,7 +436,292 @@ paths:
               schema:
                 $ref: '#/components/schemas/Trip'
 
-  /api/v1/search/trips:
+  /v1/stats/dashboard:
+    get:
+      tags:
+        - Trips
+      summary: Статистика рейсов за дату для дашборда
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: date
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Статистика рейсов за дату
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - trips_total
+                  - trips_scheduled
+                  - trips_boarding
+                  - trips_departed
+                  - trips_cancelled
+                  - trips_delayed
+                  - trips_arrived
+                  - total_capacity
+                properties:
+                  trips_total:
+                    type: integer
+                    description: Всего рейсов за дату
+                    example: 12
+                  trips_scheduled:
+                    type: integer
+                    description: Рейсов в статусе scheduled
+                    example: 2
+                  trips_boarding:
+                    type: integer
+                    description: Рейсов в статусе boarding
+                    example: 1
+                  trips_departed:
+                    type: integer
+                    description: Рейсов в статусе departed
+                    example: 5
+                  trips_cancelled:
+                    type: integer
+                    description: Рейсов в статусе cancelled
+                    example: 0
+                  trips_delayed:
+                    type: integer
+                    description: Рейсов в статусе delayed
+                    example: 1
+                  trips_arrived:
+                    type: integer
+                    description: Рейсов в статусе arrived
+                    example: 4
+                  total_capacity:
+                    type: integer
+                    description: Суммарная вместимость автобусов по рейсам за дату
+                    example: 480
+
+  /v1/buses:
+    get:
+      tags:
+        - Buses
+      summary: Список автобусов
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: station_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [active, maintenance, out_of_service]
+      responses:
+        '200':
+          description: Список автобусов
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Bus'
+    post:
+      tags:
+        - Buses
+      summary: Создать автобус
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateBusRequest'
+      responses:
+        '201':
+          description: Автобус создан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Bus'
+
+  /v1/buses/{id}:
+    get:
+      tags: [Buses]
+      summary: Автобус по ID
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Автобус
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Bus'
+    patch:
+      tags: [Buses]
+      summary: Обновить автобус
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateBusRequest'
+      responses:
+        '200':
+          description: Автобус обновлен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Bus'
+    delete:
+      tags: [Buses]
+      summary: Удалить автобус
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Автобус удален
+
+  /v1/drivers:
+    get:
+      tags:
+        - Drivers
+      summary: Список водителей
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: station_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Список водителей
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Driver'
+    post:
+      tags:
+        - Drivers
+      summary: Создать водителя
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateDriverRequest'
+      responses:
+        '201':
+          description: Водитель создан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Driver'
+
+  /v1/drivers/{id}:
+    get:
+      tags: [Drivers]
+      summary: Водитель по ID
+      operationId: getDriverById
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Водитель
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Driver'
+        '404':
+          description: Водитель не найден
+    patch:
+      tags: [Drivers]
+      summary: Обновить водителя
+      operationId: updateDriver
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateDriverRequest'
+      responses:
+        '200':
+          description: Водитель обновлен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Driver'
+        '400':
+          description: Неверный запрос
+        '404':
+          description: Водитель не найден
+    delete:
+      tags: [Drivers]
+      summary: Удалить водителя
+      operationId: deleteDriver
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Водитель удален
+        '404':
+          description: Водитель не найден
+
+  /v1/search/trips:
     get:
       tags:
         - Search
@@ -725,6 +1050,120 @@ components:
         status:
           type: string
           enum: [scheduled, boarding, departed, arrived, cancelled]
+
+    Bus:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        plate_number:
+          type: string
+        model:
+          type: string
+        capacity:
+          type: integer
+        status:
+          type: string
+          enum: [active, maintenance, out_of_service]
+        station_id:
+          type: string
+          format: uuid
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    CreateBusRequest:
+      type: object
+      required: [plate_number, model, capacity, station_id]
+      properties:
+        plate_number:
+          type: string
+          maxLength: 20
+          description: Госномер (до 20 символов для международных форматов)
+        model:
+          type: string
+        capacity:
+          type: integer
+          minimum: 1
+        station_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [active, maintenance, out_of_service]
+
+    UpdateBusRequest:
+      type: object
+      properties:
+        plate_number:
+          type: string
+          maxLength: 20
+        model:
+          type: string
+        capacity:
+          type: integer
+          minimum: 1
+        status:
+          type: string
+          enum: [active, maintenance, out_of_service]
+
+    Driver:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        full_name:
+          type: string
+        license_number:
+          type: string
+        station_id:
+          type: string
+          format: uuid
+        experience_years:
+          type: integer
+          nullable: true
+        phone:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    CreateDriverRequest:
+      type: object
+      required: [full_name, license_number, station_id]
+      properties:
+        full_name:
+          type: string
+        license_number:
+          type: string
+        experience_years:
+          type: integer
+        phone:
+          type: string
+        station_id:
+          type: string
+          format: uuid
+
+    UpdateDriverRequest:
+      type: object
+      properties:
+        full_name:
+          type: string
+        license_number:
+          type: string
+        experience_years:
+          type: integer
+        phone:
+          type: string
 
     SearchResult:
       type: object

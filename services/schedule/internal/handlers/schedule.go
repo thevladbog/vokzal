@@ -4,7 +4,9 @@
 package handlers
 
 import (
+	"errors"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -12,6 +14,17 @@ import (
 
 	"github.com/vokzal-tech/schedule-service/internal/service"
 )
+
+// allowedBusStatuses — допустимые значения статуса автобуса (CreateBusRequest, UpdateBusRequest).
+var allowedBusStatuses = map[string]bool{
+	"active":         true,
+	"maintenance":    true,
+	"out_of_service": true,
+}
+
+func isValidBusStatus(status string) bool {
+	return allowedBusStatuses[strings.TrimSpace(status)]
+}
 
 // ScheduleHandler — обработчик HTTP-запросов для маршрутов, расписаний и рейсов.
 type ScheduleHandler struct {
@@ -351,6 +364,252 @@ func (h *ScheduleHandler) GenerateTrips(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Trips generated successfully"})
+}
+
+// UpdateTrip обновляет рейс (перрон, автобус, водитель).
+func (h *ScheduleHandler) UpdateTrip(c *gin.Context) {
+	id := c.Param("id")
+	var req service.UpdateTripRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	trip, err := h.svc.UpdateTrip(c.Request.Context(), id, &req)
+	if err != nil {
+		if errors.Is(err, service.ErrTripNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Trip not found"})
+			return
+		}
+		h.logger.Error("Failed to update trip", zap.Error(err))
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update trip"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"data": trip})
+}
+
+// CreateBus создаёт автобус.
+func (h *ScheduleHandler) CreateBus(c *gin.Context) {
+	var req service.CreateBusRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if req.Status != "" && !isValidBusStatus(req.Status) {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "invalid status: must be one of active, maintenance, out_of_service",
+		})
+		return
+	}
+	if req.Capacity < 1 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "capacity: must be at least 1"})
+		return
+	}
+	bus, err := h.svc.CreateBus(c.Request.Context(), &req)
+	if err != nil {
+		if errors.Is(err, service.ErrStationNotFound) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "station_id: station not found"})
+			return
+		}
+		if errors.Is(err, service.ErrInvalidCapacity) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "capacity: must be at least 1"})
+			return
+		}
+		h.logger.Error("Failed to create bus", zap.Error(err))
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create bus"})
+		return
+	}
+	c.JSON(http.StatusCreated, gin.H{"data": bus})
+}
+
+// GetBus возвращает автобус по ID.
+func (h *ScheduleHandler) GetBus(c *gin.Context) {
+	id := c.Param("id")
+	bus, err := h.svc.GetBus(c.Request.Context(), id)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Bus not found"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"data": bus})
+}
+
+// ListBuses возвращает список автобусов.
+func (h *ScheduleHandler) ListBuses(c *gin.Context) {
+	stationID := c.Query("station_id")
+	status := c.Query("status")
+	if status != "" && !isValidBusStatus(status) {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "invalid status: must be one of active, maintenance, out_of_service",
+		})
+		return
+	}
+	var sid, st *string
+	if stationID != "" {
+		sid = &stationID
+	}
+	if status != "" {
+		st = &status
+	}
+	buses, err := h.svc.ListBuses(c.Request.Context(), sid, st)
+	if err != nil {
+		h.logger.Error("Failed to list buses", zap.Error(err))
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to list buses"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"data": buses})
+}
+
+// UpdateBus обновляет автобус.
+func (h *ScheduleHandler) UpdateBus(c *gin.Context) {
+	id := c.Param("id")
+	var req service.UpdateBusRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if req.Status != nil && !isValidBusStatus(*req.Status) {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "invalid status: must be one of active, maintenance, out_of_service",
+		})
+		return
+	}
+	if req.Capacity != nil && *req.Capacity < 1 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "capacity: must be at least 1"})
+		return
+	}
+	bus, err := h.svc.UpdateBus(c.Request.Context(), id, &req)
+	if err != nil {
+		if errors.Is(err, service.ErrBusNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Bus not found"})
+			return
+		}
+		if errors.Is(err, service.ErrInvalidCapacity) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "capacity: must be at least 1"})
+			return
+		}
+		h.logger.Error("Failed to update bus", zap.Error(err))
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update bus"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"data": bus})
+}
+
+// DeleteBus удаляет автобус.
+func (h *ScheduleHandler) DeleteBus(c *gin.Context) {
+	id := c.Param("id")
+	if err := h.svc.DeleteBus(c.Request.Context(), id); err != nil {
+		if errors.Is(err, service.ErrBusNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Bus not found"})
+			return
+		}
+		h.logger.Error("Failed to delete bus", zap.Error(err))
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete bus"})
+		return
+	}
+	c.Status(http.StatusNoContent)
+}
+
+// CreateDriver создаёт водителя.
+func (h *ScheduleHandler) CreateDriver(c *gin.Context) {
+	var req service.CreateDriverRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	driver, err := h.svc.CreateDriver(c.Request.Context(), &req)
+	if err != nil {
+		if errors.Is(err, service.ErrStationNotFound) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "station_id: station not found"})
+			return
+		}
+		h.logger.Error("Failed to create driver", zap.Error(err))
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create driver"})
+		return
+	}
+	c.JSON(http.StatusCreated, gin.H{"data": driver})
+}
+
+// GetDriver возвращает водителя по ID.
+func (h *ScheduleHandler) GetDriver(c *gin.Context) {
+	id := c.Param("id")
+	driver, err := h.svc.GetDriver(c.Request.Context(), id)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Driver not found"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"data": driver})
+}
+
+// ListDrivers возвращает список водителей.
+func (h *ScheduleHandler) ListDrivers(c *gin.Context) {
+	stationID := c.Query("station_id")
+	var sid *string
+	if stationID != "" {
+		sid = &stationID
+	}
+	drivers, err := h.svc.ListDrivers(c.Request.Context(), sid)
+	if err != nil {
+		h.logger.Error("Failed to list drivers", zap.Error(err))
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to list drivers"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"data": drivers})
+}
+
+// UpdateDriver обновляет водителя.
+func (h *ScheduleHandler) UpdateDriver(c *gin.Context) {
+	id := c.Param("id")
+	var req service.UpdateDriverRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	driver, err := h.svc.UpdateDriver(c.Request.Context(), id, &req)
+	if err != nil {
+		if errors.Is(err, service.ErrDriverNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Driver not found"})
+			return
+		}
+		h.logger.Error("Failed to update driver", zap.Error(err))
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update driver"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"data": driver})
+}
+
+// DeleteDriver удаляет водителя.
+func (h *ScheduleHandler) DeleteDriver(c *gin.Context) {
+	id := c.Param("id")
+	if err := h.svc.DeleteDriver(c.Request.Context(), id); err != nil {
+		if errors.Is(err, service.ErrDriverNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Driver not found"})
+			return
+		}
+		h.logger.Error("Failed to delete driver", zap.Error(err))
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete driver"})
+		return
+	}
+	c.Status(http.StatusNoContent)
+}
+
+// GetDashboardStats возвращает статистику рейсов за дату для дашборда.
+func (h *ScheduleHandler) GetDashboardStats(c *gin.Context) {
+	dateStr := c.Query("date")
+	if dateStr == "" {
+		dateStr = time.Now().Format("2006-01-02")
+	}
+	parsed, err := parseDate(dateStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid date format (use YYYY-MM-DD)"})
+		return
+	}
+	date := parsed.Format("2006-01-02")
+	stats, err := h.svc.GetDashboardStats(c.Request.Context(), date)
+	if err != nil {
+		h.logger.Error("Failed to get dashboard stats", zap.Error(err))
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get dashboard stats"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"data": stats})
 }
 
 func parseDate(dateStr string) (time.Time, error) {

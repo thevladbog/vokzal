@@ -30,6 +30,9 @@ type TicketService interface {
 	StartBoarding(ctx context.Context, tripID string, userID string) error
 	MarkBoarding(ctx context.Context, req *MarkBoardingRequest) error
 	GetBoardingStatus(ctx context.Context, tripID string) (*BoardingStatus, error)
+
+	// Дашборд
+	GetDashboardStats(ctx context.Context, date string) (ticketsSold, ticketsReturned int, revenue float64, err error)
 }
 
 type ticketService struct {
@@ -309,6 +312,11 @@ func (s *ticketService) MarkBoarding(ctx context.Context, req *MarkBoardingReque
 		zap.String("user_id", req.UserID))
 
 	return nil
+}
+
+// GetDashboardStats возвращает агрегаты по билетам за дату.
+func (s *ticketService) GetDashboardStats(ctx context.Context, date string) (ticketsSold, ticketsReturned int, revenue float64, err error) {
+	return s.ticketRepo.GetDashboardStats(ctx, date)
 }
 
 // GetBoardingStatus возвращает статус посадки.

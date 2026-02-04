@@ -111,9 +111,65 @@ type Stop struct {
 	ArrivalOffsetMin int    `json:"arrival_offset_min"`
 }
 
+// Bus — модель автобуса.
+// Поля сгруппированы по типу для выравнивания (string, int, time.Time); ID первым для читаемости.
+//
+//nolint:govet // fieldalignment: explicit grouping preferred for readability
+type Bus struct {
+	ID          string    `gorm:"type:uuid;primary_key" json:"id"`
+	PlateNumber string    `gorm:"type:varchar(20);uniqueIndex;not null" json:"plate_number"`
+	Model       string    `gorm:"type:varchar(50);not null" json:"model"`
+	Status      string    `gorm:"type:varchar(20);default:'active'" json:"status"`
+	StationID   string    `gorm:"type:uuid;not null;index" json:"station_id"`
+	Capacity    int       `gorm:"type:integer;not null" json:"capacity"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
+}
+
+// Driver — модель водителя.
+// Поля сгруппированы по типу для выравнивания (string, pointers, time.Time); ID первым для читаемости.
+//
+//nolint:govet // fieldalignment: explicit grouping preferred for readability
+type Driver struct {
+	ID              string    `gorm:"type:uuid;primary_key" json:"id"`
+	FullName        string    `gorm:"type:varchar(100);not null" json:"full_name"`
+	LicenseNumber   string    `gorm:"type:varchar(20);uniqueIndex;not null" json:"license_number"`
+	StationID       string    `gorm:"type:uuid;not null;index" json:"station_id"`
+	ExperienceYears *int      `gorm:"type:integer" json:"experience_years,omitempty"`
+	Phone           *string   `gorm:"type:varchar(15)" json:"phone,omitempty"`
+	CreatedAt       time.Time `json:"created_at"`
+	UpdatedAt       time.Time `json:"updated_at"`
+}
+
 // TableName возвращает имя таблицы для GORM (Route).
 func (Route) TableName() string {
 	return "routes"
+}
+
+// TableName возвращает имя таблицы для GORM (Bus).
+func (Bus) TableName() string {
+	return "buses"
+}
+
+// TableName возвращает имя таблицы для GORM (Driver).
+func (Driver) TableName() string {
+	return "drivers"
+}
+
+// BeforeCreate генерирует UUID для Bus.
+func (b *Bus) BeforeCreate(_ *gorm.DB) error {
+	if b.ID == "" {
+		b.ID = uuid.New().String()
+	}
+	return nil
+}
+
+// BeforeCreate генерирует UUID для Driver.
+func (d *Driver) BeforeCreate(_ *gorm.DB) error {
+	if d.ID == "" {
+		d.ID = uuid.New().String()
+	}
+	return nil
 }
 
 // TableName возвращает имя таблицы для GORM (Schedule).

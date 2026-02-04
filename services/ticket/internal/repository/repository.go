@@ -32,6 +32,7 @@ type TicketRepository interface {
 	Update(ctx context.Context, ticket *models.Ticket) error
 	Delete(ctx context.Context, id string) error
 	GetTripDepartureTime(ctx context.Context, tripID string) (*time.Time, error)
+	GetDashboardStats(ctx context.Context, date string) (ticketsSold, ticketsReturned int, revenue float64, err error)
 }
 
 // BoardingRepository — интерфейс репозитория событий и отметок посадки.
@@ -133,6 +134,28 @@ func (r *ticketRepository) GetTripDepartureTime(ctx context.Context, tripID stri
 		return nil, nil
 	}
 	return &dep, nil
+}
+
+// GetDashboardStats возвращает агрегаты по билетам за дату (created_at::date = date).
+// Один запрос с условной агрегацией (FILTER) вместо трёх отдельных.
+func (r *ticketRepository) GetDashboardStats(ctx context.Context, date string) (ticketsSold, ticketsReturned int, revenue float64, err error) {
+	var row struct {
+		SoldCount     int64   `gorm:"column:sold_count"`
+		ReturnedCount int64   `gorm:"column:returned_count"`
+		Revenue       float64 `gorm:"column:revenue"`
+	}
+	err = r.db.WithContext(ctx).Raw(`
+		SELECT
+			COUNT(*) FILTER (WHERE status IN ('active', 'used')) AS sold_count,
+			COUNT(*) FILTER (WHERE status = 'returned') AS returned_count,
+			COALESCE(SUM(price) FILTER (WHERE status IN ('active', 'used')), 0) AS revenue
+		FROM tickets
+		WHERE DATE(created_at) = ?
+	`, date).Scan(&row).Error
+	if err != nil {
+		return 0, 0, 0, err
+	}
+	return int(row.SoldCount), int(row.ReturnedCount), row.Revenue, nil
 }
 
 // CreateEvent создаёт событие начала посадки.

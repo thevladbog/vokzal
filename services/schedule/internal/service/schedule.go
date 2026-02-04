@@ -4,6 +4,7 @@ package service
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
@@ -13,6 +14,21 @@ import (
 	"github.com/vokzal-tech/schedule-service/internal/models"
 	"github.com/vokzal-tech/schedule-service/internal/repository"
 )
+
+// ErrStationNotFound возвращается, когда station_id в запросе не ссылается на существующую станцию.
+var ErrStationNotFound = errors.New("station not found")
+
+// ErrInvalidCapacity возвращается, когда capacity меньше 1 (CreateBus/UpdateBus).
+var ErrInvalidCapacity = errors.New("capacity must be at least 1")
+
+// ErrTripNotFound возвращается, когда рейс не найден (UpdateTrip и др.).
+var ErrTripNotFound = errors.New("trip not found")
+
+// ErrBusNotFound возвращается, когда автобус не найден (UpdateBus, DeleteBus).
+var ErrBusNotFound = errors.New("bus not found")
+
+// ErrDriverNotFound возвращается, когда водитель не найден (UpdateDriver, DeleteDriver).
+var ErrDriverNotFound = errors.New("driver not found")
 
 // ScheduleService — интерфейс сервиса расписания (станции, маршруты, расписания, рейсы).
 type ScheduleService interface {
@@ -42,7 +58,23 @@ type ScheduleService interface {
 	GetTrip(ctx context.Context, id string) (*models.Trip, error)
 	ListTripsByDate(ctx context.Context, date string) ([]*models.Trip, error)
 	UpdateTripStatus(ctx context.Context, id string, status string, delayMinutes int) (*models.Trip, error)
+	UpdateTrip(ctx context.Context, id string, req *UpdateTripRequest) (*models.Trip, error)
 	GenerateTripsForSchedule(ctx context.Context, scheduleID string, fromDate, toDate time.Time) error
+	GetDashboardStats(ctx context.Context, date string) (*DashboardStats, error)
+
+	// Buses
+	CreateBus(ctx context.Context, req *CreateBusRequest) (*models.Bus, error)
+	GetBus(ctx context.Context, id string) (*models.Bus, error)
+	ListBuses(ctx context.Context, stationID *string, status *string) ([]*models.Bus, error)
+	UpdateBus(ctx context.Context, id string, req *UpdateBusRequest) (*models.Bus, error)
+	DeleteBus(ctx context.Context, id string) error
+
+	// Drivers
+	CreateDriver(ctx context.Context, req *CreateDriverRequest) (*models.Driver, error)
+	GetDriver(ctx context.Context, id string) (*models.Driver, error)
+	ListDrivers(ctx context.Context, stationID *string) ([]*models.Driver, error)
+	UpdateDriver(ctx context.Context, id string, req *UpdateDriverRequest) (*models.Driver, error)
+	DeleteDriver(ctx context.Context, id string) error
 }
 
 type scheduleService struct {
@@ -50,6 +82,8 @@ type scheduleService struct {
 	routeRepo    repository.RouteRepository
 	scheduleRepo repository.ScheduleRepository
 	tripRepo     repository.TripRepository
+	busRepo      repository.BusRepository
+	driverRepo   repository.DriverRepository
 	natsConn     *nats.Conn
 	logger       *zap.Logger
 }
@@ -112,12 +146,69 @@ type CreateTripRequest struct {
 	Date       string  `json:"date" binding:"required"`
 }
 
+// UpdateTripRequest — запрос на обновление рейса (перрон, автобус, водитель).
+type UpdateTripRequest struct {
+	Platform *string `json:"platform"`
+	BusID    *string `json:"bus_id"`
+	DriverID *string `json:"driver_id"`
+}
+
+// CreateBusRequest — запрос на создание автобуса.
+// Поля упорядочены по убыванию размера (strings, затем int) для выравнивания и минимизации padding.
+type CreateBusRequest struct {
+	PlateNumber string `json:"plate_number" binding:"required"`
+	Model       string `json:"model" binding:"required"`
+	StationID   string `json:"station_id" binding:"required"`
+	Status      string `json:"status"`
+	Capacity    int    `json:"capacity" binding:"required"`
+}
+
+// UpdateBusRequest — запрос на обновление автобуса.
+type UpdateBusRequest struct {
+	PlateNumber *string `json:"plate_number"`
+	Model       *string `json:"model"`
+	Capacity    *int    `json:"capacity"`
+	Status      *string `json:"status"`
+}
+
+// CreateDriverRequest — запрос на создание водителя.
+type CreateDriverRequest struct {
+	FullName        string  `json:"full_name" binding:"required"`
+	LicenseNumber   string  `json:"license_number" binding:"required"`
+	ExperienceYears *int    `json:"experience_years"`
+	Phone           *string `json:"phone"`
+	StationID       string  `json:"station_id" binding:"required"`
+}
+
+// UpdateDriverRequest — запрос на обновление водителя.
+type UpdateDriverRequest struct {
+	FullName        *string `json:"full_name"`
+	LicenseNumber   *string `json:"license_number"`
+	ExperienceYears *int    `json:"experience_years"`
+	Phone           *string `json:"phone"`
+}
+
+// DashboardStats — статистика для дашборда (рейсы за дату).
+type DashboardStats struct {
+	TripsTotal     int `json:"trips_total"`
+	TripsScheduled int `json:"trips_scheduled"`
+	TripsBoarding  int `json:"trips_boarding"`
+	TripsDeparted  int `json:"trips_departed"`
+	TripsCancelled int `json:"trips_cancelled"` //nolint:misspell // British spelling; golangci-lint misspell (locale US) flags it
+	TripsDelayed   int `json:"trips_delayed"`
+	TripsArrived   int `json:"trips_arrived"`
+	// TotalCapacity — сумма вместимостей автобусов по рейсам за дату (рейсы без автобуса считаются как 40 мест).
+	TotalCapacity int `json:"total_capacity"`
+}
+
 // NewScheduleService создаёт сервис расписания.
 func NewScheduleService(
 	stationRepo repository.StationRepository,
 	routeRepo repository.RouteRepository,
 	scheduleRepo repository.ScheduleRepository,
 	tripRepo repository.TripRepository,
+	busRepo repository.BusRepository,
+	driverRepo repository.DriverRepository,
 	natsConn *nats.Conn,
 	logger *zap.Logger,
 ) ScheduleService {
@@ -126,6 +217,8 @@ func NewScheduleService(
 		routeRepo:    routeRepo,
 		scheduleRepo: scheduleRepo,
 		tripRepo:     tripRepo,
+		busRepo:      busRepo,
+		driverRepo:   driverRepo,
 		natsConn:     natsConn,
 		logger:       logger,
 	}
@@ -397,6 +490,251 @@ func (s *scheduleService) UpdateTripStatus(ctx context.Context, id, status strin
 		zap.Int("delay", delayMinutes))
 
 	return trip, nil
+}
+
+func (s *scheduleService) UpdateTrip(ctx context.Context, id string, req *UpdateTripRequest) (*models.Trip, error) {
+	trip, err := s.tripRepo.FindByID(ctx, id)
+	if err != nil {
+		if errors.Is(err, repository.ErrTripNotFound) {
+			return nil, ErrTripNotFound
+		}
+		return nil, fmt.Errorf("find trip: %w", err)
+	}
+	if req.Platform != nil {
+		trip.Platform = req.Platform
+	}
+	if req.BusID != nil {
+		trip.BusID = req.BusID
+	}
+	if req.DriverID != nil {
+		trip.DriverID = req.DriverID
+	}
+	if err := s.tripRepo.Update(ctx, trip); err != nil {
+		return nil, fmt.Errorf("update trip: %w", err)
+	}
+	s.publishTripEvent("trip.updated", trip)
+	return trip, nil
+}
+
+func (s *scheduleService) CreateBus(ctx context.Context, req *CreateBusRequest) (*models.Bus, error) {
+	if req.Capacity < 1 {
+		return nil, ErrInvalidCapacity
+	}
+	if _, err := s.stationRepo.FindByID(ctx, req.StationID); err != nil {
+		if errors.Is(err, repository.ErrStationNotFound) {
+			return nil, ErrStationNotFound
+		}
+		s.logger.Error("CreateBus: find station failed", zap.String("station_id", req.StationID), zap.Error(err))
+		return nil, fmt.Errorf("find station: %w", err)
+	}
+	status := req.Status
+	if status == "" {
+		status = "active"
+	}
+	bus := &models.Bus{
+		PlateNumber: req.PlateNumber,
+		Model:       req.Model,
+		Capacity:    req.Capacity,
+		StationID:   req.StationID,
+		Status:      status,
+	}
+	if err := s.busRepo.Create(ctx, bus); err != nil {
+		s.logger.Error("CreateBus: create failed", zap.String("plate_number", req.PlateNumber), zap.String("station_id", req.StationID), zap.Error(err))
+		return nil, fmt.Errorf("create bus: %w", err)
+	}
+	s.logger.Info("Bus created", zap.String("bus_id", bus.ID), zap.String("plate_number", bus.PlateNumber), zap.String("station_id", bus.StationID), zap.String("status", bus.Status))
+	return bus, nil
+}
+
+func (s *scheduleService) GetBus(ctx context.Context, id string) (*models.Bus, error) {
+	bus, err := s.busRepo.FindByID(ctx, id)
+	if err != nil {
+		s.logger.Error("GetBus failed", zap.String("bus_id", id), zap.Error(err))
+		return nil, fmt.Errorf("find bus: %w", err)
+	}
+	return bus, nil
+}
+
+func (s *scheduleService) ListBuses(ctx context.Context, stationID, status *string) ([]*models.Bus, error) {
+	buses, err := s.busRepo.FindAll(ctx, stationID, status)
+	if err != nil {
+		s.logger.Error("ListBuses failed", zap.Any("station_id", stationID), zap.Any("status", status), zap.Error(err))
+		return nil, fmt.Errorf("list buses: %w", err)
+	}
+	return buses, nil
+}
+
+func (s *scheduleService) UpdateBus(ctx context.Context, id string, req *UpdateBusRequest) (*models.Bus, error) {
+	s.logger.Debug("UpdateBus", zap.String("bus_id", id),
+		zap.Any("plate_number", req.PlateNumber), zap.Any("model", req.Model),
+		zap.Any("capacity", req.Capacity), zap.Any("status", req.Status))
+	bus, err := s.busRepo.FindByID(ctx, id)
+	if err != nil {
+		if errors.Is(err, repository.ErrBusNotFound) {
+			return nil, ErrBusNotFound
+		}
+		s.logger.Error("UpdateBus: find bus failed", zap.String("bus_id", id), zap.Error(err))
+		return nil, fmt.Errorf("find bus: %w", err)
+	}
+	if req.PlateNumber != nil {
+		bus.PlateNumber = *req.PlateNumber
+	}
+	if req.Model != nil {
+		bus.Model = *req.Model
+	}
+	if req.Capacity != nil {
+		if *req.Capacity < 1 {
+			return nil, ErrInvalidCapacity
+		}
+		bus.Capacity = *req.Capacity
+	}
+	if req.Status != nil {
+		bus.Status = *req.Status
+	}
+	if err := s.busRepo.Update(ctx, bus); err != nil {
+		s.logger.Error("UpdateBus: update failed", zap.String("bus_id", id), zap.Error(err))
+		return nil, fmt.Errorf("update bus: %w", err)
+	}
+	s.logger.Info("Bus updated", zap.String("bus_id", id), zap.String("plate_number", bus.PlateNumber), zap.String("status", bus.Status))
+	return bus, nil
+}
+
+func (s *scheduleService) DeleteBus(ctx context.Context, id string) error {
+	if err := s.busRepo.Delete(ctx, id); err != nil {
+		if errors.Is(err, repository.ErrBusNotFound) {
+			return ErrBusNotFound
+		}
+		s.logger.Error("DeleteBus failed", zap.String("bus_id", id), zap.Error(err))
+		return fmt.Errorf("delete bus: %w", err)
+	}
+	s.logger.Info("Bus deleted", zap.String("bus_id", id))
+	return nil
+}
+
+func (s *scheduleService) CreateDriver(ctx context.Context, req *CreateDriverRequest) (*models.Driver, error) {
+	s.logger.Debug("CreateDriver", zap.String("station_id", req.StationID), zap.String("full_name", req.FullName), zap.String("license_number", req.LicenseNumber))
+	if _, err := s.stationRepo.FindByID(ctx, req.StationID); err != nil {
+		if errors.Is(err, repository.ErrStationNotFound) {
+			return nil, ErrStationNotFound
+		}
+		s.logger.Error("CreateDriver failed: FindByID station", zap.String("station_id", req.StationID), zap.Error(err))
+		return nil, fmt.Errorf("CreateDriver failed: FindByID station: %w", err)
+	}
+	driver := &models.Driver{
+		FullName:        req.FullName,
+		LicenseNumber:   req.LicenseNumber,
+		ExperienceYears: req.ExperienceYears,
+		Phone:           req.Phone,
+		StationID:       req.StationID,
+	}
+	if err := s.driverRepo.Create(ctx, driver); err != nil {
+		s.logger.Error("CreateDriver failed: Create", zap.String("station_id", req.StationID), zap.String("license_number", req.LicenseNumber), zap.Error(err))
+		return nil, fmt.Errorf("CreateDriver failed: Create: %w", err)
+	}
+	s.logger.Info("Driver created", zap.String("driver_id", driver.ID), zap.String("full_name", driver.FullName), zap.String("station_id", driver.StationID))
+	return driver, nil
+}
+
+func (s *scheduleService) GetDriver(ctx context.Context, id string) (*models.Driver, error) {
+	s.logger.Debug("GetDriver", zap.String("driver_id", id))
+	driver, err := s.driverRepo.FindByID(ctx, id)
+	if err != nil {
+		s.logger.Error("GetDriver failed: FindByID", zap.String("driver_id", id), zap.Error(err))
+		return nil, fmt.Errorf("GetDriver failed: FindByID: %w", err)
+	}
+	return driver, nil
+}
+
+func (s *scheduleService) ListDrivers(ctx context.Context, stationID *string) ([]*models.Driver, error) {
+	s.logger.Debug("ListDrivers", zap.Any("station_id", stationID))
+	drivers, err := s.driverRepo.FindAll(ctx, stationID)
+	if err != nil {
+		s.logger.Error("ListDrivers failed: FindAll", zap.Any("station_id", stationID), zap.Error(err))
+		return nil, fmt.Errorf("ListDrivers failed: FindAll: %w", err)
+	}
+	return drivers, nil
+}
+
+func (s *scheduleService) UpdateDriver(ctx context.Context, id string, req *UpdateDriverRequest) (*models.Driver, error) {
+	s.logger.Debug("UpdateDriver", zap.String("driver_id", id),
+		zap.Any("full_name", req.FullName), zap.Any("license_number", req.LicenseNumber),
+		zap.Any("experience_years", req.ExperienceYears), zap.Any("phone", req.Phone))
+	driver, err := s.driverRepo.FindByID(ctx, id)
+	if err != nil {
+		if errors.Is(err, repository.ErrDriverNotFound) {
+			return nil, ErrDriverNotFound
+		}
+		s.logger.Error("UpdateDriver failed: FindByID", zap.String("driver_id", id), zap.Error(err))
+		return nil, fmt.Errorf("UpdateDriver failed: FindByID: %w", err)
+	}
+	if req.FullName != nil {
+		driver.FullName = *req.FullName
+	}
+	if req.LicenseNumber != nil {
+		driver.LicenseNumber = *req.LicenseNumber
+	}
+	if req.ExperienceYears != nil {
+		driver.ExperienceYears = req.ExperienceYears
+	}
+	if req.Phone != nil {
+		driver.Phone = req.Phone
+	}
+	if err := s.driverRepo.Update(ctx, driver); err != nil {
+		s.logger.Error("UpdateDriver failed: Update", zap.String("driver_id", id), zap.Error(err))
+		return nil, fmt.Errorf("UpdateDriver failed: Update: %w", err)
+	}
+	s.logger.Info("Driver updated", zap.String("driver_id", id), zap.String("full_name", driver.FullName))
+	return driver, nil
+}
+
+func (s *scheduleService) DeleteDriver(ctx context.Context, id string) error {
+	s.logger.Debug("DeleteDriver", zap.String("driver_id", id))
+	if err := s.driverRepo.Delete(ctx, id); err != nil {
+		if errors.Is(err, repository.ErrDriverNotFound) {
+			return ErrDriverNotFound
+		}
+		s.logger.Error("DeleteDriver failed: Delete", zap.String("driver_id", id), zap.Error(err))
+		return fmt.Errorf("DeleteDriver failed: Delete: %w", err)
+	}
+	s.logger.Info("Driver deleted", zap.String("driver_id", id))
+	return nil
+}
+
+const defaultCapacityPerTrip = 40
+
+func (s *scheduleService) GetDashboardStats(ctx context.Context, date string) (*DashboardStats, error) {
+	trips, err := s.tripRepo.FindByDate(ctx, date)
+	if err != nil {
+		return nil, fmt.Errorf("GetDashboardStats: find trips by date: %w", err)
+	}
+	stats := &DashboardStats{TripsTotal: len(trips)}
+	var totalCapacity int
+	for _, t := range trips {
+		switch t.Status {
+		case "scheduled":
+			stats.TripsScheduled++
+		case "boarding":
+			stats.TripsBoarding++
+		case "departed":
+			stats.TripsDeparted++
+		case "cancelled": //nolint:misspell // trip status; British spelling intentional
+			stats.TripsCancelled++
+		case "delayed":
+			stats.TripsDelayed++
+		case "arrived":
+			stats.TripsArrived++
+		}
+		seats := defaultCapacityPerTrip
+		if t.BusID != nil && *t.BusID != "" {
+			bus, err := s.busRepo.FindByID(ctx, *t.BusID)
+			if err == nil {
+				seats = bus.Capacity
+			}
+		}
+		totalCapacity += seats
+	}
+	stats.TotalCapacity = totalCapacity
+	return stats, nil
 }
 
 func (s *scheduleService) GenerateTripsForSchedule(ctx context.Context, scheduleID string, fromDate, toDate time.Time) error {

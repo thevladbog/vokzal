@@ -5,6 +5,7 @@ package handlers
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
@@ -179,4 +180,25 @@ func (h *TicketHandler) GetBoardingStatus(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"data": status})
+}
+
+// GetDashboardStats возвращает статистику билетов за дату для дашборда.
+func (h *TicketHandler) GetDashboardStats(c *gin.Context) {
+	date := c.Query("date")
+	if date == "" {
+		date = time.Now().Format("2006-01-02")
+	}
+	ticketsSold, ticketsReturned, revenue, err := h.svc.GetDashboardStats(c.Request.Context(), date)
+	if err != nil {
+		h.logger.Error("Failed to get dashboard stats", zap.Error(err))
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get dashboard stats"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"data": gin.H{
+			"tickets_sold":     ticketsSold,
+			"tickets_returned": ticketsReturned,
+			"revenue":          revenue,
+		},
+	})
 }

@@ -104,6 +104,8 @@ func main() {
 	})
 
 	v1 := router.Group("/v1")
+	ticketStats := v1.Group("/ticket")
+	ticketStats.GET("/stats/dashboard", ticketHandler.GetDashboardStats)
 	tickets := v1.Group("/tickets")
 	tickets.POST("/sell", ticketHandler.SellTicket)
 	tickets.GET("", ticketHandler.ListTicketsByTrip)

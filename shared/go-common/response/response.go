@@ -6,21 +6,21 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// Response стандартная структура ответа API
+// Response — стандартная структура ответа API.
 type Response struct {
-	Success bool        `json:"success"`
 	Data    interface{} `json:"data,omitempty"`
 	Error   *ErrorInfo  `json:"error,omitempty"`
+	Success bool        `json:"success"`
 }
 
-// ErrorInfo детали ошибки
+// ErrorInfo — детали ошибки.
 type ErrorInfo struct {
 	Code    string `json:"code"`
 	Message string `json:"message"`
 	Details string `json:"details,omitempty"`
 }
 
-// Success отправляет успешный ответ
+// Success отправляет успешный ответ.
 func Success(c *gin.Context, statusCode int, data interface{}) {
 	c.JSON(statusCode, Response{
 		Success: true,
@@ -28,7 +28,7 @@ func Success(c *gin.Context, statusCode int, data interface{}) {
 	})
 }
 
-// Error отправляет ответ с ошибкой
+// Error отправляет ответ с ошибкой.
 func Error(c *gin.Context, statusCode int, code, message string) {
 	c.JSON(statusCode, Response{
 		Success: false,
@@ -39,7 +39,7 @@ func Error(c *gin.Context, statusCode int, code, message string) {
 	})
 }
 
-// ErrorWithDetails отправляет ответ с ошибкой и деталями
+// ErrorWithDetails отправляет ответ с ошибкой и деталями.
 func ErrorWithDetails(c *gin.Context, statusCode int, code, message, details string) {
 	c.JSON(statusCode, Response{
 		Success: false,
@@ -51,27 +51,27 @@ func ErrorWithDetails(c *gin.Context, statusCode int, code, message, details str
 	})
 }
 
-// BadRequest ошибка 400
+// BadRequest — ответ 400.
 func BadRequest(c *gin.Context, message string) {
 	Error(c, http.StatusBadRequest, "bad_request", message)
 }
 
-// Unauthorized ошибка 401
+// Unauthorized — ответ 401.
 func Unauthorized(c *gin.Context, message string) {
 	Error(c, http.StatusUnauthorized, "unauthorized", message)
 }
 
-// Forbidden ошибка 403
+// Forbidden — ответ 403.
 func Forbidden(c *gin.Context, message string) {
 	Error(c, http.StatusForbidden, "forbidden", message)
 }
 
-// NotFound ошибка 404
+// NotFound — ответ 404.
 func NotFound(c *gin.Context, message string) {
 	Error(c, http.StatusNotFound, "not_found", message)
 }
 
-// InternalError ошибка 500
+// InternalError — ответ 500.
 func InternalError(c *gin.Context, message string) {
 	Error(c, http.StatusInternalServerError, "internal_error", message)
 }

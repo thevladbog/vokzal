@@ -118,7 +118,8 @@ jobs:
   build-docker:
     name: Build Docker Images
     needs: [detect-changes, build]
-    if: ${{ needs.detect-changes.outputs.apps != '[]' && github.event_name != 'pull_request' }}
+    # Временно отключено — публикация в Docker Hub ещё не настроена
+    if: false
     runs-on: ubuntu-latest
     strategy:
       matrix:

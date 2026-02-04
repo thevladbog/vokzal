@@ -1,10 +1,7 @@
 name: Deploy
 
+# Временно отключено: деплой и публикация ещё не настроены.
 on:
-  push:
-    branches: [main]
-    tags:
-      - 'v*'
   workflow_dispatch:
     inputs:
       environment:
@@ -19,6 +16,7 @@ jobs:
   deploy-services:
     name: Deploy Services
     runs-on: ubuntu-latest
+    if: false # Временно отключено — K8s/инфра не настроены
     environment: ${{ github.event.inputs.environment || 'production' }}
     
     steps:
@@ -72,6 +70,7 @@ jobs:
   deploy-ui:
     name: Deploy UI Applications
     runs-on: ubuntu-latest
+    if: false # Временно отключено — S3/CloudFront не настроены
     environment: ${{ github.event.inputs.environment || 'production' }}
     
     steps:
