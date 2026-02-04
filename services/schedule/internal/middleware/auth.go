@@ -60,6 +60,7 @@ func AuthMiddleware(jwtSecret string, logger *zap.Logger) gin.HandlerFunc {
 			return
 		}
 
+		// Use gin.Context Set/Get API (string keys) only; compatible with Gin 1.11+ where Keys is map[any]any.
 		c.Set("user_id", claims.UserID)
 		c.Set("username", claims.Username)
 		c.Set("role", claims.Role)
