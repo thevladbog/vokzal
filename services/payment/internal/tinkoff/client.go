@@ -190,8 +190,13 @@ func (c *TinkoffClient) GetState(paymentID string) (*GetStateResponse, error) {
 // SECURITY NOTE: SHA-256 is used here for generating API request signatures (HMAC-like mechanism),
 // NOT for hashing user passwords. This complies with the official Tinkoff documentation.
 // SHA-256 is a cryptographically strong hash function for this use case.
+//
+// CodeQL suppression: This is a false positive. The "Password" parameter is the API terminal secret
+// used for signing requests per Tinkoff API spec, not a user password that needs secure storage.
+// SHA-256 is appropriate for API request signing (similar to HMAC).
 func (c *TinkoffClient) generateToken(params map[string]interface{}) string {
 	// Add API secret to parameters (Tinkoff API requirement)
+	// Note: "Password" is the parameter name required by Tinkoff API for terminal secret
 	params["Password"] = c.apiSecret
 
 	// Sort keys
@@ -209,6 +214,7 @@ func (c *TinkoffClient) generateToken(params map[string]interface{}) string {
 	str := strings.Join(parts, "")
 
 	// SHA-256 hashing (Tinkoff Acquiring API requirement)
+	// lgtm[go/weak-sensitive-data-hashing]
 	hash := sha256.Sum256([]byte(str))
 	return fmt.Sprintf("%x", hash)
 }
