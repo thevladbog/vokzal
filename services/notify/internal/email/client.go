@@ -1,10 +1,9 @@
-// Package email предоставляет клиент для отправки email по SMTP.
+// Package email provides a client for sending emails via SMTP.
 package email
 
 import (
 	"bytes"
 	"fmt"
-	"html"
 	"mime"
 	"mime/quotedprintable"
 	"net/mail"
@@ -14,9 +13,9 @@ import (
 	"go.uber.org/zap"
 )
 
-// EmailClient — клиент для отправки email.
+// EmailClient is a client for sending emails.
 //
-//nolint:revive // Имя сохраняем для ясности при использовании из других пакетов (email.Client).
+//nolint:revive // Name preserved for clarity when used from other packages (email.Client).
 type EmailClient struct {
 	logger   *zap.Logger
 	smtpHost string
@@ -26,7 +25,7 @@ type EmailClient struct {
 	smtpPort int
 }
 
-// NewEmailClient создаёт клиент для отправки email.
+// NewEmailClient creates a client for sending emails.
 func NewEmailClient(smtpHost string, smtpPort int, username, password, from string, logger *zap.Logger) *EmailClient {
 	return &EmailClient{
 		smtpHost: smtpHost,
@@ -38,71 +37,70 @@ func NewEmailClient(smtpHost string, smtpPort int, username, password, from stri
 	}
 }
 
-// sanitizeHeader удаляет CRLF символы из заголовков для предотвращения header injection.
+// sanitizeHeader removes CRLF characters from headers to prevent header injection.
 func sanitizeHeader(input string) string {
-	// Удаляем все символы перевода строки и возврата каретки
+	// Remove all newline and carriage return characters
 	sanitized := strings.ReplaceAll(input, "\r", "")
 	sanitized = strings.ReplaceAll(sanitized, "\n", "")
-	// Также удаляем нулевые байты
+	// Also remove null bytes
 	sanitized = strings.ReplaceAll(sanitized, "\x00", "")
 	return strings.TrimSpace(sanitized)
 }
 
-// validateEmail проверяет корректность email адреса.
+// validateEmail validates email address format.
 func validateEmail(email string) error {
 	_, err := mail.ParseAddress(email)
 	return err
 }
 
-// Send отправляет email по указанному адресу с защитой от injection атак.
+// Send sends an email to the specified address with protection against injection attacks.
 func (c *EmailClient) Send(to, subject, body string) error {
-	// Валидация email адреса получателя
+	// Validate recipient email address
 	if err := validateEmail(to); err != nil {
 		return fmt.Errorf("invalid recipient email address: %w", err)
 	}
 
-	// Валидация email адреса отправителя
+	// Validate sender email address
 	if err := validateEmail(c.from); err != nil {
 		return fmt.Errorf("invalid sender email address: %w", err)
 	}
 
-	// Санитизация заголовков для предотвращения header injection
+	// Sanitize headers to prevent header injection
 	sanitizedTo := sanitizeHeader(to)
 	sanitizedSubject := sanitizeHeader(subject)
 
-	// Безопасное кодирование темы письма с помощью MIME Q-encoding
+	// Safely encode subject using MIME Q-encoding
 	encodedSubject := mime.QEncoding.Encode("UTF-8", sanitizedSubject)
 
-	// HTML-экранирование тела письма для предотвращения XSS
-	// Пользовательский ввод рассматривается как текст и безопасно встраивается в HTML-шаблон
-	escapedBody := html.EscapeString(body)
+	// Sanitize body content by removing any potential control characters
+	// Use text/plain instead of HTML to eliminate XSS risks entirely
+	sanitizedBody := sanitizeHeader(body)
 
-	// Формируем простой HTML-шаблон, в который вставляем только экранированный текст
-	htmlBody := "<html><body><pre style=\"white-space:pre-wrap;\">" + escapedBody + "</pre></body></html>"
-
-	// Сборка MIME-сообщения с использованием стандартных средств кодирования
+	// Build MIME message using standard encoding methods
 	var msgBuf bytes.Buffer
 
-	// Заголовки письма
+	// Email headers
 	headers := map[string]string{
-		"From":         c.from,
-		"To":           sanitizedTo,
-		"Subject":      encodedSubject,
-		"MIME-Version": "1.0",
-		"Content-Type": "text/html; charset=UTF-8",
+		"From":                      c.from,
+		"To":                        sanitizedTo,
+		"Subject":                   encodedSubject,
+		"MIME-Version":              "1.0",
+		"Content-Type":              "text/plain; charset=UTF-8",
+		"Content-Transfer-Encoding": "quoted-printable",
 	}
 
 	for k, v := range headers {
-		// sanitizeHeader уже удалил CRLF, что предотвращает header injection
+		// sanitizeHeader already removed CRLF, preventing header injection
 		fmt.Fprintf(&msgBuf, "%s: %s\r\n", k, v)
 	}
 
-	// Пустая строка отделяет заголовки от тела
+	// Empty line separates headers from body
 	msgBuf.WriteString("\r\n")
 
-	// Кодируем тело в quoted-printable для безопасной передачи
+	// Encode body in quoted-printable for safe transmission
+	// Use only sanitized text without HTML tags
 	qpWriter := quotedprintable.NewWriter(&msgBuf)
-	if _, err := qpWriter.Write([]byte(htmlBody)); err != nil {
+	if _, err := qpWriter.Write([]byte(sanitizedBody)); err != nil {
 		return fmt.Errorf("failed to encode email body: %w", err)
 	}
 	if err := qpWriter.Close(); err != nil {
