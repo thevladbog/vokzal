@@ -49,7 +49,7 @@ type LoggerConfig struct {
 // TinkoffConfig — настройки Tinkoff Acquiring.
 type TinkoffConfig struct {
 	TerminalKey string `mapstructure:"terminal_key"`
-	// Password — это API секрет терминала (не пароль пользователя), используется для подписи запросов
+	// Password is the terminal API secret (not a user password), used to sign API requests
 	Password string `mapstructure:"password"`
 	APIUrl   string `mapstructure:"api_url"`
 }

@@ -1,4 +1,4 @@
-// Package tinkoff предоставляет клиент для Tinkoff Acquiring API.
+// Package tinkoff provides a client for the Tinkoff Acquiring API.
 package tinkoff
 
 import (
@@ -15,18 +15,18 @@ import (
 	"go.uber.org/zap"
 )
 
-// TinkoffClient — клиент для работы с Tinkoff Acquiring API.
+// TinkoffClient is a client for interacting with the Tinkoff Acquiring API.
 //
-//nolint:revive // Имя сохраняем для ясности (tinkoff.Client).
+//nolint:revive // Name preserved for clarity (tinkoff.Client).
 type TinkoffClient struct {
 	client      *http.Client
 	logger      *zap.Logger
 	terminalKey string
-	apiSecret   string // API secret (не пароль пользователя) для подписи запросов
-	apiURL      string
+	apiSecret   string // API secret (not a user password) used to sign requests
+	apiURL      string // API base URL
 }
 
-// InitRequest — запрос инициализации платежа.
+// InitRequest is a payment initialization request.
 type InitRequest struct {
 	TerminalKey     string `json:"TerminalKey"`
 	OrderID         string `json:"OrderId"`
@@ -38,7 +38,7 @@ type InitRequest struct {
 	Amount          int64  `json:"Amount"`
 }
 
-// InitResponse — ответ на инициализацию платежа.
+// InitResponse is a payment initialization response.
 type InitResponse struct {
 	ErrorCode  string `json:"ErrorCode"`
 	Message    string `json:"Message"`
@@ -47,14 +47,14 @@ type InitResponse struct {
 	Success    bool   `json:"Success"`
 }
 
-// GetStateRequest — запрос статуса платежа.
+// GetStateRequest is a payment status request.
 type GetStateRequest struct {
 	TerminalKey string `json:"TerminalKey"`
 	PaymentID   string `json:"PaymentId"`
 	Token       string `json:"Token"`
 }
 
-// GetStateResponse — ответ со статусом платежа.
+// GetStateResponse is a payment status response.
 type GetStateResponse struct {
 	ErrorCode string `json:"ErrorCode"`
 	Message   string `json:"Message"`
@@ -65,8 +65,8 @@ type GetStateResponse struct {
 	Success   bool   `json:"Success"`
 }
 
-// NewTinkoffClient создаёт клиент Tinkoff Acquiring.
-// apiSecret — это не пароль пользователя, а секретный ключ терминала для подписи API-запросов.
+// NewTinkoffClient creates a Tinkoff Acquiring client.
+// apiSecret is the terminal API secret (not a user password) used to sign API requests.
 func NewTinkoffClient(terminalKey, apiSecret, apiURL string, logger *zap.Logger) *TinkoffClient {
 	return &TinkoffClient{
 		terminalKey: terminalKey,
@@ -79,7 +79,7 @@ func NewTinkoffClient(terminalKey, apiSecret, apiURL string, logger *zap.Logger)
 	}
 }
 
-// Init инициализирует платёж.
+// Init initializes a payment.
 func (c *TinkoffClient) Init(orderID string, amount float64, description string) (*InitResponse, error) {
 	amountKopecks := int64(amount * 100)
 
@@ -90,7 +90,7 @@ func (c *TinkoffClient) Init(orderID string, amount float64, description string)
 		Description: description,
 	}
 
-	// Генерация токена
+	// Generate token
 	req.Token = c.generateToken(map[string]interface{}{
 		"TerminalKey": req.TerminalKey,
 		"Amount":      req.Amount,
@@ -138,7 +138,7 @@ func (c *TinkoffClient) Init(orderID string, amount float64, description string)
 	return &result, nil
 }
 
-// GetState получает статус платежа.
+// GetState retrieves the payment status.
 func (c *TinkoffClient) GetState(paymentID string) (*GetStateResponse, error) {
 	req := &GetStateRequest{
 		TerminalKey: c.terminalKey,
@@ -185,30 +185,30 @@ func (c *TinkoffClient) GetState(paymentID string) (*GetStateResponse, error) {
 	return &result, nil
 }
 
-// generateToken генерирует токен для подписи запроса согласно спецификации Tinkoff Acquiring API.
+// generateToken generates a token for signing requests according to the Tinkoff Acquiring API specification.
 //
-// SECURITY NOTE: SHA-256 используется здесь для генерации подписи API-запросов (HMAC-подобный механизм),
-// а НЕ для хеширования паролей пользователей. Это соответствует официальной документации Tinkoff.
-// SHA-256 является криптографически стойкой хеш-функцией для данного применения.
+// SECURITY NOTE: SHA-256 is used here for generating API request signatures (HMAC-like mechanism),
+// NOT for hashing user passwords. This complies with the official Tinkoff documentation.
+// SHA-256 is a cryptographically strong hash function for this use case.
 func (c *TinkoffClient) generateToken(params map[string]interface{}) string {
-	// Добавляем API secret к параметрам (требование Tinkoff API)
+	// Add API secret to parameters (Tinkoff API requirement)
 	params["Password"] = c.apiSecret
 
-	// Сортируем ключи
+	// Sort keys
 	keys := make([]string, 0, len(params))
 	for k := range params {
 		keys = append(keys, k)
 	}
 	sort.Strings(keys)
 
-	// Формируем строку для хеширования
+	// Build string for hashing
 	parts := make([]string, 0, len(keys))
 	for _, k := range keys {
 		parts = append(parts, fmt.Sprintf("%v", params[k]))
 	}
 	str := strings.Join(parts, "")
 
-	// SHA-256 хеширование (требование Tinkoff Acquiring API)
+	// SHA-256 hashing (Tinkoff Acquiring API requirement)
 	hash := sha256.Sum256([]byte(str))
 	return fmt.Sprintf("%x", hash)
 }
