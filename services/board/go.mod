@@ -1,6 +1,6 @@
 module github.com/vokzal-tech/board-service
 
-go 1.24.0
+go 1.24.13
 
 require (
 	github.com/gin-gonic/gin v1.10.0
@@ -59,7 +59,7 @@ require (
 	golang.org/x/arch v0.8.0 // indirect
 	golang.org/x/crypto v0.47.0 // indirect
 	golang.org/x/exp v0.0.0-20230905200255-921286631fa9 // indirect
-	golang.org/x/net v0.48.0 // indirect
+	golang.org/x/net v0.49.0 // indirect
 	golang.org/x/sync v0.19.0 // indirect
 	golang.org/x/sys v0.40.0 // indirect
 	golang.org/x/text v0.33.0 // indirect
