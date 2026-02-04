@@ -47,6 +47,23 @@ func sanitizeHeader(input string) string {
 	return strings.TrimSpace(sanitized)
 }
 
+// sanitizeBody removes control characters from the email body to prevent content injection
+// while preserving regular text. The body is treated as plain text.
+func sanitizeBody(input string) string {
+	// Map over runes and drop ASCII control characters (0x00–0x1F) except tab.
+	sanitized := strings.Map(func(r rune) rune {
+		if r == '\t' {
+			return r
+		}
+		if r < 0x20 {
+			// Drop other control characters including CR and LF
+			return -1
+		}
+		return r
+	}, input)
+	return strings.TrimSpace(sanitized)
+}
+
 // validateEmail validates email address format.
 func validateEmail(email string) error {
 	_, err := mail.ParseAddress(email)
@@ -74,7 +91,7 @@ func (c *EmailClient) Send(to, subject, body string) error {
 
 	// Sanitize body content by removing any potential control characters
 	// Use text/plain instead of HTML to eliminate XSS risks entirely
-	sanitizedBody := sanitizeHeader(body)
+	sanitizedBody := sanitizeBody(body)
 
 	// Build MIME message using standard encoding methods
 	var msgBuf bytes.Buffer
