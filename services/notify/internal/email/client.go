@@ -2,8 +2,11 @@
 package email
 
 import (
+	"bytes"
 	"fmt"
 	"html"
+	"mime"
+	"mime/quotedprintable"
 	"net/mail"
 	"net/smtp"
 	"strings"
@@ -67,27 +70,53 @@ func (c *EmailClient) Send(to, subject, body string) error {
 	sanitizedTo := sanitizeHeader(to)
 	sanitizedSubject := sanitizeHeader(subject)
 
+	// Безопасное кодирование темы письма с помощью MIME Q-encoding
+	encodedSubject := mime.QEncoding.Encode("UTF-8", sanitizedSubject)
+
 	// HTML-экранирование тела письма для предотвращения XSS
-	// Пользователи могут отправлять HTML, но он должен быть безопасным
-	sanitizedBody := html.EscapeString(body)
+	// Пользовательский ввод рассматривается как текст и безопасно встраивается в HTML-шаблон
+	escapedBody := html.EscapeString(body)
+
+	// Формируем простой HTML-шаблон, в который вставляем только экранированный текст
+	htmlBody := "<html><body><pre style=\"white-space:pre-wrap;\">" + escapedBody + "</pre></body></html>"
+
+	// Сборка MIME-сообщения с использованием стандартных средств кодирования
+	var msgBuf bytes.Buffer
+
+	// Заголовки письма
+	headers := map[string]string{
+		"From":         c.from,
+		"To":           sanitizedTo,
+		"Subject":      encodedSubject,
+		"MIME-Version": "1.0",
+		"Content-Type": "text/html; charset=UTF-8",
+	}
+
+	for k, v := range headers {
+		// sanitizeHeader уже удалил CRLF, что предотвращает header injection
+		fmt.Fprintf(&msgBuf, "%s: %s\r\n", k, v)
+	}
+
+	// Пустая строка отделяет заголовки от тела
+	msgBuf.WriteString("\r\n")
+
+	// Кодируем тело в quoted-printable для безопасной передачи
+	qpWriter := quotedprintable.NewWriter(&msgBuf)
+	if _, err := qpWriter.Write([]byte(htmlBody)); err != nil {
+		return fmt.Errorf("failed to encode email body: %w", err)
+	}
+	if err := qpWriter.Close(); err != nil {
+		return fmt.Errorf("failed to finish encoding email body: %w", err)
+	}
 
 	auth := smtp.PlainAuth("", c.username, c.password, c.smtpHost)
-
-	// Формирование безопасного сообщения
-	msg := fmt.Sprintf("From: %s\r\n"+
-		"To: %s\r\n"+
-		"Subject: %s\r\n"+
-		"Content-Type: text/html; charset=UTF-8\r\n"+
-		"\r\n"+
-		"%s\r\n", c.from, sanitizedTo, sanitizedSubject, sanitizedBody)
-
 	addr := fmt.Sprintf("%s:%d", c.smtpHost, c.smtpPort)
 
 	c.logger.Debug("Sending email",
 		zap.String("to", sanitizedTo),
 		zap.String("subject", sanitizedSubject))
 
-	if err := smtp.SendMail(addr, auth, c.from, []string{sanitizedTo}, []byte(msg)); err != nil {
+	if err := smtp.SendMail(addr, auth, c.from, []string{sanitizedTo}, msgBuf.Bytes()); err != nil {
 		return fmt.Errorf("failed to send email: %w", err)
 	}
 
