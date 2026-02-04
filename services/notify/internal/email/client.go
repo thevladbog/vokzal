@@ -76,14 +76,22 @@ func validateEmail(email string) error {
 // Send sends an email to the specified address with protection against injection attacks.
 func (c *EmailClient) Send(to, subject, body string) error {
 	// Validate recipient email address
-	if err := validateEmail(to); err != nil {
+	toAddr, err := mail.ParseAddress(to)
+	if err != nil {
 		return fmt.Errorf("invalid recipient email address: %w", err)
 	}
 
 	// Validate sender email address
-	if err := validateEmail(c.from); err != nil {
+	fromAddr, err := mail.ParseAddress(c.from)
+	if err != nil {
 		return fmt.Errorf("invalid sender email address: %w", err)
 	}
+
+	// Extract bare mailbox addresses for SMTP envelope
+	// smtp.SendMail requires bare addresses (e.g., "user@example.com")
+	// not display-name format (e.g., "John Doe <user@example.com>")
+	bareToAddr := toAddr.Address
+	bareFromAddr := fromAddr.Address
 
 	// Sanitize headers to prevent header injection
 	sanitizedTo := sanitizeHeader(to)
@@ -134,7 +142,8 @@ func (c *EmailClient) Send(to, subject, body string) error {
 		zap.String("to", sanitizedTo),
 		zap.String("subject", sanitizedSubject))
 
-	if err := smtp.SendMail(addr, auth, c.from, []string{sanitizedTo}, msgBuf.Bytes()); err != nil {
+	// Use bare addresses for SMTP envelope (required by smtp.SendMail)
+	if err := smtp.SendMail(addr, auth, bareFromAddr, []string{bareToAddr}, msgBuf.Bytes()); err != nil {
 		return fmt.Errorf("failed to send email: %w", err)
 	}
 
