@@ -78,16 +78,15 @@ func (m *Manager) Verify(tokenString string) (*Claims, error) {
 	})
 
 	if err != nil {
+		if errors.Is(err, jwt.ErrTokenExpired) {
+			return nil, ErrExpiredToken
+		}
 		return nil, err
 	}
 
 	claims, ok := token.Claims.(*Claims)
 	if !ok || !token.Valid {
 		return nil, ErrInvalidToken
-	}
-
-	if claims.ExpiresAt != nil && claims.ExpiresAt.Before(time.Now()) {
-		return nil, ErrExpiredToken
 	}
 
 	return claims, nil

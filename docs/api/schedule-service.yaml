@@ -387,7 +387,7 @@ paths:
               type: object
               properties:
                 platform:
-                  type: string
+                  type: integer
                 bus_id:
                   type: string
                   format: uuid
@@ -397,6 +397,10 @@ paths:
       responses:
         '200':
           description: Рейс обновлен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Trip'
 
   /v1/trips/{id}/status:
     patch:
@@ -516,6 +520,12 @@ paths:
       responses:
         '200':
           description: Список автобусов
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Bus'
     post:
       tags:
         - Buses
@@ -527,26 +537,14 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              required: [plate_number, model, capacity, station_id]
-              properties:
-                plate_number:
-                  type: string
-                  maxLength: 20
-                  description: Госномер (до 20 символов для международных форматов)
-                model:
-                  type: string
-                capacity:
-                  type: integer
-                station_id:
-                  type: string
-                  format: uuid
-                status:
-                  type: string
-                  enum: [active, maintenance, out_of_service]
+              $ref: '#/components/schemas/CreateBusRequest'
       responses:
         '201':
           description: Автобус создан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Bus'
 
   /v1/buses/{id}:
     get:
@@ -625,6 +623,12 @@ paths:
       responses:
         '200':
           description: Список водителей
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Driver'
     post:
       tags:
         - Drivers
@@ -636,23 +640,14 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              required: [full_name, license_number, station_id]
-              properties:
-                full_name:
-                  type: string
-                license_number:
-                  type: string
-                experience_years:
-                  type: integer
-                phone:
-                  type: string
-                station_id:
-                  type: string
-                  format: uuid
+              $ref: '#/components/schemas/CreateDriverRequest'
       responses:
         '201':
           description: Водитель создан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Driver'
 
   /v1/drivers/{id}:
     get:
@@ -1081,6 +1076,26 @@ components:
           type: string
           format: date-time
 
+    CreateBusRequest:
+      type: object
+      required: [plate_number, model, capacity, station_id]
+      properties:
+        plate_number:
+          type: string
+          maxLength: 20
+          description: Госномер (до 20 символов для международных форматов)
+        model:
+          type: string
+        capacity:
+          type: integer
+          minimum: 1
+        station_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [active, maintenance, out_of_service]
+
     UpdateBusRequest:
       type: object
       properties:
@@ -1121,6 +1136,22 @@ components:
         updated_at:
           type: string
           format: date-time
+
+    CreateDriverRequest:
+      type: object
+      required: [full_name, license_number, station_id]
+      properties:
+        full_name:
+          type: string
+        license_number:
+          type: string
+        experience_years:
+          type: integer
+        phone:
+          type: string
+        station_id:
+          type: string
+          format: uuid
 
     UpdateDriverRequest:
       type: object
