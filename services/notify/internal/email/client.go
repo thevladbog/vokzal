@@ -50,7 +50,7 @@ func sanitizeHeader(input string) string {
 // sanitizeBody removes dangerous control characters from the email body while
 // preserving legitimate line breaks. This allows multi-line email bodies.
 func sanitizeBody(input string) string {
-	// Map over runes and drop dangerous ASCII control characters (0x00–0x1F)
+	// First, drop dangerous ASCII control characters (0x00–0x1F)
 	// but explicitly allow newline (\n), carriage return (\r), and tab (\t).
 	sanitized := strings.Map(func(r rune) rune {
 		// Allow newline, carriage return, and tab
@@ -63,6 +63,17 @@ func sanitizeBody(input string) string {
 		}
 		return r
 	}, input)
+
+	// Normalize line endings to a single '\n' to avoid issues with mixed CR/LF.
+	// We still keep newlines, but we avoid ambiguous representations.
+	sanitized = strings.ReplaceAll(sanitized, "\r\n", "\n")
+	sanitized = strings.ReplaceAll(sanitized, "\r", "\n")
+
+	// Neutralize any HTML-like markup to reduce the risk of it being rendered as active content
+	// in lenient email clients: show it literally instead.
+	sanitized = strings.ReplaceAll(sanitized, "<", "&lt;")
+	sanitized = strings.ReplaceAll(sanitized, ">", "&gt;")
+
 	// Don't use TrimSpace as it would remove legitimate trailing newlines
 	return sanitized
 }
