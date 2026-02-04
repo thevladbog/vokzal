@@ -126,17 +126,15 @@ func main() {
 		})
 	})
 
-	v1 := router.Group("/v1")
-	payments := v1.Group("/payments")
-	payments.POST("/tinkoff/init", paymentHandler.InitTinkoff)
-	payments.POST("/sbp/init", paymentHandler.InitSBP)
-	payments.POST("/cash/init", paymentHandler.InitCash)
-	payments.GET("/:id", paymentHandler.GetPayment)
-	payments.GET("/:id/status", paymentHandler.CheckStatus)
-	payments.GET("", paymentHandler.GetPaymentsByTicket)
-	payments.GET("/list", paymentHandler.ListPayments)
-	webhooks := v1.Group("/webhooks")
-	webhooks.POST("/tinkoff", paymentHandler.TinkoffWebhook)
+	// Traefik strips /v1/payment prefix, service receives /, /:id, /tinkoff/init, etc.
+	router.POST("/tinkoff/init", paymentHandler.InitTinkoff)
+	router.POST("/sbp/init", paymentHandler.InitSBP)
+	router.POST("/cash/init", paymentHandler.InitCash)
+	router.GET("/list", paymentHandler.ListPayments)
+	router.GET("", paymentHandler.GetPaymentsByTicket)
+	router.GET("/:id", paymentHandler.GetPayment)
+	router.GET("/:id/status", paymentHandler.CheckStatus)
+	router.POST("/webhooks/tinkoff", paymentHandler.TinkoffWebhook)
 
 	// Создать HTTP сервер
 	srv := &http.Server{

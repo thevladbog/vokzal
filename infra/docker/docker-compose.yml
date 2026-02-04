@@ -11,7 +11,7 @@ services:
       POSTGRES_PASSWORD: vokzal_secret_2026
       POSTGRES_INITDB_ARGS: "-E UTF8 --locale=ru_RU.UTF-8"
     ports:
-      - "5432:5432"
+      - "5440:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
       - ./init-scripts:/docker-entrypoint-initdb.d
@@ -80,18 +80,19 @@ services:
 
   # Traefik - API Gateway
   traefik:
-    image: traefik:v3.0
+    image: traefik:v3.6.7
     container_name: vokzal-traefik
     command:
       - "--configFile=/etc/traefik/traefik.toml"
     ports:
-      - "80:80"      # HTTP
-      - "443:443"    # HTTPS
-      - "8080:8080"  # Dashboard
-      - "8082:8082"  # Metrics
+      - "8000:80"    # HTTP (mapped to 8000)
+      - "8443:443"   # HTTPS
+      - "8100:8080"  # Dashboard (moved to avoid conflict)
+      - "8101:8082"  # Metrics (moved to avoid conflict)
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      - ./traefik:/etc/traefik
+      - ./traefik/traefik.toml:/etc/traefik/traefik.toml
+      - ./traefik/config:/etc/traefik/config
       - traefik-certs:/letsencrypt
       - traefik-logs:/var/log/traefik
     networks:

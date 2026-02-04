@@ -109,15 +109,22 @@ func main() {
 		})
 	})
 
-	v1 := router.Group("/v1")
-	receipts := v1.Group("/receipts")
-	receipts.GET("/:id", fiscalHandler.GetReceipt)
+	// Traefik strips /v1 prefix, service receives /receipts/*, /z-reports/*, /kkt/*
+
+	// Receipts routes
+	receipts := router.Group("/receipts")
 	receipts.GET("", fiscalHandler.GetReceiptsByTicket)
-	reports := v1.Group("/z-reports")
+	receipts.GET("/:id", fiscalHandler.GetReceipt)
+
+	// Z-reports routes
+	reports := router.Group("/z-reports")
 	reports.POST("", fiscalHandler.CreateZReport)
 	reports.GET("", fiscalHandler.ListZReports)
 	reports.GET("/date", fiscalHandler.GetZReport)
-	v1.GET("/kkt/status", fiscalHandler.GetKKTStatus)
+
+	// KKT routes
+	kkt := router.Group("/kkt")
+	kkt.GET("/status", fiscalHandler.GetKKTStatus)
 
 	// Создать HTTP сервер
 	srv := &http.Server{

@@ -78,11 +78,10 @@ func main() {
 		})
 	})
 
-	v1 := router.Group("/v1")
-	geo := v1.Group("/geo")
-	geo.GET("/geocode", geoHandler.Geocode)
-	geo.GET("/reverse", geoHandler.ReverseGeocode)
-	geo.GET("/distance", geoHandler.GetDistance)
+	// Traefik strips /v1/geo prefix, service receives /geocode, /reverse, /distance
+	router.GET("/geocode", geoHandler.Geocode)
+	router.GET("/reverse", geoHandler.ReverseGeocode)
+	router.GET("/distance", geoHandler.GetDistance)
 
 	srv := &http.Server{
 		Addr:         ":" + cfg.Server.Port,

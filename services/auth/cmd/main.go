@@ -113,16 +113,14 @@ func main() {
 		})
 	})
 
-	// API routes
-	v1 := router.Group("/v1")
-	auth := v1.Group("/auth")
-	auth.POST("/login", authHandler.Login)
-	auth.POST("/refresh", authHandler.Refresh)
-	auth.POST("/logout", authHandler.Logout)
-	auth.GET("/me", authMiddleware.RequireAuth(), authHandler.Me)
+	// API routes (Traefik strips /v1/auth prefix, so we define routes without it)
+	router.POST("/login", authHandler.Login)
+	router.POST("/refresh", authHandler.Refresh)
+	router.POST("/logout", authHandler.Logout)
+	router.GET("/me", authMiddleware.RequireAuth(), authHandler.Me)
 
-	// Users CRUD (admin only)
-	users := v1.Group("/users")
+	// Users CRUD (admin only) - Traefik strips /v1/users, so routes are at root
+	users := router.Group("/")
 	users.Use(authMiddleware.RequireAuth(), authMiddleware.RequireRole("admin"))
 	users.GET("", authHandler.ListUsers)
 	users.POST("", authHandler.CreateUser)
