@@ -71,6 +71,8 @@ jobs:
   build-and-publish:
     name: Build & Publish Docker Images
     needs: create-release
+    # Временно отключено — публикация образов сервисов ещё не настроена
+    if: false
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -101,7 +103,7 @@ jobs:
 
   notify-release:
     name: Notify Release
-    needs: [create-release, build-and-publish]
+    needs: [create-release]
     runs-on: ubuntu-latest
     
     steps:
@@ -113,5 +115,4 @@ jobs:
           message: |
             🎉 New Release: Вокзал.ТЕХ ${{ needs.create-release.outputs.version }}
             
-            📦 All services have been built and published to Docker Hub
             🔗 Release notes: https://github.com/${{ github.repository }}/releases/tag/${{ needs.create-release.outputs.version }}

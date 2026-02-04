@@ -35,6 +35,8 @@ type BusRepository interface {
 }
 
 // DriverRepository — интерфейс репозитория водителей.
+//
+//nolint:dupl // CRUD interface shape is intentionally the same across repositories
 type DriverRepository interface {
 	Create(ctx context.Context, driver *models.Driver) error
 	FindByID(ctx context.Context, id string) (*models.Driver, error)
@@ -53,6 +55,8 @@ type StationRepository interface {
 }
 
 // RouteRepository — интерфейс репозитория маршрутов.
+//
+//nolint:dupl // CRUD interface shape is intentionally the same across repositories
 type RouteRepository interface {
 	Create(ctx context.Context, route *models.Route) error
 	FindByID(ctx context.Context, id string) (*models.Route, error)
@@ -139,6 +143,7 @@ func (r *stationRepository) Create(ctx context.Context, station *models.Station)
 	return r.db.WithContext(ctx).Create(station).Error
 }
 
+//nolint:dupl // FindByID pattern is the same across repositories; only model and error differ
 func (r *stationRepository) FindByID(ctx context.Context, id string) (*models.Station, error) {
 	var station models.Station
 	if err := r.db.WithContext(ctx).First(&station, "id = ?", id).Error; err != nil {
@@ -182,6 +187,7 @@ func (r *routeRepository) Create(ctx context.Context, route *models.Route) error
 	return r.db.WithContext(ctx).Create(route).Error
 }
 
+//nolint:dupl // FindByID pattern is the same across repositories; only model and error differ
 func (r *routeRepository) FindByID(ctx context.Context, id string) (*models.Route, error) {
 	var route models.Route
 	if err := r.db.WithContext(ctx).First(&route, "id = ?", id).Error; err != nil {
@@ -225,6 +231,7 @@ func (r *scheduleRepository) Create(ctx context.Context, schedule *models.Schedu
 	return r.db.WithContext(ctx).Create(schedule).Error
 }
 
+//nolint:dupl // FindByID with Preload is the same for Schedule and Trip; only model and error differ
 func (r *scheduleRepository) FindByID(ctx context.Context, id string) (*models.Schedule, error) {
 	var schedule models.Schedule
 	if err := r.db.WithContext(ctx).Preload("Route").First(&schedule, "id = ?", id).Error; err != nil {
@@ -264,6 +271,7 @@ func (r *tripRepository) Create(ctx context.Context, trip *models.Trip) error {
 	return r.db.WithContext(ctx).Create(trip).Error
 }
 
+//nolint:dupl // FindByID with Preload is the same for Schedule and Trip; only model and error differ
 func (r *tripRepository) FindByID(ctx context.Context, id string) (*models.Trip, error) {
 	var trip models.Trip
 	if err := r.db.WithContext(ctx).Preload("Schedule.Route").First(&trip, "id = ?", id).Error; err != nil {
@@ -314,6 +322,7 @@ func (r *busRepository) Create(ctx context.Context, bus *models.Bus) error {
 	return r.db.WithContext(ctx).Create(bus).Error
 }
 
+//nolint:dupl // FindByID pattern is the same across repositories; only model and error differ
 func (r *busRepository) FindByID(ctx context.Context, id string) (*models.Bus, error) {
 	var bus models.Bus
 	if err := r.db.WithContext(ctx).First(&bus, "id = ?", id).Error; err != nil {
@@ -360,6 +369,7 @@ func (r *driverRepository) Create(ctx context.Context, driver *models.Driver) er
 	return r.db.WithContext(ctx).Create(driver).Error
 }
 
+//nolint:dupl // FindByID pattern is the same across repositories; only model and error differ
 func (r *driverRepository) FindByID(ctx context.Context, id string) (*models.Driver, error) {
 	var driver models.Driver
 	if err := r.db.WithContext(ctx).First(&driver, "id = ?", id).Error; err != nil {

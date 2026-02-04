@@ -4,7 +4,9 @@
 package handlers
 
 import (
+	"errors"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -12,6 +14,17 @@ import (
 
 	"github.com/vokzal-tech/schedule-service/internal/service"
 )
+
+// allowedBusStatuses — допустимые значения статуса автобуса (CreateBusRequest, UpdateBusRequest).
+var allowedBusStatuses = map[string]bool{
+	"active":         true,
+	"maintenance":    true,
+	"out_of_service": true,
+}
+
+func isValidBusStatus(status string) bool {
+	return allowedBusStatuses[strings.TrimSpace(status)]
+}
 
 // ScheduleHandler — обработчик HTTP-запросов для маршрутов, расписаний и рейсов.
 type ScheduleHandler struct {
@@ -363,6 +376,10 @@ func (h *ScheduleHandler) UpdateTrip(c *gin.Context) {
 	}
 	trip, err := h.svc.UpdateTrip(c.Request.Context(), id, &req)
 	if err != nil {
+		if errors.Is(err, service.ErrTripNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Trip not found"})
+			return
+		}
 		h.logger.Error("Failed to update trip", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update trip"})
 		return
@@ -377,8 +394,26 @@ func (h *ScheduleHandler) CreateBus(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+	if req.Status != "" && !isValidBusStatus(req.Status) {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "invalid status: must be one of active, maintenance, out_of_service",
+		})
+		return
+	}
+	if req.Capacity < 1 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "capacity: must be at least 1"})
+		return
+	}
 	bus, err := h.svc.CreateBus(c.Request.Context(), &req)
 	if err != nil {
+		if errors.Is(err, service.ErrStationNotFound) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "station_id: station not found"})
+			return
+		}
+		if errors.Is(err, service.ErrInvalidCapacity) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "capacity: must be at least 1"})
+			return
+		}
 		h.logger.Error("Failed to create bus", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create bus"})
 		return
@@ -401,6 +436,12 @@ func (h *ScheduleHandler) GetBus(c *gin.Context) {
 func (h *ScheduleHandler) ListBuses(c *gin.Context) {
 	stationID := c.Query("station_id")
 	status := c.Query("status")
+	if status != "" && !isValidBusStatus(status) {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "invalid status: must be one of active, maintenance, out_of_service",
+		})
+		return
+	}
 	var sid, st *string
 	if stationID != "" {
 		sid = &stationID
@@ -425,8 +466,26 @@ func (h *ScheduleHandler) UpdateBus(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+	if req.Status != nil && !isValidBusStatus(*req.Status) {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "invalid status: must be one of active, maintenance, out_of_service",
+		})
+		return
+	}
+	if req.Capacity != nil && *req.Capacity < 1 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "capacity: must be at least 1"})
+		return
+	}
 	bus, err := h.svc.UpdateBus(c.Request.Context(), id, &req)
 	if err != nil {
+		if errors.Is(err, service.ErrBusNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Bus not found"})
+			return
+		}
+		if errors.Is(err, service.ErrInvalidCapacity) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "capacity: must be at least 1"})
+			return
+		}
 		h.logger.Error("Failed to update bus", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update bus"})
 		return
@@ -438,6 +497,10 @@ func (h *ScheduleHandler) UpdateBus(c *gin.Context) {
 func (h *ScheduleHandler) DeleteBus(c *gin.Context) {
 	id := c.Param("id")
 	if err := h.svc.DeleteBus(c.Request.Context(), id); err != nil {
+		if errors.Is(err, service.ErrBusNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Bus not found"})
+			return
+		}
 		h.logger.Error("Failed to delete bus", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete bus"})
 		return
@@ -454,6 +517,10 @@ func (h *ScheduleHandler) CreateDriver(c *gin.Context) {
 	}
 	driver, err := h.svc.CreateDriver(c.Request.Context(), &req)
 	if err != nil {
+		if errors.Is(err, service.ErrStationNotFound) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "station_id: station not found"})
+			return
+		}
 		h.logger.Error("Failed to create driver", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create driver"})
 		return
@@ -498,6 +565,10 @@ func (h *ScheduleHandler) UpdateDriver(c *gin.Context) {
 	}
 	driver, err := h.svc.UpdateDriver(c.Request.Context(), id, &req)
 	if err != nil {
+		if errors.Is(err, service.ErrDriverNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Driver not found"})
+			return
+		}
 		h.logger.Error("Failed to update driver", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update driver"})
 		return
@@ -509,6 +580,10 @@ func (h *ScheduleHandler) UpdateDriver(c *gin.Context) {
 func (h *ScheduleHandler) DeleteDriver(c *gin.Context) {
 	id := c.Param("id")
 	if err := h.svc.DeleteDriver(c.Request.Context(), id); err != nil {
+		if errors.Is(err, service.ErrDriverNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Driver not found"})
+			return
+		}
 		h.logger.Error("Failed to delete driver", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete driver"})
 		return
@@ -518,10 +593,16 @@ func (h *ScheduleHandler) DeleteDriver(c *gin.Context) {
 
 // GetDashboardStats возвращает статистику рейсов за дату для дашборда.
 func (h *ScheduleHandler) GetDashboardStats(c *gin.Context) {
-	date := c.Query("date")
-	if date == "" {
-		date = time.Now().Format("2006-01-02")
+	dateStr := c.Query("date")
+	if dateStr == "" {
+		dateStr = time.Now().Format("2006-01-02")
 	}
+	parsed, err := parseDate(dateStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid date format (use YYYY-MM-DD)"})
+		return
+	}
+	date := parsed.Format("2006-01-02")
 	stats, err := h.svc.GetDashboardStats(c.Request.Context(), date)
 	if err != nil {
 		h.logger.Error("Failed to get dashboard stats", zap.Error(err))

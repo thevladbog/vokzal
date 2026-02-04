@@ -19,11 +19,11 @@ traefik/
 Все микросервисы доступны через `api.vokzal.tech`:
 
 ```
-http://api.vokzal.tech/v1/auth/*       → Auth Service (8080)
-http://api.vokzal.tech/v1/schedule/*   → Schedule Service (8081)
-http://api.vokzal.tech/v1/tickets/*    → Ticket Service (8082)
-http://api.vokzal.tech/v1/receipts/*   → Fiscal Service (8083)
-http://api.vokzal.tech/v1/payment/*    → Payment Service (8084)
+http://api.vokzal.tech/v1/auth/*       → Auth Service (8081)
+http://api.vokzal.tech/v1/schedule/*   → Schedule Service (8082)
+http://api.vokzal.tech/v1/tickets/*    → Ticket Service (8083)
+http://api.vokzal.tech/v1/receipts/*   → Fiscal Service (8084)
+http://api.vokzal.tech/v1/payment/*    → Payment Service (8085)
 http://api.vokzal.tech/v1/board/*      → Board Service (8086)
 http://api.vokzal.tech/v1/notify/*     → Notify Service (8087)
 http://api.vokzal.tech/v1/audit/*      → Audit Service (8088)

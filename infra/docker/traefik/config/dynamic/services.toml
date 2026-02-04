@@ -14,9 +14,9 @@
       middlewares = ["cors-headers"]
       entryPoints = ["web", "websecure"]
     
-    # Ticket Service
+    # Ticket Service: /v1/ticket/ (stats only; trailing slash avoids matching /v1/tickets), /v1/tickets, /v1/boarding
     [http.routers.ticket]
-      rule = "Host(`api.vokzal.tech`) && PathPrefix(`/v1/tickets`, `/v1/boarding`, `/v1/ticket`)"
+      rule = "Host(`api.vokzal.tech`) && PathPrefix(`/v1/ticket/`, `/v1/tickets`, `/v1/boarding`)"
       service = "ticket-service"
       middlewares = ["cors-headers"]
       entryPoints = ["web", "websecure"]
@@ -71,30 +71,30 @@
       entryPoints = ["web", "websecure"]
 
   [http.services]
-    # Auth Service (port 8080)
+    # Auth Service (port 8081)
     [http.services.auth-service.loadBalancer]
       [[http.services.auth-service.loadBalancer.servers]]
-        url = "http://auth:8080"
+        url = "http://auth:8081"
     
-    # Schedule Service (port 8081)
+    # Schedule Service (port 8082)
     [http.services.schedule-service.loadBalancer]
       [[http.services.schedule-service.loadBalancer.servers]]
-        url = "http://schedule:8081"
+        url = "http://schedule:8082"
     
-    # Ticket Service (port 8082)
+    # Ticket Service (port 8083)
     [http.services.ticket-service.loadBalancer]
       [[http.services.ticket-service.loadBalancer.servers]]
-        url = "http://ticket:8082"
+        url = "http://ticket:8083"
     
-    # Fiscal Service (port 8083)
+    # Fiscal Service (port 8084)
     [http.services.fiscal-service.loadBalancer]
       [[http.services.fiscal-service.loadBalancer.servers]]
-        url = "http://fiscal:8083"
+        url = "http://fiscal:8084"
     
-    # Payment Service (port 8084)
+    # Payment Service (port 8085)
     [http.services.payment-service.loadBalancer]
       [[http.services.payment-service.loadBalancer.servers]]
-        url = "http://payment:8084"
+        url = "http://payment:8085"
     
     # Board Service (port 8086)
     [http.services.board-service.loadBalancer]

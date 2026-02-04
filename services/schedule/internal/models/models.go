@@ -112,29 +112,31 @@ type Stop struct {
 }
 
 // Bus — модель автобуса.
+// Поля сгруппированы по типу для выравнивания (string, int, time.Time); ID первым для читаемости.
 //
-//nolint:govet // fieldalignment: field order kept for GORM/JSON readability
+//nolint:govet // fieldalignment: explicit grouping preferred for readability
 type Bus struct {
-	Capacity    int       `gorm:"type:integer;not null" json:"capacity"`
 	ID          string    `gorm:"type:uuid;primary_key" json:"id"`
-	PlateNumber string    `gorm:"type:varchar(12);uniqueIndex;not null" json:"plate_number"`
+	PlateNumber string    `gorm:"type:varchar(20);uniqueIndex;not null" json:"plate_number"`
 	Model       string    `gorm:"type:varchar(50);not null" json:"model"`
 	Status      string    `gorm:"type:varchar(20);default:'active'" json:"status"`
 	StationID   string    `gorm:"type:uuid;not null;index" json:"station_id"`
+	Capacity    int       `gorm:"type:integer;not null" json:"capacity"`
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
 }
 
 // Driver — модель водителя.
+// Поля сгруппированы по типу для выравнивания (string, pointers, time.Time); ID первым для читаемости.
 //
-//nolint:govet // fieldalignment: field order kept for GORM/JSON readability
+//nolint:govet // fieldalignment: explicit grouping preferred for readability
 type Driver struct {
-	ExperienceYears *int      `gorm:"type:integer" json:"experience_years,omitempty"`
-	Phone           *string   `gorm:"type:varchar(15)" json:"phone,omitempty"`
 	ID              string    `gorm:"type:uuid;primary_key" json:"id"`
 	FullName        string    `gorm:"type:varchar(100);not null" json:"full_name"`
 	LicenseNumber   string    `gorm:"type:varchar(20);uniqueIndex;not null" json:"license_number"`
 	StationID       string    `gorm:"type:uuid;not null;index" json:"station_id"`
+	ExperienceYears *int      `gorm:"type:integer" json:"experience_years,omitempty"`
+	Phone           *string   `gorm:"type:varchar(15)" json:"phone,omitempty"`
 	CreatedAt       time.Time `json:"created_at"`
 	UpdatedAt       time.Time `json:"updated_at"`
 }

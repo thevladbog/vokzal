@@ -129,6 +129,7 @@
     "status": "Status",
     "delay": "Delay",
     "platform": "Platform",
+    "platformPlaceholder": "e.g. 1",
     "loading": "Loading trips...",
     "loadError": "Failed to load trips",
     "noTrips": "No trips on selected date",
@@ -141,6 +142,7 @@
     "status_delayed": "Delayed",
     "status_cancelled": "Cancelled",
     "delayMinutes": "{{count}} min",
+    "delayInvalid": "Enter a whole number 0 or greater (delay in minutes)",
     "bus": "Bus",
     "driver": "Driver"
   },

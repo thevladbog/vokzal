@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -61,6 +61,7 @@ export const SchedulesPage: React.FC = () => {
   const styles = useStyles();
   const queryClient = useQueryClient();
   const [routeFilter, setRouteFilter] = useState<string>('');
+  const hasInitializedRoute = useRef(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [editSchedule, setEditSchedule] = useState<Schedule | null>(null);
   const [createRouteId, setCreateRouteId] = useState('');
@@ -205,14 +206,18 @@ export const SchedulesPage: React.FC = () => {
     });
   };
 
+  // Set first route only on initial load when routes become available; do not overwrite on refetch.
   useEffect(() => {
-    if (!routeFilter && routes.length > 0) {
-      setRouteFilter(routes[0].id);
-    }
-  }, [routes, routeFilter]);
+    if (hasInitializedRoute.current || routes.length === 0) return;
+    setRouteFilter(routes[0].id);
+    hasInitializedRoute.current = true;
+  }, [routes]);
+
+  const isGenerateRangeInvalid = generateFromDate > generateToDate;
 
   const handleGenerateSubmit = () => {
     if (!generateScheduleId || !generateFromDate || !generateToDate) return;
+    if (isGenerateRangeInvalid) return;
     generateMutation.mutate({
       scheduleId: generateScheduleId,
       fromDate: generateFromDate,
@@ -311,7 +316,7 @@ export const SchedulesPage: React.FC = () => {
                     appearance="primary"
                     onClick={handleGenerateSubmit}
                     disabled={
-                      !generateScheduleId || !generateFromDate || !generateToDate || generateMutation.isPending
+                      !generateScheduleId || !generateFromDate || !generateToDate || isGenerateRangeInvalid || generateMutation.isPending
                     }
                   >
                     {generateMutation.isPending ? t('schedules.creating') : t('schedules.generateTrips')}

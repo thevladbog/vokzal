@@ -165,7 +165,7 @@ export const DriversPage: React.FC = () => {
                     min={0}
                     value={String(createExperience)}
                     onChange={(_, v) =>
-                      setCreateExperience(v.value === '' ? '' : parseInt(v.value, 10) || 0)
+                      setCreateExperience(v.value === '' ? '' : Math.max(0, parseInt(v.value, 10) || 0))
                     }
                   />
                 </div>
@@ -296,7 +296,7 @@ export const DriversPage: React.FC = () => {
                       min={0}
                       value={String(editExperience)}
                       onChange={(_, v) =>
-                        setEditExperience(v.value === '' ? '' : parseInt(v.value, 10) || 0)
+                        setEditExperience(v.value === '' ? '' : Math.max(0, parseInt(v.value, 10) || 0))
                       }
                     />
                   </div>

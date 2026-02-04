@@ -17,7 +17,6 @@ import {
   Label,
   Button,
   Dialog,
-  DialogTrigger,
   DialogSurface,
   DialogTitle,
   DialogBody,
@@ -31,7 +30,7 @@ import { scheduleService } from '@/services/schedule';
 import type { Trip, Bus, Driver } from '@/types';
 import { formatDate } from '@/utils/format';
 
-const TRIP_STATUSES = ['scheduled', 'delayed', 'cancelled', 'departed', 'arrived'] as const;
+const TRIP_STATUSES = ['scheduled', 'boarding', 'delayed', 'cancelled', 'departed', 'arrived'] as const;
 
 const useStyles = makeStyles({
   container: { padding: '24px' },
@@ -47,22 +46,23 @@ export const TripsPage: React.FC = () => {
   const queryClient = useQueryClient();
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [editTrip, setEditTrip] = useState<Trip | null>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editStatus, setEditStatus] = useState<string>('');
-  const [editDelay, setEditDelay] = useState<number>(0);
+  const [editDelayInput, setEditDelayInput] = useState<string>('0');
+  const [editDelayError, setEditDelayError] = useState<string>('');
   const [editPlatform, setEditPlatform] = useState('');
   const [editBusId, setEditBusId] = useState('');
   const [editDriverId, setEditDriverId] = useState('');
 
+  // Fetched on page load so edit dialog Selects have data ready when opened.
   const { data: buses = [] } = useQuery<Bus[]>({
     queryKey: ['buses'],
     queryFn: () => scheduleService.getBuses({}),
-    enabled: !!editTrip,
   });
 
   const { data: drivers = [] } = useQuery<Driver[]>({
     queryKey: ['drivers'],
     queryFn: () => scheduleService.getDrivers({}),
-    enabled: !!editTrip,
   });
 
   const getStatusLabel = (status: string): string => {
@@ -75,49 +75,97 @@ export const TripsPage: React.FC = () => {
     queryFn: () => scheduleService.getTrips({ date }),
   });
 
+  // Two API calls (status/delay then platform/bus/driver); on second failure we rollback the first.
   const updateTripMutation = useMutation({
     mutationFn: async (payload: {
       id: string;
       status: string;
       delay_minutes: number;
       platform?: string;
-      bus_id?: string;
-      driver_id?: string;
+      bus_id?: string | null;
+      driver_id?: string | null;
+      previous_status: string;
+      previous_delay_minutes: number;
     }) => {
       await scheduleService.updateTripStatus(payload.id, {
         status: payload.status,
         delay_minutes: payload.delay_minutes,
       });
-      await scheduleService.updateTrip(payload.id, {
-        platform: payload.platform || undefined,
-        bus_id: payload.bus_id || undefined,
-        driver_id: payload.driver_id || undefined,
-      });
+      try {
+        await scheduleService.updateTrip(payload.id, {
+          platform: payload.platform || undefined,
+          bus_id: payload.bus_id ?? undefined,
+          driver_id: payload.driver_id ?? undefined,
+        });
+      } catch (err) {
+        // Compensating rollback: restore original status/delay so trip state stays consistent.
+        await scheduleService.updateTripStatus(payload.id, {
+          status: payload.previous_status,
+          delay_minutes: payload.previous_delay_minutes,
+        }).catch(() => {});
+        throw err;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['trips'] });
+      setEditDialogOpen(false);
       setEditTrip(null);
     },
   });
 
+  const parseDelay = (raw: string): { valid: boolean; value: number } => {
+    const trimmed = raw.trim();
+    if (trimmed === '') return { valid: true, value: 0 };
+    const n = parseInt(trimmed, 10);
+    if (Number.isNaN(n) || n < 0 || !/^\d+$/.test(trimmed)) {
+      return { valid: false, value: 0 };
+    }
+    return { valid: true, value: n };
+  };
+
   const openEdit = (trip: Trip) => {
+    const delay = trip.delay_minutes ?? 0;
     setEditTrip(trip);
     setEditStatus(trip.status);
-    setEditDelay(trip.delay_minutes ?? 0);
+    setEditDelayInput(String(delay));
+    setEditDelayError('');
     setEditPlatform(trip.platform ?? '');
     setEditBusId(trip.bus_id ?? '');
     setEditDriverId(trip.driver_id ?? '');
+    setEditDialogOpen(true);
+  };
+
+  const closeEditDialog = () => {
+    setEditDialogOpen(false);
+    setEditTrip(null);
+  };
+
+  const handleDelayChange = (value: string) => {
+    setEditDelayInput(value);
+    const { valid } = parseDelay(value);
+    if (valid) {
+      setEditDelayError('');
+    } else {
+      setEditDelayError(t('trips.delayInvalid'));
+    }
   };
 
   const handleEditSubmit = () => {
     if (!editTrip) return;
+    const { valid, value: delayMinutes } = parseDelay(editDelayInput);
+    if (!valid) {
+      setEditDelayError(t('trips.delayInvalid'));
+      return;
+    }
     updateTripMutation.mutate({
       id: editTrip.id,
       status: editStatus,
-      delay_minutes: editDelay,
+      delay_minutes: delayMinutes,
       platform: editPlatform.trim() || undefined,
-      bus_id: editBusId || undefined,
-      driver_id: editDriverId || undefined,
+      bus_id: editBusId === '' ? null : editBusId,
+      driver_id: editDriverId === '' ? null : editDriverId,
+      previous_status: editTrip.status,
+      previous_delay_minutes: editTrip.delay_minutes ?? 0,
     });
   };
 
@@ -180,109 +228,12 @@ export const TripsPage: React.FC = () => {
                 </TableCell>
                 <TableCell>{trip.platform ?? '—'}</TableCell>
                 <TableCell>
-                  <Dialog
-                    open={editTrip?.id === trip.id}
-                    onOpenChange={(_, v) => (!v.open && setEditTrip(null))}
-                  >
-                    <DialogTrigger disableButtonEnhancement>
-                      <Button
-                        appearance="subtle"
-                        icon={<Edit24Regular />}
-                        aria-label={t('common.edit')}
-                        onClick={() => openEdit(trip)}
-                      />
-                    </DialogTrigger>
-                    <DialogSurface>
-                      <DialogBody>
-                        <DialogTitle>
-                          {t('trips.editTrip')}
-                        </DialogTitle>
-                        <DialogContent>
-                          <div className={styles.formRow}>
-                            <Label>{t('trips.status')}</Label>
-                            <Select
-                              value={editStatus}
-                              onChange={(_, data) => setEditStatus(data.value ?? '')}
-                              style={{ width: '100%' }}
-                            >
-                              {TRIP_STATUSES.map((s) => (
-                                <Option key={s} value={s} text={getStatusLabel(s)}>
-                                  {getStatusLabel(s)}
-                                </Option>
-                              ))}
-                            </Select>
-                          </div>
-                          <div className={styles.formRow}>
-                            <Label htmlFor="edit-delay">
-                              {t('trips.delay')} ({t('trips.minutes')})
-                            </Label>
-                            <Input
-                              id="edit-delay"
-                              type="number"
-                              min={0}
-                              value={String(editDelay)}
-                              onChange={(_, v) => setEditDelay(Math.max(0, parseInt(v.value, 10) || 0))}
-                            />
-                          </div>
-                          <div className={styles.formRow}>
-                            <Label htmlFor="edit-platform">{t('trips.platform')}</Label>
-                            <Input
-                              id="edit-platform"
-                              value={editPlatform}
-                              onChange={(_, v) => setEditPlatform(v.value)}
-                              placeholder="1"
-                            />
-                          </div>
-                          <div className={styles.formRow}>
-                            <Label>{t('trips.bus')}</Label>
-                            <Select
-                              value={editBusId}
-                              onChange={(_, d) => setEditBusId(d.value ?? '')}
-                              style={{ width: '100%' }}
-                            >
-                              <Option value="" text="—">—</Option>
-                              {buses.map((b) => (
-                                <Option key={b.id} value={b.id} text={`${b.plate_number} (${b.model})`}>
-                                  {b.plate_number} ({b.model})
-                                </Option>
-                              ))}
-                            </Select>
-                          </div>
-                          <div className={styles.formRow}>
-                            <Label>{t('trips.driver')}</Label>
-                            <Select
-                              value={editDriverId}
-                              onChange={(_, d) => setEditDriverId(d.value ?? '')}
-                              style={{ width: '100%' }}
-                            >
-                              <Option value="" text="—">—</Option>
-                              {drivers.map((d) => (
-                                <Option key={d.id} value={d.id} text={`${d.full_name} (${d.license_number})`}>
-                                  {d.full_name} ({d.license_number})
-                                </Option>
-                              ))}
-                            </Select>
-                          </div>
-                        </DialogContent>
-                        <DialogActions>
-                          <DialogTrigger disableButtonEnhancement>
-                            <Button appearance="secondary">
-                              {t('common.cancel')}
-                            </Button>
-                          </DialogTrigger>
-                          <Button
-                            appearance="primary"
-                            onClick={handleEditSubmit}
-                            disabled={updateTripMutation.isPending}
-                          >
-                            {updateTripMutation.isPending
-                              ? t('common.saving')
-                              : t('common.save')}
-                          </Button>
-                        </DialogActions>
-                      </DialogBody>
-                    </DialogSurface>
-                  </Dialog>
+                  <Button
+                    appearance="subtle"
+                    icon={<Edit24Regular />}
+                    aria-label={t('common.edit')}
+                    onClick={() => openEdit(trip)}
+                  />
                 </TableCell>
               </TableRow>
             ))}
@@ -294,6 +245,104 @@ export const TripsPage: React.FC = () => {
           </div>
         )}
       </Card>
+
+      <Dialog open={editDialogOpen} onOpenChange={(_, v) => (!v.open && closeEditDialog())}>
+        <DialogSurface>
+          <DialogBody>
+            <DialogTitle>{t('trips.editTrip')}</DialogTitle>
+            <DialogContent>
+              {editTrip && (
+                <>
+                  <div className={styles.formRow}>
+                    <Label>{t('trips.status')}</Label>
+                    <Select
+                      value={editStatus}
+                      onChange={(_, data) => setEditStatus(data.value ?? '')}
+                      style={{ width: '100%' }}
+                    >
+                      {TRIP_STATUSES.map((s) => (
+                        <Option key={s} value={s} text={getStatusLabel(s)}>
+                          {getStatusLabel(s)}
+                        </Option>
+                      ))}
+                    </Select>
+                  </div>
+                  <div className={styles.formRow}>
+                    <Label htmlFor="edit-delay">
+                      {t('trips.delay')} ({t('trips.minutes')})
+                    </Label>
+                    <Input
+                      id="edit-delay"
+                      type="text"
+                      inputMode="numeric"
+                      value={editDelayInput}
+                      onChange={(_, v) => handleDelayChange(v.value)}
+                      aria-invalid={!!editDelayError}
+                      aria-describedby={editDelayError ? 'edit-delay-error' : undefined}
+                    />
+                    {editDelayError && (
+                      <Text id="edit-delay-error" style={{ color: 'var(--colorPaletteRedForeground1)', fontSize: '12px', marginTop: '4px' }}>
+                        {editDelayError}
+                      </Text>
+                    )}
+                  </div>
+                  <div className={styles.formRow}>
+                    <Label htmlFor="edit-platform">{t('trips.platform')}</Label>
+                    <Input
+                      id="edit-platform"
+                      value={editPlatform}
+                      onChange={(_, v) => setEditPlatform(v.value)}
+                      placeholder={t('trips.platformPlaceholder')}
+                    />
+                  </div>
+                  <div className={styles.formRow}>
+                    <Label>{t('trips.bus')}</Label>
+                    <Select
+                      value={editBusId}
+                      onChange={(_, d) => setEditBusId(d.value ?? '')}
+                      style={{ width: '100%' }}
+                    >
+                      <Option value="" text="—">—</Option>
+                      {buses.map((b) => (
+                        <Option key={b.id} value={b.id} text={`${b.plate_number} (${b.model})`}>
+                          {b.plate_number} ({b.model})
+                        </Option>
+                      ))}
+                    </Select>
+                  </div>
+                  <div className={styles.formRow}>
+                    <Label>{t('trips.driver')}</Label>
+                    <Select
+                      value={editDriverId}
+                      onChange={(_, d) => setEditDriverId(d.value ?? '')}
+                      style={{ width: '100%' }}
+                    >
+                      <Option value="" text="—">—</Option>
+                      {drivers.map((d) => (
+                        <Option key={d.id} value={d.id} text={`${d.full_name} (${d.license_number})`}>
+                          {d.full_name} ({d.license_number})
+                        </Option>
+                      ))}
+                    </Select>
+                  </div>
+                </>
+              )}
+            </DialogContent>
+            <DialogActions>
+              <Button appearance="secondary" onClick={closeEditDialog}>
+                {t('common.cancel')}
+              </Button>
+              <Button
+                appearance="primary"
+                onClick={handleEditSubmit}
+                disabled={!editTrip || updateTripMutation.isPending || !!editDelayError}
+              >
+                {updateTripMutation.isPending ? t('common.saving') : t('common.save')}
+              </Button>
+            </DialogActions>
+          </DialogBody>
+        </DialogSurface>
+      </Dialog>
     </div>
   );
 };

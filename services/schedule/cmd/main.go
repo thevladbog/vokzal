@@ -90,7 +90,7 @@ func main() {
 	}
 	router := gin.Default()
 
-	// Health check and dashboard stats (stats requires auth via v1 group)
+	// Public: health check (no auth).
 	router.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"status":  "ok",
@@ -99,6 +99,7 @@ func main() {
 		})
 	})
 
+	// Protected: all routes under /v1 require JWT auth (including /v1/stats/dashboard).
 	v1 := router.Group("/v1")
 	v1.Use(middleware.AuthMiddleware(cfg.JWT.Secret, logger))
 	v1.GET("/stats/dashboard", scheduleHandler.GetDashboardStats)

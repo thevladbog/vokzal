@@ -137,30 +137,25 @@ func (r *ticketRepository) GetTripDepartureTime(ctx context.Context, tripID stri
 }
 
 // GetDashboardStats возвращает агрегаты по билетам за дату (created_at::date = date).
+// Один запрос с условной агрегацией (FILTER) вместо трёх отдельных.
 func (r *ticketRepository) GetDashboardStats(ctx context.Context, date string) (ticketsSold, ticketsReturned int, revenue float64, err error) {
-	var soldCount int64
-	if err := r.db.WithContext(ctx).Model(&models.Ticket{}).
-		Where("DATE(created_at) = ? AND status IN ?", date, []string{"active", "used"}).
-		Count(&soldCount).Error; err != nil {
+	var row struct {
+		SoldCount     int64   `gorm:"column:sold_count"`
+		ReturnedCount int64   `gorm:"column:returned_count"`
+		Revenue       float64 `gorm:"column:revenue"`
+	}
+	err = r.db.WithContext(ctx).Raw(`
+		SELECT
+			COUNT(*) FILTER (WHERE status IN ('active', 'used')) AS sold_count,
+			COUNT(*) FILTER (WHERE status = 'returned') AS returned_count,
+			COALESCE(SUM(price) FILTER (WHERE status IN ('active', 'used')), 0) AS revenue
+		FROM tickets
+		WHERE DATE(created_at) = ?
+	`, date).Scan(&row).Error
+	if err != nil {
 		return 0, 0, 0, err
 	}
-	var returnedCount int64
-	if err := r.db.WithContext(ctx).Model(&models.Ticket{}).
-		Where("DATE(created_at) = ? AND status = ?", date, "returned").
-		Count(&returnedCount).Error; err != nil {
-		return 0, 0, 0, err
-	}
-	var rev *float64
-	if err := r.db.WithContext(ctx).Model(&models.Ticket{}).
-		Select("COALESCE(SUM(price), 0)").
-		Where("DATE(created_at) = ? AND status IN ?", date, []string{"active", "used"}).
-		Scan(&rev).Error; err != nil {
-		return 0, 0, 0, err
-	}
-	if rev != nil {
-		revenue = *rev
-	}
-	return int(soldCount), int(returnedCount), revenue, nil
+	return int(row.SoldCount), int(row.ReturnedCount), row.Revenue, nil
 }
 
 // CreateEvent создаёт событие начала посадки.

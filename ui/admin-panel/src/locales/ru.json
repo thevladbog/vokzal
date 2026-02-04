@@ -129,6 +129,7 @@
     "status": "Статус",
     "delay": "Задержка",
     "platform": "Перрон",
+    "platformPlaceholder": "Напр. 1",
     "loading": "Загрузка рейсов...",
     "loadError": "Ошибка загрузки рейсов",
     "noTrips": "Рейсов на выбранную дату нет",
@@ -141,6 +142,7 @@
     "status_delayed": "Задержан",
     "status_cancelled": "Отменён",
     "delayMinutes": "{{count}} мин",
+    "delayInvalid": "Введите целое число от 0 и выше (минуты задержки)",
     "bus": "Автобус",
     "driver": "Водитель"
   },

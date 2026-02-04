@@ -26,7 +26,7 @@ COMMENT ON TABLE stations IS 'Автовокзалы';
 -- ====================================
 CREATE TABLE buses (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    plate_number VARCHAR(12) UNIQUE NOT NULL,
+    plate_number VARCHAR(20) UNIQUE NOT NULL,
     model VARCHAR(50) NOT NULL,
     capacity INTEGER NOT NULL CHECK (capacity > 0),
     status VARCHAR(20) NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'maintenance', 'out_of_service')),

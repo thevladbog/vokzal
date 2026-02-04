@@ -55,23 +55,29 @@ export const DashboardPage: React.FC = () => {
   const styles = useStyles();
   const { t } = useTranslation();
   const user = useAuthStore((state) => state.user);
+  const todayStr = today();
 
   const { data: scheduleStats, isLoading: scheduleLoading } = useQuery({
-    queryKey: ['dashboard', 'schedule', today()],
-    queryFn: () => scheduleService.getDashboardStats(today()),
+    queryKey: ['dashboard', 'schedule', todayStr],
+    queryFn: () => scheduleService.getDashboardStats(todayStr),
   });
 
   const { data: ticketStats, isLoading: ticketLoading } = useQuery({
-    queryKey: ['dashboard', 'ticket', today()],
-    queryFn: () => ticketService.getDashboardStats(today()),
+    queryKey: ['dashboard', 'ticket', todayStr],
+    queryFn: () => ticketService.getDashboardStats(todayStr),
   });
 
   const isLoading = scheduleLoading || ticketLoading;
   const tripsTotal = scheduleStats?.trips_total ?? 0;
+  const totalCapacity = scheduleStats?.total_capacity ?? 0;
   const ticketsSold = ticketStats?.tickets_sold ?? 0;
   const ticketsReturned = ticketStats?.tickets_returned ?? 0;
   const revenue = ticketStats?.revenue ?? 0;
-  const occupancyPercent = tripsTotal > 0 ? Math.round((ticketsSold / (tripsTotal * 40)) * 100) : 0;
+  const totalSeats = totalCapacity > 0 ? totalCapacity : (tripsTotal > 0 ? tripsTotal * 40 : 40);
+  const occupancyPercent =
+    (ticketStats as { occupancy?: number } | undefined)?.occupancy ??
+    (scheduleStats as { occupancy?: number } | undefined)?.occupancy ??
+    (totalSeats > 0 ? Math.round((ticketsSold / totalSeats) * 100) : 0);
 
   return (
     <FluentProvider theme={webLightTheme}>

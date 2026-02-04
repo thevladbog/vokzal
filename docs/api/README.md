@@ -24,11 +24,11 @@
 │  (Gateway)  │
 └──────┬──────┘
        │
-       ├─────────► Auth Service      (порт 8080)
-       ├─────────► Schedule Service (порт 8081)
-       ├─────────► Ticket Service   (порт 8082)
-       ├─────────► Fiscal Service   (порт 8083)
-       ├─────────► Payment Service  (порт 8084)
+       ├─────────► Auth Service      (порт 8081)
+       ├─────────► Schedule Service (порт 8082)
+       ├─────────► Ticket Service   (порт 8083)
+       ├─────────► Fiscal Service   (порт 8084)
+       ├─────────► Payment Service  (порт 8085)
        ├─────────► Board Service    (порт 8086)
        ├─────────► Notify Service   (порт 8087)
        ├─────────► Audit Service    (порт 8088)
@@ -39,7 +39,7 @@
 ## 🎯 Сервисы
 
 ### Auth Service
-**Порт**: 8080  
+**Порт**: 8081  
 **Спецификация**: [auth-service.yaml](./auth-service.yaml)
 
 Сервис аутентификации и авторизации:
@@ -59,7 +59,7 @@
 - `POST /users` - Создание пользователя
 
 ### Schedule Service
-**Порт**: 8081  
+**Порт**: 8082  
 **Спецификация**: [schedule-service.yaml](./schedule-service.yaml)
 
 Сервис управления расписанием:
@@ -81,7 +81,7 @@
 - `GET /stats/dashboard?date=` — статистика рейсов за дату
 
 ### Ticket Service
-**Порт**: 8082  
+**Порт**: 8083  
 **Спецификация**: [ticket-service.yaml](./ticket-service.yaml)
 
 Сервис управления билетами:
@@ -101,12 +101,12 @@
 - `POST /boarding/scan` - Посадка пассажира
 
 ### Fiscal Service
-**Порт**: 8083
+**Порт**: 8084
 
 Сервис фискализации (54-ФЗ, АТОЛ ККТ, Z-отчёты).
 
 ### Payment Service
-**Порт**: 8084
+**Порт**: 8085
 
 Сервис обработки платежей:
 - Tinkoff Acquiring
