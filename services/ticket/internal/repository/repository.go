@@ -32,6 +32,7 @@ type TicketRepository interface {
 	Update(ctx context.Context, ticket *models.Ticket) error
 	Delete(ctx context.Context, id string) error
 	GetTripDepartureTime(ctx context.Context, tripID string) (*time.Time, error)
+	GetDashboardStats(ctx context.Context, date string) (ticketsSold, ticketsReturned int, revenue float64, err error)
 }
 
 // BoardingRepository — интерфейс репозитория событий и отметок посадки.
@@ -133,6 +134,33 @@ func (r *ticketRepository) GetTripDepartureTime(ctx context.Context, tripID stri
 		return nil, nil
 	}
 	return &dep, nil
+}
+
+// GetDashboardStats возвращает агрегаты по билетам за дату (created_at::date = date).
+func (r *ticketRepository) GetDashboardStats(ctx context.Context, date string) (ticketsSold, ticketsReturned int, revenue float64, err error) {
+	var soldCount int64
+	if err := r.db.WithContext(ctx).Model(&models.Ticket{}).
+		Where("DATE(created_at) = ? AND status IN ?", date, []string{"active", "used"}).
+		Count(&soldCount).Error; err != nil {
+		return 0, 0, 0, err
+	}
+	var returnedCount int64
+	if err := r.db.WithContext(ctx).Model(&models.Ticket{}).
+		Where("DATE(created_at) = ? AND status = ?", date, "returned").
+		Count(&returnedCount).Error; err != nil {
+		return 0, 0, 0, err
+	}
+	var rev *float64
+	if err := r.db.WithContext(ctx).Model(&models.Ticket{}).
+		Select("COALESCE(SUM(price), 0)").
+		Where("DATE(created_at) = ? AND status IN ?", date, []string{"active", "used"}).
+		Scan(&rev).Error; err != nil {
+		return 0, 0, 0, err
+	}
+	if rev != nil {
+		revenue = *rev
+	}
+	return int(soldCount), int(returnedCount), revenue, nil
 }
 
 // CreateEvent создаёт событие начала посадки.

@@ -16,7 +16,7 @@
     
     # Ticket Service
     [http.routers.ticket]
-      rule = "Host(`api.vokzal.tech`) && PathPrefix(`/v1/tickets`, `/v1/boarding`)"
+      rule = "Host(`api.vokzal.tech`) && PathPrefix(`/v1/tickets`, `/v1/boarding`, `/v1/ticket`)"
       service = "ticket-service"
       middlewares = ["cors-headers"]
       entryPoints = ["web", "websecure"]

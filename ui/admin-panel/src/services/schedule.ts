@@ -1,5 +1,5 @@
 import { apiClient } from './api';
-import type { Schedule, Trip, Route, Station } from '@/types';
+import type { Schedule, Trip, Route, Station, Bus, Driver } from '@/types';
 
 export const scheduleService = {
   // Stations
@@ -45,8 +45,9 @@ export const scheduleService = {
   },
 
   updateSchedule: async (id: string, data: Partial<Schedule>) => {
-    const response = await apiClient.put<Schedule>(`/schedule/schedules/${id}`, data);
-    return response.data;
+    const response = await apiClient.patch<{ data: Schedule }>(`/schedule/schedules/${id}`, data);
+    const body = response.data as { data?: Schedule };
+    return body.data ?? (response.data as unknown as Schedule);
   },
 
   deleteSchedule: async (id: string) => {
@@ -101,16 +102,78 @@ export const scheduleService = {
     return response.data;
   },
 
-  updateTrip: async (id: string, data: Partial<Trip>) => {
-    const response = await apiClient.put<Trip>(`/schedule/trips/${id}`, data);
-    return response.data;
+  updateTripStatus: async (
+    id: string,
+    data: { status: string; delay_minutes?: number }
+  ): Promise<Trip> => {
+    const response = await apiClient.patch<{ data: Trip }>(`/schedule/trips/${id}/status`, data);
+    const body = response.data as { data?: Trip };
+    return body.data ?? (response.data as unknown as Trip);
   },
 
-  generateTrips: async (scheduleId: string, fromDate: string, toDate: string) => {
-    const response = await apiClient.post(`/schedule/schedules/${scheduleId}/generate-trips`, {
+  generateTrips: async (scheduleId: string, fromDate: string, toDate: string): Promise<void> => {
+    await apiClient.post('/schedule/trips/generate', {
+      schedule_id: scheduleId,
       from_date: fromDate,
       to_date: toDate,
     });
-    return response.data;
+  },
+
+  updateTrip: async (
+    id: string,
+    data: { platform?: string; bus_id?: string; driver_id?: string }
+  ): Promise<Trip> => {
+    const response = await apiClient.patch<{ data: Trip }>(`/schedule/trips/${id}`, data);
+    const body = response.data as { data?: Trip };
+    return body.data ?? (response.data as unknown as Trip);
+  },
+
+  // Buses
+  getBuses: async (params?: { station_id?: string; status?: string }): Promise<Bus[]> => {
+    const response = await apiClient.get<{ data: Bus[] }>('/schedule/buses', { params });
+    const body = response.data as { data?: Bus[] };
+    return body.data ?? (response.data as unknown as Bus[]) ?? [];
+  },
+  createBus: async (data: Omit<Bus, 'id' | 'created_at' | 'updated_at'>) => {
+    const response = await apiClient.post<{ data: Bus }>('/schedule/buses', data);
+    const body = response.data as { data?: Bus };
+    return body.data ?? (response.data as unknown as Bus);
+  },
+  updateBus: async (id: string, data: Partial<Bus>) => {
+    const response = await apiClient.patch<{ data: Bus }>(`/schedule/buses/${id}`, data);
+    const body = response.data as { data?: Bus };
+    return body.data ?? (response.data as unknown as Bus);
+  },
+  deleteBus: async (id: string) => {
+    await apiClient.delete(`/schedule/buses/${id}`);
+  },
+
+  // Drivers
+  getDrivers: async (params?: { station_id?: string }): Promise<Driver[]> => {
+    const response = await apiClient.get<{ data: Driver[] }>('/schedule/drivers', { params });
+    const body = response.data as { data?: Driver[] };
+    return body.data ?? (response.data as unknown as Driver[]) ?? [];
+  },
+  createDriver: async (data: Omit<Driver, 'id' | 'created_at' | 'updated_at'>) => {
+    const response = await apiClient.post<{ data: Driver }>('/schedule/drivers', data);
+    const body = response.data as { data?: Driver };
+    return body.data ?? (response.data as unknown as Driver);
+  },
+  updateDriver: async (id: string, data: Partial<Driver>) => {
+    const response = await apiClient.patch<{ data: Driver }>(`/schedule/drivers/${id}`, data);
+    const body = response.data as { data?: Driver };
+    return body.data ?? (response.data as unknown as Driver);
+  },
+  deleteDriver: async (id: string) => {
+    await apiClient.delete(`/schedule/drivers/${id}`);
+  },
+
+  getDashboardStats: async (date?: string) => {
+    const response = await apiClient.get<{ data: { trips_total: number; trips_scheduled: number; trips_departed: number; trips_cancelled: number; trips_delayed: number; trips_arrived: number } }>(
+      '/schedule/stats/dashboard',
+      { params: date ? { date } : {} }
+    );
+    const body = response.data as { data?: { trips_total: number; trips_scheduled: number; trips_departed: number; trips_cancelled: number; trips_delayed: number; trips_arrived: number } };
+    return body.data ?? { trips_total: 0, trips_scheduled: 0, trips_departed: 0, trips_cancelled: 0, trips_delayed: 0, trips_arrived: 0 };
   },
 };

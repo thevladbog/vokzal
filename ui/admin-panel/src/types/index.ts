@@ -68,14 +68,26 @@ export interface Station {
   updated_at: string;
 }
 
-// Bus
+// Bus (backend: plate_number, capacity)
 export interface Bus {
   id: string;
-  registration_number: string;
+  plate_number: string;
   model: string;
-  seats_count: number;
+  capacity: number;
   station_id: string;
-  status: 'active' | 'maintenance' | 'inactive';
+  status: 'active' | 'maintenance' | 'out_of_service';
+  created_at: string;
+  updated_at: string;
+}
+
+// Driver
+export interface Driver {
+  id: string;
+  full_name: string;
+  license_number: string;
+  experience_years?: number | null;
+  phone?: string | null;
+  station_id: string;
   created_at: string;
   updated_at: string;
 }

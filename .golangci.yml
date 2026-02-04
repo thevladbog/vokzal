@@ -86,6 +86,13 @@ linters:
       - path: vendor/
         linters:
           - all
+      # CRUD repositories and services have similar patterns by design
+      - path: services/schedule/internal/repository/
+        linters:
+          - dupl
+      - path: services/schedule/internal/service/
+        linters:
+          - dupl
 
 formatters:
   enable:

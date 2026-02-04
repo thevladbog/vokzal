@@ -10,6 +10,8 @@ import { UsersPage } from '@/pages/UsersPage';
 import { StationsPage } from '@/pages/StationsPage';
 import { RoutesPage } from '@/pages/RoutesPage';
 import { TripsPage } from '@/pages/TripsPage';
+import { BusesPage } from '@/pages/BusesPage';
+import { DriversPage } from '@/pages/DriversPage';
 import { AuditPage } from '@/pages/AuditPage';
 import { ReportsPage } from '@/pages/ReportsPage';
 import { MonitoringPage } from '@/pages/MonitoringPage';
@@ -106,6 +108,24 @@ function App() {
               element={
                 <ProtectedRoute allowedRoles={['admin', 'dispatcher']}>
                   <TripsPage />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/buses"
+              element={
+                <ProtectedRoute allowedRoles={['admin', 'dispatcher']}>
+                  <BusesPage />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/drivers"
+              element={
+                <ProtectedRoute allowedRoles={['admin', 'dispatcher']}>
+                  <DriversPage />
                 </ProtectedRoute>
               }
             />

@@ -19,7 +19,29 @@ var (
 	ErrScheduleNotFound = errors.New("schedule not found")
 	// ErrTripNotFound возвращается, когда рейс не найден.
 	ErrTripNotFound = errors.New("trip not found")
+	// ErrBusNotFound возвращается, когда автобус не найден.
+	ErrBusNotFound = errors.New("bus not found")
+	// ErrDriverNotFound возвращается, когда водитель не найден.
+	ErrDriverNotFound = errors.New("driver not found")
 )
+
+// BusRepository — интерфейс репозитория автобусов.
+type BusRepository interface {
+	Create(ctx context.Context, bus *models.Bus) error
+	FindByID(ctx context.Context, id string) (*models.Bus, error)
+	FindAll(ctx context.Context, stationID *string, status *string) ([]*models.Bus, error)
+	Update(ctx context.Context, bus *models.Bus) error
+	Delete(ctx context.Context, id string) error
+}
+
+// DriverRepository — интерфейс репозитория водителей.
+type DriverRepository interface {
+	Create(ctx context.Context, driver *models.Driver) error
+	FindByID(ctx context.Context, id string) (*models.Driver, error)
+	FindAll(ctx context.Context, stationID *string) ([]*models.Driver, error)
+	Update(ctx context.Context, driver *models.Driver) error
+	Delete(ctx context.Context, id string) error
+}
 
 // StationRepository — интерфейс репозитория станций.
 type StationRepository interface {
@@ -74,6 +96,24 @@ type tripRepository struct {
 	db *gorm.DB
 }
 
+type busRepository struct {
+	db *gorm.DB
+}
+
+type driverRepository struct {
+	db *gorm.DB
+}
+
+// NewBusRepository создаёт репозиторий автобусов.
+func NewBusRepository(db *gorm.DB) BusRepository {
+	return &busRepository{db: db}
+}
+
+// NewDriverRepository создаёт репозиторий водителей.
+func NewDriverRepository(db *gorm.DB) DriverRepository {
+	return &driverRepository{db: db}
+}
+
 // NewStationRepository создаёт репозиторий станций.
 func NewStationRepository(db *gorm.DB) StationRepository {
 	return &stationRepository{db: db}
@@ -99,7 +139,6 @@ func (r *stationRepository) Create(ctx context.Context, station *models.Station)
 	return r.db.WithContext(ctx).Create(station).Error
 }
 
-//nolint:dupl // FindByID pattern is the same across repositories
 func (r *stationRepository) FindByID(ctx context.Context, id string) (*models.Station, error) {
 	var station models.Station
 	if err := r.db.WithContext(ctx).First(&station, "id = ?", id).Error; err != nil {
@@ -143,7 +182,6 @@ func (r *routeRepository) Create(ctx context.Context, route *models.Route) error
 	return r.db.WithContext(ctx).Create(route).Error
 }
 
-//nolint:dupl // FindByID pattern is the same across repositories
 func (r *routeRepository) FindByID(ctx context.Context, id string) (*models.Route, error) {
 	var route models.Route
 	if err := r.db.WithContext(ctx).First(&route, "id = ?", id).Error; err != nil {
@@ -187,7 +225,6 @@ func (r *scheduleRepository) Create(ctx context.Context, schedule *models.Schedu
 	return r.db.WithContext(ctx).Create(schedule).Error
 }
 
-//nolint:dupl // FindByID с Preload для Schedule и Trip — одинаковая структура.
 func (r *scheduleRepository) FindByID(ctx context.Context, id string) (*models.Schedule, error) {
 	var schedule models.Schedule
 	if err := r.db.WithContext(ctx).Preload("Route").First(&schedule, "id = ?", id).Error; err != nil {
@@ -227,7 +264,6 @@ func (r *tripRepository) Create(ctx context.Context, trip *models.Trip) error {
 	return r.db.WithContext(ctx).Create(trip).Error
 }
 
-//nolint:dupl // FindByID с Preload для Schedule и Trip — одинаковая структура.
 func (r *tripRepository) FindByID(ctx context.Context, id string) (*models.Trip, error) {
 	var trip models.Trip
 	if err := r.db.WithContext(ctx).Preload("Schedule.Route").First(&trip, "id = ?", id).Error; err != nil {
@@ -269,6 +305,95 @@ func (r *tripRepository) Delete(ctx context.Context, id string) error {
 	}
 	if result.RowsAffected == 0 {
 		return ErrTripNotFound
+	}
+	return nil
+}
+
+// Bus repository implementation.
+func (r *busRepository) Create(ctx context.Context, bus *models.Bus) error {
+	return r.db.WithContext(ctx).Create(bus).Error
+}
+
+func (r *busRepository) FindByID(ctx context.Context, id string) (*models.Bus, error) {
+	var bus models.Bus
+	if err := r.db.WithContext(ctx).First(&bus, "id = ?", id).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrBusNotFound
+		}
+		return nil, err
+	}
+	return &bus, nil
+}
+
+func (r *busRepository) FindAll(ctx context.Context, stationID, status *string) ([]*models.Bus, error) {
+	var buses []*models.Bus
+	query := r.db.WithContext(ctx)
+	if stationID != nil && *stationID != "" {
+		query = query.Where("station_id = ?", *stationID)
+	}
+	if status != nil && *status != "" {
+		query = query.Where("status = ?", *status)
+	}
+	if err := query.Order("plate_number ASC").Find(&buses).Error; err != nil {
+		return nil, err
+	}
+	return buses, nil
+}
+
+func (r *busRepository) Update(ctx context.Context, bus *models.Bus) error {
+	return r.db.WithContext(ctx).Save(bus).Error
+}
+
+func (r *busRepository) Delete(ctx context.Context, id string) error {
+	result := r.db.WithContext(ctx).Delete(&models.Bus{}, "id = ?", id)
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return ErrBusNotFound
+	}
+	return nil
+}
+
+// Driver repository implementation.
+func (r *driverRepository) Create(ctx context.Context, driver *models.Driver) error {
+	return r.db.WithContext(ctx).Create(driver).Error
+}
+
+func (r *driverRepository) FindByID(ctx context.Context, id string) (*models.Driver, error) {
+	var driver models.Driver
+	if err := r.db.WithContext(ctx).First(&driver, "id = ?", id).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrDriverNotFound
+		}
+		return nil, err
+	}
+	return &driver, nil
+}
+
+func (r *driverRepository) FindAll(ctx context.Context, stationID *string) ([]*models.Driver, error) {
+	var drivers []*models.Driver
+	query := r.db.WithContext(ctx)
+	if stationID != nil && *stationID != "" {
+		query = query.Where("station_id = ?", *stationID)
+	}
+	if err := query.Order("full_name ASC").Find(&drivers).Error; err != nil {
+		return nil, err
+	}
+	return drivers, nil
+}
+
+func (r *driverRepository) Update(ctx context.Context, driver *models.Driver) error {
+	return r.db.WithContext(ctx).Save(driver).Error
+}
+
+func (r *driverRepository) Delete(ctx context.Context, id string) error {
+	result := r.db.WithContext(ctx).Delete(&models.Driver{}, "id = ?", id)
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return ErrDriverNotFound
 	}
 	return nil
 }

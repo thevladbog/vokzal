@@ -55,7 +55,7 @@ func main() {
 		logger.Fatal("Failed to connect to database", zap.Error(err))
 	}
 
-	if migErr := db.AutoMigrate(&models.Station{}, &models.Route{}, &models.Schedule{}, &models.Trip{}); migErr != nil {
+	if migErr := db.AutoMigrate(&models.Station{}, &models.Route{}, &models.Schedule{}, &models.Trip{}, &models.Bus{}, &models.Driver{}); migErr != nil {
 		logger.Warn("Auto-migration failed", zap.Error(migErr))
 	}
 
@@ -75,9 +75,11 @@ func main() {
 	routeRepo := repository.NewRouteRepository(db)
 	scheduleRepo := repository.NewScheduleRepository(db)
 	tripRepo := repository.NewTripRepository(db)
+	busRepo := repository.NewBusRepository(db)
+	driverRepo := repository.NewDriverRepository(db)
 
 	// Создать сервис
-	scheduleService := service.NewScheduleService(stationRepo, routeRepo, scheduleRepo, tripRepo, natsConn, logger)
+	scheduleService := service.NewScheduleService(stationRepo, routeRepo, scheduleRepo, tripRepo, busRepo, driverRepo, natsConn, logger)
 
 	// Создать handlers
 	scheduleHandler := handlers.NewScheduleHandler(scheduleService, logger)
@@ -88,7 +90,7 @@ func main() {
 	}
 	router := gin.Default()
 
-	// Health check (public, no auth)
+	// Health check and dashboard stats (stats requires auth via v1 group)
 	router.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"status":  "ok",
@@ -99,6 +101,7 @@ func main() {
 
 	v1 := router.Group("/v1")
 	v1.Use(middleware.AuthMiddleware(cfg.JWT.Secret, logger))
+	v1.GET("/stats/dashboard", scheduleHandler.GetDashboardStats)
 	stations := v1.Group("/stations")
 	stations.POST("", scheduleHandler.CreateStation)
 	stations.GET("", scheduleHandler.ListStations)
@@ -122,7 +125,20 @@ func main() {
 	trips.GET("", scheduleHandler.ListTripsByDate)
 	trips.GET("/:id", scheduleHandler.GetTrip)
 	trips.PATCH("/:id/status", scheduleHandler.UpdateTripStatus)
+	trips.PATCH("/:id", scheduleHandler.UpdateTrip)
 	trips.POST("/generate", scheduleHandler.GenerateTrips)
+	buses := v1.Group("/buses")
+	buses.POST("", scheduleHandler.CreateBus)
+	buses.GET("", scheduleHandler.ListBuses)
+	buses.GET("/:id", scheduleHandler.GetBus)
+	buses.PATCH("/:id", scheduleHandler.UpdateBus)
+	buses.DELETE("/:id", scheduleHandler.DeleteBus)
+	drivers := v1.Group("/drivers")
+	drivers.POST("", scheduleHandler.CreateDriver)
+	drivers.GET("", scheduleHandler.ListDrivers)
+	drivers.GET("/:id", scheduleHandler.GetDriver)
+	drivers.PATCH("/:id", scheduleHandler.UpdateDriver)
+	drivers.DELETE("/:id", scheduleHandler.DeleteDriver)
 
 	// Создать HTTP сервер
 	srv := &http.Server{

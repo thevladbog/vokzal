@@ -38,4 +38,13 @@ export const ticketService = {
     });
     return response.data;
   },
+
+  getDashboardStats: async (date?: string): Promise<{ tickets_sold: number; tickets_returned: number; revenue: number }> => {
+    const response = await apiClient.get<{ data: { tickets_sold: number; tickets_returned: number; revenue: number } }>(
+      '/ticket/stats/dashboard',
+      { params: date ? { date } : {} }
+    );
+    const body = response.data as { data?: { tickets_sold: number; tickets_returned: number; revenue: number } };
+    return body.data ?? { tickets_sold: 0, tickets_returned: 0, revenue: 0 };
+  },
 };

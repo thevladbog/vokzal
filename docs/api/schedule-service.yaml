@@ -18,7 +18,7 @@ info:
     name: Proprietary
 
 servers:
-  - url: http://localhost:8082
+  - url: http://localhost:8081
     description: Development
   - url: https://api.vokzal.tech/schedule
     description: Production
@@ -32,6 +32,10 @@ tags:
     description: Управление расписаниями
   - name: Trips
     description: Управление рейсами
+  - name: Buses
+    description: Справочник автобусов
+  - name: Drivers
+    description: Справочник водителей
   - name: Search
     description: Поиск рейсов
 
@@ -338,7 +342,7 @@ paths:
     put:
       tags:
         - Trips
-      summary: Обновить рейс
+      summary: Обновить рейс (полностью)
       security:
         - bearerAuth: []
       parameters:
@@ -361,6 +365,37 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Trip'
+
+    patch:
+      tags:
+        - Trips
+      summary: Обновить рейс (перрон, автобус, водитель)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                platform:
+                  type: string
+                bus_id:
+                  type: string
+                  format: uuid
+                driver_id:
+                  type: string
+                  format: uuid
+      responses:
+        '200':
+          description: Рейс обновлен
 
   /api/v1/trips/{id}/status:
     patch:
@@ -395,6 +430,141 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Trip'
+
+  /api/v1/stats/dashboard:
+    get:
+      tags:
+        - Trips
+      summary: Статистика рейсов за дату для дашборда
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: date
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: trips_total, trips_scheduled, trips_departed, trips_cancelled, trips_delayed, trips_arrived
+
+  /api/v1/buses:
+    get:
+      tags:
+        - Buses
+      summary: Список автобусов
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: station_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [active, maintenance, out_of_service]
+      responses:
+        '200':
+          description: Список автобусов
+    post:
+      tags:
+        - Buses
+      summary: Создать автобус
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [plate_number, model, capacity, station_id]
+              properties:
+                plate_number:
+                  type: string
+                model:
+                  type: string
+                capacity:
+                  type: integer
+                station_id:
+                  type: string
+                  format: uuid
+                status:
+                  type: string
+                  enum: [active, maintenance, out_of_service]
+      responses:
+        '201':
+          description: Автобус создан
+
+  /api/v1/buses/{id}:
+    get:
+      tags: [Buses]
+      summary: Автобус по ID
+    patch:
+      tags: [Buses]
+      summary: Обновить автобус
+    delete:
+      tags: [Buses]
+      summary: Удалить автобус
+
+  /api/v1/drivers:
+    get:
+      tags:
+        - Drivers
+      summary: Список водителей
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: station_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Список водителей
+    post:
+      tags:
+        - Drivers
+      summary: Создать водителя
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [full_name, license_number, station_id]
+              properties:
+                full_name:
+                  type: string
+                license_number:
+                  type: string
+                experience_years:
+                  type: integer
+                phone:
+                  type: string
+                station_id:
+                  type: string
+                  format: uuid
+      responses:
+        '201':
+          description: Водитель создан
+
+  /api/v1/drivers/{id}:
+    get:
+      tags: [Drivers]
+      summary: Водитель по ID
+    patch:
+      tags: [Drivers]
+      summary: Обновить водителя
+    delete:
+      tags: [Drivers]
+      summary: Удалить водителя
 
   /api/v1/search/trips:
     get:

@@ -42,7 +42,23 @@ type ScheduleService interface {
 	GetTrip(ctx context.Context, id string) (*models.Trip, error)
 	ListTripsByDate(ctx context.Context, date string) ([]*models.Trip, error)
 	UpdateTripStatus(ctx context.Context, id string, status string, delayMinutes int) (*models.Trip, error)
+	UpdateTrip(ctx context.Context, id string, req *UpdateTripRequest) (*models.Trip, error)
 	GenerateTripsForSchedule(ctx context.Context, scheduleID string, fromDate, toDate time.Time) error
+	GetDashboardStats(ctx context.Context, date string) (*DashboardStats, error)
+
+	// Buses
+	CreateBus(ctx context.Context, req *CreateBusRequest) (*models.Bus, error)
+	GetBus(ctx context.Context, id string) (*models.Bus, error)
+	ListBuses(ctx context.Context, stationID *string, status *string) ([]*models.Bus, error)
+	UpdateBus(ctx context.Context, id string, req *UpdateBusRequest) (*models.Bus, error)
+	DeleteBus(ctx context.Context, id string) error
+
+	// Drivers
+	CreateDriver(ctx context.Context, req *CreateDriverRequest) (*models.Driver, error)
+	GetDriver(ctx context.Context, id string) (*models.Driver, error)
+	ListDrivers(ctx context.Context, stationID *string) ([]*models.Driver, error)
+	UpdateDriver(ctx context.Context, id string, req *UpdateDriverRequest) (*models.Driver, error)
+	DeleteDriver(ctx context.Context, id string) error
 }
 
 type scheduleService struct {
@@ -50,6 +66,8 @@ type scheduleService struct {
 	routeRepo    repository.RouteRepository
 	scheduleRepo repository.ScheduleRepository
 	tripRepo     repository.TripRepository
+	busRepo      repository.BusRepository
+	driverRepo   repository.DriverRepository
 	natsConn     *nats.Conn
 	logger       *zap.Logger
 }
@@ -112,12 +130,67 @@ type CreateTripRequest struct {
 	Date       string  `json:"date" binding:"required"`
 }
 
+// UpdateTripRequest — запрос на обновление рейса (перрон, автобус, водитель).
+type UpdateTripRequest struct {
+	Platform *string `json:"platform"`
+	BusID    *string `json:"bus_id"`
+	DriverID *string `json:"driver_id"`
+}
+
+// CreateBusRequest — запрос на создание автобуса.
+//
+//nolint:govet // fieldalignment: field order kept for JSON binding
+type CreateBusRequest struct {
+	Capacity    int    `json:"capacity" binding:"required"`
+	PlateNumber string `json:"plate_number" binding:"required"`
+	Model       string `json:"model" binding:"required"`
+	StationID   string `json:"station_id" binding:"required"`
+	Status      string `json:"status"`
+}
+
+// UpdateBusRequest — запрос на обновление автобуса.
+type UpdateBusRequest struct {
+	PlateNumber *string `json:"plate_number"`
+	Model       *string `json:"model"`
+	Capacity    *int    `json:"capacity"`
+	Status      *string `json:"status"`
+}
+
+// CreateDriverRequest — запрос на создание водителя.
+type CreateDriverRequest struct {
+	FullName        string  `json:"full_name" binding:"required"`
+	LicenseNumber   string  `json:"license_number" binding:"required"`
+	ExperienceYears *int    `json:"experience_years"`
+	Phone           *string `json:"phone"`
+	StationID       string  `json:"station_id" binding:"required"`
+}
+
+// UpdateDriverRequest — запрос на обновление водителя.
+type UpdateDriverRequest struct {
+	FullName        *string `json:"full_name"`
+	LicenseNumber   *string `json:"license_number"`
+	ExperienceYears *int    `json:"experience_years"`
+	Phone           *string `json:"phone"`
+}
+
+// DashboardStats — статистика для дашборда (рейсы за дату).
+type DashboardStats struct {
+	TripsTotal     int `json:"trips_total"`
+	TripsScheduled int `json:"trips_scheduled"`
+	TripsDeparted  int `json:"trips_departed"`
+	TripsCancelled int `json:"trips_cancelled"` //nolint:misspell // API/domain value is British "cancelled"
+	TripsDelayed   int `json:"trips_delayed"`
+	TripsArrived   int `json:"trips_arrived"`
+}
+
 // NewScheduleService создаёт сервис расписания.
 func NewScheduleService(
 	stationRepo repository.StationRepository,
 	routeRepo repository.RouteRepository,
 	scheduleRepo repository.ScheduleRepository,
 	tripRepo repository.TripRepository,
+	busRepo repository.BusRepository,
+	driverRepo repository.DriverRepository,
 	natsConn *nats.Conn,
 	logger *zap.Logger,
 ) ScheduleService {
@@ -126,6 +199,8 @@ func NewScheduleService(
 		routeRepo:    routeRepo,
 		scheduleRepo: scheduleRepo,
 		tripRepo:     tripRepo,
+		busRepo:      busRepo,
+		driverRepo:   driverRepo,
 		natsConn:     natsConn,
 		logger:       logger,
 	}
@@ -397,6 +472,152 @@ func (s *scheduleService) UpdateTripStatus(ctx context.Context, id, status strin
 		zap.Int("delay", delayMinutes))
 
 	return trip, nil
+}
+
+func (s *scheduleService) UpdateTrip(ctx context.Context, id string, req *UpdateTripRequest) (*models.Trip, error) {
+	trip, err := s.tripRepo.FindByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	if req.Platform != nil {
+		trip.Platform = req.Platform
+	}
+	if req.BusID != nil {
+		trip.BusID = req.BusID
+	}
+	if req.DriverID != nil {
+		trip.DriverID = req.DriverID
+	}
+	if err := s.tripRepo.Update(ctx, trip); err != nil {
+		return nil, err
+	}
+	s.publishTripEvent("trip.status_changed", trip)
+	return trip, nil
+}
+
+func (s *scheduleService) CreateBus(ctx context.Context, req *CreateBusRequest) (*models.Bus, error) {
+	status := req.Status
+	if status == "" {
+		status = "active"
+	}
+	bus := &models.Bus{
+		PlateNumber: req.PlateNumber,
+		Model:       req.Model,
+		Capacity:    req.Capacity,
+		StationID:   req.StationID,
+		Status:      status,
+	}
+	if err := s.busRepo.Create(ctx, bus); err != nil {
+		return nil, err
+	}
+	return bus, nil
+}
+
+func (s *scheduleService) GetBus(ctx context.Context, id string) (*models.Bus, error) {
+	return s.busRepo.FindByID(ctx, id)
+}
+
+func (s *scheduleService) ListBuses(ctx context.Context, stationID, status *string) ([]*models.Bus, error) {
+	return s.busRepo.FindAll(ctx, stationID, status)
+}
+
+func (s *scheduleService) UpdateBus(ctx context.Context, id string, req *UpdateBusRequest) (*models.Bus, error) {
+	bus, err := s.busRepo.FindByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	if req.PlateNumber != nil {
+		bus.PlateNumber = *req.PlateNumber
+	}
+	if req.Model != nil {
+		bus.Model = *req.Model
+	}
+	if req.Capacity != nil {
+		bus.Capacity = *req.Capacity
+	}
+	if req.Status != nil {
+		bus.Status = *req.Status
+	}
+	if err := s.busRepo.Update(ctx, bus); err != nil {
+		return nil, err
+	}
+	return bus, nil
+}
+
+func (s *scheduleService) DeleteBus(ctx context.Context, id string) error {
+	return s.busRepo.Delete(ctx, id)
+}
+
+func (s *scheduleService) CreateDriver(ctx context.Context, req *CreateDriverRequest) (*models.Driver, error) {
+	driver := &models.Driver{
+		FullName:        req.FullName,
+		LicenseNumber:   req.LicenseNumber,
+		ExperienceYears: req.ExperienceYears,
+		Phone:           req.Phone,
+		StationID:       req.StationID,
+	}
+	if err := s.driverRepo.Create(ctx, driver); err != nil {
+		return nil, err
+	}
+	return driver, nil
+}
+
+func (s *scheduleService) GetDriver(ctx context.Context, id string) (*models.Driver, error) {
+	return s.driverRepo.FindByID(ctx, id)
+}
+
+func (s *scheduleService) ListDrivers(ctx context.Context, stationID *string) ([]*models.Driver, error) {
+	return s.driverRepo.FindAll(ctx, stationID)
+}
+
+func (s *scheduleService) UpdateDriver(ctx context.Context, id string, req *UpdateDriverRequest) (*models.Driver, error) {
+	driver, err := s.driverRepo.FindByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	if req.FullName != nil {
+		driver.FullName = *req.FullName
+	}
+	if req.LicenseNumber != nil {
+		driver.LicenseNumber = *req.LicenseNumber
+	}
+	if req.ExperienceYears != nil {
+		driver.ExperienceYears = req.ExperienceYears
+	}
+	if req.Phone != nil {
+		driver.Phone = req.Phone
+	}
+	if err := s.driverRepo.Update(ctx, driver); err != nil {
+		return nil, err
+	}
+	return driver, nil
+}
+
+func (s *scheduleService) DeleteDriver(ctx context.Context, id string) error {
+	return s.driverRepo.Delete(ctx, id)
+}
+
+func (s *scheduleService) GetDashboardStats(ctx context.Context, date string) (*DashboardStats, error) {
+	trips, err := s.tripRepo.FindByDate(ctx, date)
+	if err != nil {
+		return nil, err
+	}
+	stats := &DashboardStats{TripsTotal: len(trips)}
+	for _, t := range trips {
+		switch t.Status {
+		case "scheduled":
+			stats.TripsScheduled++
+		case "departed":
+			stats.TripsDeparted++
+		case "cancelled": //nolint:misspell // trip status value
+			stats.TripsCancelled++
+		case "delayed":
+			stats.TripsDelayed++
+		case "arrived":
+			stats.TripsArrived++
+		}
+	}
+	return stats, nil
 }
 
 func (s *scheduleService) GenerateTripsForSchedule(ctx context.Context, scheduleID string, fromDate, toDate time.Time) error {
