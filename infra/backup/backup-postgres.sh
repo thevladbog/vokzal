@@ -27,7 +27,9 @@ echo "[$(date -Iseconds)] Starting PostgreSQL backup: ${PGDATABASE} -> ${DUMP_PA
 pg_dump -Fc -f "${DUMP_PATH}" "${PGDATABASE}"
 
 if [[ -n "${GPG_RECIPIENT:-}" ]]; then
-  gpg --encrypt --recipient "${GPG_RECIPIENT}" --trust-model always -o "${DUMP_PATH}.gpg" "${DUMP_PATH}"
+  # Use trust-on-first-use: recipient key is accepted on first use and reused thereafter (no interactive trust).
+  # Ensure GPG_RECIPIENT (key id/email) is correct; pre-import the key if you need full signature validation.
+  gpg --encrypt --recipient "${GPG_RECIPIENT}" --trust-model tofu -o "${DUMP_PATH}.gpg" "${DUMP_PATH}"
   rm -f "${DUMP_PATH}"
   FINAL_PATH="${DUMP_PATH}.gpg"
   echo "[$(date -Iseconds)] Encrypted backup: ${FINAL_PATH}"
