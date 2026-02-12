@@ -1,3 +1,4 @@
+# Port 8098 must match Traefik (audit-service) and start-services.ps1 $portMap (audit uses non-sequential port)
 server:
   port: "8098"
   mode: "debug"

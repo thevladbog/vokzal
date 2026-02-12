@@ -99,14 +99,15 @@ func main() {
 		})
 	})
 
-	// Protected routes (Traefik strips /v1/schedule, service receives /stats/dashboard, etc.)
+	// Protected routes: Traefik strips /v1 only (see strip-v1-schedule), so service receives
+	// /schedule/stats/dashboard, /stations, /stations/:id, /routes, /schedules, /trips, /buses, /drivers
 	authMW := middleware.AuthMiddleware(cfg.JWT.Secret, logger)
 
-	// Schedule stats route - Traefik strips /v1/schedule
-	router.GET("/stats/dashboard", authMW, scheduleHandler.GetDashboardStats)
+	// Schedule stats route - Traefik strips /v1, service receives /schedule/stats/dashboard
+	router.GET("/schedule/stats/dashboard", authMW, scheduleHandler.GetDashboardStats)
 
-	// Stations routes - Traefik strips /v1/stations
-	stations := router.Group("/")
+	// Stations - Traefik strips /v1, service receives /stations, /stations/:id
+	stations := router.Group("/stations")
 	stations.Use(authMW)
 	stations.POST("", scheduleHandler.CreateStation)
 	stations.GET("", scheduleHandler.ListStations)
@@ -114,8 +115,8 @@ func main() {
 	stations.PATCH("/:id", scheduleHandler.UpdateStation)
 	stations.DELETE("/:id", scheduleHandler.DeleteStation)
 
-	// Routes - same pattern, Traefik strips /v1/routes
-	routes := router.Group("/")
+	// Routes - service receives /routes, /routes/:id
+	routes := router.Group("/routes")
 	routes.Use(authMW)
 	routes.POST("", scheduleHandler.CreateRoute)
 	routes.GET("", scheduleHandler.ListRoutes)
@@ -123,8 +124,8 @@ func main() {
 	routes.PATCH("/:id", scheduleHandler.UpdateRoute)
 	routes.DELETE("/:id", scheduleHandler.DeleteRoute)
 
-	// Schedules - Traefik strips /v1/schedules
-	schedules := router.Group("/")
+	// Schedules - service receives /schedules, /schedules/:id
+	schedules := router.Group("/schedules")
 	schedules.Use(authMW)
 	schedules.POST("", scheduleHandler.CreateSchedule)
 	schedules.GET("", scheduleHandler.ListSchedulesByRoute)
@@ -132,8 +133,8 @@ func main() {
 	schedules.PATCH("/:id", scheduleHandler.UpdateSchedule)
 	schedules.DELETE("/:id", scheduleHandler.DeleteSchedule)
 
-	// Trips - Traefik strips /v1/trips
-	trips := router.Group("/")
+	// Trips - service receives /trips, /trips/:id, /trips/generate, /trips/:id/status
+	trips := router.Group("/trips")
 	trips.Use(authMW)
 	trips.POST("", scheduleHandler.CreateTrip)
 	trips.GET("", scheduleHandler.ListTripsByDate)
@@ -142,8 +143,8 @@ func main() {
 	trips.PATCH("/:id", scheduleHandler.UpdateTrip)
 	trips.POST("/generate", scheduleHandler.GenerateTrips)
 
-	// Buses - Traefik strips /v1/buses
-	buses := router.Group("/")
+	// Buses - service receives /buses, /buses/:id
+	buses := router.Group("/buses")
 	buses.Use(authMW)
 	buses.POST("", scheduleHandler.CreateBus)
 	buses.GET("", scheduleHandler.ListBuses)
@@ -151,8 +152,8 @@ func main() {
 	buses.PATCH("/:id", scheduleHandler.UpdateBus)
 	buses.DELETE("/:id", scheduleHandler.DeleteBus)
 
-	// Drivers - Traefik strips /v1/drivers
-	drivers := router.Group("/")
+	// Drivers - service receives /drivers, /drivers/:id
+	drivers := router.Group("/drivers")
 	drivers.Use(authMW)
 	drivers.POST("", scheduleHandler.CreateDriver)
 	drivers.GET("", scheduleHandler.ListDrivers)

@@ -131,7 +131,7 @@ func main() {
 	router.POST("/sbp/init", paymentHandler.InitSBP)
 	router.POST("/cash/init", paymentHandler.InitCash)
 	router.GET("/list", paymentHandler.ListPayments)
-	router.GET("", paymentHandler.GetPaymentsByTicket)
+	router.GET("/", paymentHandler.GetPaymentsByTicket)
 	router.GET("/:id", paymentHandler.GetPayment)
 	router.GET("/:id/status", paymentHandler.CheckStatus)
 	router.POST("/webhooks/tinkoff", paymentHandler.TinkoffWebhook)

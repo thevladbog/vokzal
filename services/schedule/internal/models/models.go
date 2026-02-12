@@ -32,7 +32,7 @@ func (j *JSONB) Scan(value interface{}) error {
 	if !ok {
 		return errors.New("failed to scan JSONB value")
 	}
-	*j = s
+	*j = append([]byte(nil), s...)
 	return nil
 }
 
@@ -51,7 +51,7 @@ func (j *JSONB) UnmarshalJSON(data []byte) error {
 		*j = nil
 		return nil
 	}
-	*j = data
+	*j = append([]byte(nil), data...)
 	return nil
 }
 

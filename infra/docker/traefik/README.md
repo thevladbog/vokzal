@@ -1,6 +1,12 @@
 # Traefik Configuration for Вокзал.ТЕХ
 
-Конфигурация Traefik v3.0 как API Gateway для всех микросервисов.
+Конфигурация Traefik v3.x как API Gateway для всех микросервисов (образ `traefik:v3.6.7`).
+
+## Совместимость с Traefik v3.6.7
+
+- **Провайдеры:** используются только Docker и File — Kubernetes Gateway API и CRD не используются; `experimental.kubernetesIngressNGINX` отсутствует.
+- **Load balancer:** в динамической конфигурации не задан алгоритм (нет `leasttime` и т.п.).
+- **Путь запроса (percent-encoding):** для entryPoints `web` и `websecure` явно заданы `entryPoints.<name>.http.encodedCharacters` (все `false`) и `sanitizePath = true`, чтобы поведение было предсказуемым и безопасным для v3.6+.
 
 ## Структура
 
@@ -78,10 +84,10 @@ http://localhost/v1/board/ws (WebSocket)
 
 ## Dashboard
 
-Traefik Dashboard доступен на:
+Traefik Dashboard доступен на (при запуске через docker-compose — порт 8100):
 
 ```
-http://localhost:8080/dashboard/
+http://localhost:8100/dashboard/
 ```
 
 Показывает:

@@ -137,7 +137,7 @@
     # CORS headers
     [http.middlewares.cors-headers.headers]
       accessControlAllowMethods = ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
-      accessControlAllowOriginList = ["http://localhost:3001", "http://localhost:5173", "http://localhost:3000", "https://vokzal.tech", "https://*.vokzal.tech"]
+      accessControlAllowOriginList = ["http://localhost", "http://localhost:3001", "http://localhost:5173", "http://localhost:3000", "https://vokzal.tech", "https://*.vokzal.tech"]
       accessControlAllowHeaders = ["Authorization", "Content-Type", "X-Requested-With"]
       accessControlAllowCredentials = true
       accessControlMaxAge = 3600
@@ -150,9 +150,9 @@
     [http.middlewares.strip-admin.stripPrefix]
       prefixes = ["/admin"]
     
-    # Schedule service: strips full path prefix
+    # Schedule service: strip /v1 only so backend receives /schedule/..., /stations/..., /routes/..., etc.
     [http.middlewares.strip-v1-schedule.stripPrefix]
-      prefixes = ["/v1/schedule", "/v1/stations", "/v1/routes", "/v1/trips", "/v1/buses", "/v1/drivers", "/v1/schedules"]
+      prefixes = ["/v1"]
     
     # Ticket service: strips full path prefix
     [http.middlewares.strip-v1-ticket.stripPrefix]

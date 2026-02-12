@@ -18,6 +18,7 @@ nats:
 logger:
   level: "debug"
 
+# Must match MinIO container (e.g. docker-compose MINIO_ROOT_USER / MINIO_ROOT_PASSWORD)
 minio:
   endpoint: "localhost:9000"
   access_key: "vokzal"

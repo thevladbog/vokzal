@@ -109,7 +109,8 @@ func main() {
 		})
 	})
 
-	// Traefik strips /v1 prefix, service receives /receipts/*, /z-reports/*, /kkt/*
+	// Traefik strip-v1-fiscal strips each full prefix (/v1/receipts, /v1/z-reports, /v1/kkt), so the
+	// service receives only the path suffix (e.g. /v1/receipts/abc → /abc, /v1/kkt/status → /status).
 
 	// Receipts routes
 	receipts := router.Group("/receipts")

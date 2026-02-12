@@ -1,4 +1,9 @@
 #!/bin/bash
+# PostgreSQL init for Вокзал.ТЕХ Docker Compose (local/dev).
+# Creates extensions and one schema per microservice. All services connect as the single
+# POSTGRES_USER (admin) with full privileges. This is intentional for simplicity in
+# local development; production deployments MUST use separate DB users per service,
+# grant each user only USAGE/CREATE on its own schema, and follow least privilege.
 set -e
 PGPASSWORD=$POSTGRES_PASSWORD psql -v ON_ERROR_STOP=1 -U $POSTGRES_USER -d $POSTGRES_DB -c "CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\";"
 PGPASSWORD=$POSTGRES_PASSWORD psql -v ON_ERROR_STOP=1 -U $POSTGRES_USER -d $POSTGRES_DB -c "CREATE SCHEMA IF NOT EXISTS auth;"

@@ -112,8 +112,8 @@ func main() {
 	router.POST("/email", notifyHandler.SendEmail)
 	router.POST("/telegram", notifyHandler.SendTelegram)
 	router.POST("/tts", notifyHandler.SendTTS)
-	router.GET("/:id", notifyHandler.GetNotification)
 	router.GET("/list", notifyHandler.ListNotifications)
+	router.GET("/:id", notifyHandler.GetNotification)
 
 	srv := &http.Server{
 		Addr:         ":" + cfg.Server.Port,

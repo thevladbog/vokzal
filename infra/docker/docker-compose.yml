@@ -33,7 +33,7 @@ services:
     volumes:
       - redis-data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      test: ["CMD", "redis-cli", "--no-auth-warning", "-a", "vokzal_redis_2026", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -92,9 +92,12 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./traefik/traefik.toml:/etc/traefik/traefik.toml
+      # config mount includes config/dynamic/ (traefik.toml providers.file directory = /etc/traefik/config/dynamic)
       - ./traefik/config:/etc/traefik/config
       - traefik-certs:/letsencrypt
       - traefik-logs:/var/log/traefik
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     networks:
       - vokzal-network
     restart: unless-stopped

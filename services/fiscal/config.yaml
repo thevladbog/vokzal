@@ -23,5 +23,6 @@ atol:
   company_name: "ООО «Вокзал.ТЕХ»"
   tax_system: "osn"  # osn, usn_income, usn_income_outcome, esn, patent
 
+# For Docker: use host.docker.internal (agent on host) or service name; override via VOKZAL_FISCAL_LOCAL_AGENT_URL
 local_agent:
-  url: "http://172.20.0.7:8081"
+  url: "http://localhost:8081"

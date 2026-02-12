@@ -15,6 +15,7 @@ nats:
   user: "vokzal"
   password: "nats_secret_2026"
 
+# Override in production via VOKZAL_SCHEDULE_JWT_SECRET; release mode will not start with default secret
 jwt:
   secret: "vokzal-tech-jwt-secret-change-me-in-production"
 

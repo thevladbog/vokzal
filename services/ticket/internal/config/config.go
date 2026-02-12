@@ -9,12 +9,20 @@ import (
 )
 
 // Config — корневая конфигурация сервиса.
+//
+//nolint:govet // fieldalignment: keep mapstructure/readability order
 type Config struct {
 	NATS     NATSConfig     `mapstructure:"nats"`
 	Server   ServerConfig   `mapstructure:"server"`
 	Logger   LoggerConfig   `mapstructure:"logger"`
 	Database DatabaseConfig `mapstructure:"database"`
 	Business BusinessConfig `mapstructure:"business"`
+	JWT      JWTConfig      `mapstructure:"jwt"`
+}
+
+// JWTConfig — настройки JWT для проверки токенов (тот же секрет, что в Auth Service).
+type JWTConfig struct {
+	Secret string `mapstructure:"secret"`
 }
 
 // ServerConfig — настройки HTTP-сервера.
@@ -83,6 +91,7 @@ func Load() (*Config, error) {
 	viper.SetDefault("business.refund_penalty.over_24_hours", 0.10)
 	viper.SetDefault("business.refund_penalty.between_12_24", 0.20)
 	viper.SetDefault("business.refund_penalty.under_12_hours", 0.30)
+	viper.SetDefault("jwt.secret", "vokzal_jwt_secret_change_in_production")
 
 	if err := viper.ReadInConfig(); err != nil {
 		var notFound viper.ConfigFileNotFoundError
