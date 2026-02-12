@@ -5,19 +5,15 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
+	"log"
 	"os"
 	"regexp"
 	"strings"
 
 	"github.com/spf13/viper"
-)
 
-// Insecure JWT secret placeholders; app must not start in release mode when secret is one of these.
-var insecureJWTSecrets = []string{
-	"vokzal_jwt_secret_change_in_production",
-	"vokzal-tech-jwt-secret-change-me-in-production",
-	"vokzal-tech-jwt-secret-change-me",
-}
+	commonjwt "github.com/vokzal-tech/go-common/jwt"
+)
 
 // Config — корневая конфигурация сервиса (поля по убыванию размера для выравнивания).
 type Config struct {
@@ -75,8 +71,12 @@ type MinIOConfig struct {
 // Real credentials must not be committed; .env is in .gitignore.
 func loadDotEnv() {
 	for _, path := range []string{".", "./config"} {
-		f, err := os.Open(path + "/.env")
+		envPath := path + "/.env"
+		f, err := os.Open(envPath)
 		if err != nil {
+			if !errors.Is(err, os.ErrNotExist) {
+				log.Printf("[document config] warning: could not open .env at %s: %v", envPath, err)
+			}
 			continue
 		}
 		scanner := bufio.NewScanner(f)
@@ -94,12 +94,15 @@ func loadDotEnv() {
 			val = strings.Trim(val, "\"'")
 			if key != "" {
 				if setErr := os.Setenv(key, val); setErr != nil {
-					continue
+					log.Printf("[document config] warning: could not set env %s from .env: %v", key, setErr)
 				}
 			}
 		}
+		if err := scanner.Err(); err != nil {
+			log.Printf("[document config] warning: error reading .env at %s: %v", envPath, err)
+		}
 		if closeErr := f.Close(); closeErr != nil {
-			_ = closeErr // ignore close error on .env read
+			log.Printf("[document config] warning: could not close .env at %s: %v", envPath, closeErr)
 		}
 		break
 	}
@@ -108,8 +111,11 @@ func loadDotEnv() {
 var envExpandRe = regexp.MustCompile(`\$\{([^}:]+)(?::-([^}]*))?\}`)
 
 // expandEnv replaces ${VAR} and ${VAR:-default} in s with os.Getenv("VAR") or default.
+// Use $$ for a literal $ (e.g. "$${literal}" stays "${literal}").
 func expandEnv(s string) string {
-	return envExpandRe.ReplaceAllStringFunc(s, func(match string) string {
+	const placeholder = "\x01"
+	s = strings.ReplaceAll(s, "$$", placeholder)
+	s = envExpandRe.ReplaceAllStringFunc(s, func(match string) string {
 		sub := envExpandRe.FindStringSubmatch(match)
 		if len(sub) < 2 {
 			return match
@@ -124,6 +130,7 @@ func expandEnv(s string) string {
 		}
 		return ""
 	})
+	return strings.ReplaceAll(s, placeholder, "$")
 }
 
 // Load читает конфигурацию из файла и переменных окружения.
@@ -187,7 +194,7 @@ func Load() (*Config, error) {
 	config.JWT.Secret = expandEnv(config.JWT.Secret)
 
 	if strings.TrimSpace(config.Database.User) == "" || strings.TrimSpace(config.Database.Password) == "" {
-		return nil, fmt.Errorf("database.user and database.password must be set (e.g. via DB_USER, DB_PASSWORD or .env)")
+		return nil, fmt.Errorf("database.user and database.password must be set (e.g. VOKZAL_DOCUMENT_DATABASE_USER, VOKZAL_DOCUMENT_DATABASE_PASSWORD or .env)")
 	}
 
 	// In release mode, refuse to run with default/placeholder JWT secret (use VOKZAL_DOCUMENT_JWT_SECRET in production).
@@ -196,7 +203,7 @@ func Load() (*Config, error) {
 		if s == "" {
 			return nil, fmt.Errorf("jwt.secret must not be empty or blank in release mode; set VOKZAL_DOCUMENT_JWT_SECRET")
 		}
-		for _, bad := range insecureJWTSecrets {
+		for _, bad := range commonjwt.InsecureJWTSecrets {
 			if s == bad {
 				return nil, fmt.Errorf("jwt.secret must not be the default/placeholder in release mode; set VOKZAL_DOCUMENT_JWT_SECRET")
 			}

@@ -4,8 +4,11 @@ package config
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/spf13/viper"
+
+	commonjwt "github.com/vokzal-tech/go-common/jwt"
 )
 
 // Config — корневая конфигурация сервиса.
@@ -89,6 +92,19 @@ func Load() (*Config, error) {
 
 	if config.Database.Password == "" {
 		return nil, fmt.Errorf("database password is required (set VOKZAL_AUDIT_DATABASE_PASSWORD)")
+	}
+
+	// In release mode, refuse to run with default/placeholder JWT secret (use VOKZAL_AUDIT_JWT_SECRET in production).
+	if config.Server.Mode == "release" {
+		s := strings.TrimSpace(config.JWT.Secret)
+		if s == "" {
+			return nil, fmt.Errorf("jwt.secret must not be empty or blank in release mode; set VOKZAL_AUDIT_JWT_SECRET")
+		}
+		for _, bad := range commonjwt.InsecureJWTSecrets {
+			if s == bad {
+				return nil, fmt.Errorf("jwt.secret must not be the default/placeholder in release mode; set VOKZAL_AUDIT_JWT_SECRET")
+			}
+		}
 	}
 
 	return &config, nil

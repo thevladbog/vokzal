@@ -8,14 +8,9 @@ import (
 	"time"
 
 	"github.com/spf13/viper"
-)
 
-// Insecure JWT secret placeholders; app must not start in release mode when secret is one of these.
-var insecureJWTSecrets = []string{
-	"vokzal_jwt_secret_change_in_production",
-	"vokzal-tech-jwt-secret-change-me-in-production",
-	"vokzal-tech-jwt-secret-change-me",
-}
+	commonjwt "github.com/vokzal-tech/go-common/jwt"
+)
 
 // Config — корневая конфигурация сервиса.
 type Config struct {
@@ -100,7 +95,7 @@ func Load() (*Config, error) {
 		if s == "" {
 			return nil, fmt.Errorf("jwt.secret must not be empty or blank in release mode; set VOKZAL_AUTH_JWT_SECRET")
 		}
-		for _, bad := range insecureJWTSecrets {
+		for _, bad := range commonjwt.InsecureJWTSecrets {
 			if s == bad {
 				return nil, fmt.Errorf("jwt.secret must not be the default/placeholder in release mode; set VOKZAL_AUTH_JWT_SECRET")
 			}

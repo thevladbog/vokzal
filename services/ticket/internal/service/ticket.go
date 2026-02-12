@@ -55,7 +55,7 @@ type SellTicketRequest struct {
 	TripID        string  `json:"trip_id" binding:"required"`
 	PaymentMethod string  `json:"payment_method" binding:"required"`
 	Price         float64 `json:"price" binding:"required,gt=0"`
-	// UserID — ID кассира (из JWT middleware), для аудита/логирования.
+	// UserID — ID аутентифицированного пользователя (из JWT middleware), для аудита/логирования; любая роль (кассир, диспетчер, контролёр, админ).
 	UserID string `json:"-"`
 }
 

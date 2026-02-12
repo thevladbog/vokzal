@@ -7,14 +7,9 @@ import (
 	"strings"
 
 	"github.com/spf13/viper"
-)
 
-// Insecure JWT secret placeholders; app must not start in release mode when secret is one of these.
-var insecureJWTSecrets = []string{
-	"vokzal_jwt_secret_change_in_production",
-	"vokzal-tech-jwt-secret-change-me-in-production",
-	"vokzal-tech-jwt-secret-change-me",
-}
+	commonjwt "github.com/vokzal-tech/go-common/jwt"
+)
 
 // Config — корневая конфигурация сервиса.
 //
@@ -99,6 +94,7 @@ func Load() (*Config, error) {
 	viper.SetDefault("business.refund_penalty.over_24_hours", 0.10)
 	viper.SetDefault("business.refund_penalty.between_12_24", 0.20)
 	viper.SetDefault("business.refund_penalty.under_12_hours", 0.30)
+	// jwt.secret is overridden by env VOKZAL_TICKET_JWT_SECRET (Viper prefix VOKZAL_TICKET_ + key jwt.secret).
 	viper.SetDefault("jwt.secret", "vokzal_jwt_secret_change_in_production")
 
 	if err := viper.ReadInConfig(); err != nil {
@@ -113,13 +109,13 @@ func Load() (*Config, error) {
 		return nil, fmt.Errorf("failed to unmarshal config: %w", err)
 	}
 
-	// In release mode, refuse to run with default/placeholder JWT secret (use VOKZAL_TICKET_JWT_SECRET in production).
+	// In release mode, refuse to run with default/placeholder JWT secret. Set env VOKZAL_TICKET_JWT_SECRET in production.
 	if config.Server.Mode == "release" {
 		s := strings.TrimSpace(config.JWT.Secret)
 		if s == "" {
 			return nil, fmt.Errorf("jwt.secret must not be empty or blank in release mode; set VOKZAL_TICKET_JWT_SECRET")
 		}
-		for _, bad := range insecureJWTSecrets {
+		for _, bad := range commonjwt.InsecureJWTSecrets {
 			if s == bad {
 				return nil, fmt.Errorf("jwt.secret must not be the default/placeholder in release mode; set VOKZAL_TICKET_JWT_SECRET")
 			}

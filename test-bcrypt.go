@@ -46,6 +46,8 @@ func main() {
 		logger.Info("compare OK", zap.String("hash", string(hash)))
 	}
 
+	// Intentionally public fixture hash for this test utility only: verifies defaultTestPassword.
+	// Do not use for production or real credentials; only for run-time check that bcrypt compare works.
 	fixtureHash := "$2a$10$GMHnZVK5kA0QRmCLqJBo3.zKoWmuR0yYZFjUSXaiCtKWEduv1eSTe"
 	err = bcrypt.CompareHashAndPassword([]byte(fixtureHash), []byte(password))
 	if err != nil && password == defaultTestPassword {

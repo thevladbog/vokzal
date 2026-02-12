@@ -1,4 +1,6 @@
--- Dev-only: set a known bcrypt hash for specific test accounts (disp1, cashier1, ctrl1).
+-- Dev-only: set a known bcrypt hash for three test accounts only (disp1, cashier1, ctrl1).
+-- NOT a general password migration — does not update all users or production accounts.
+-- Hash MUST match 002_seed_test_data.sql; see README.md section "Тестовый пароль (dev only)".
 -- Does NOT run by default. Requires explicit opt-in in the same session:
 --   SET app.allow_password_reset = 'yes';
 -- Then run this file. Rolls back on error or if opt-in was not set.

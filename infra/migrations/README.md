@@ -78,6 +78,21 @@ migrate -path /Users/thevladbog/PRSOME/vokzal/infra/migrations \
 
 ⚠️ **Важно:** Сменить пароль после первого входа!
 
+## Тестовый пароль (dev only)
+
+Один и тот же bcrypt-хэш для тестовых учёток **disp1**, **cashier1**, **ctrl1** используется в двух файлах:
+
+- `002_seed_test_data.sql` (INSERT пользователей)
+- `update_passwords.sql` (UPDATE паролей по opt-in)
+
+**При смене хэша нужно обновить оба файла.** Текущее значение (хранить в одном месте здесь):
+
+```
+$2a$10$gvTooaZGTXfKUqHRGn1xeuaqvwFqlzd5Z3BH7WBEFvJ9bBOa9xAMu
+```
+
+Чтобы сгенерировать новый хэш: `BCRYPT_TEST_PASSWORD=новый_пароль go run ../test-bcrypt.go` (из корня репозитория), затем подставить вывод в оба файла.
+
 ## Индексы
 
 Все критически важные индексы созданы:

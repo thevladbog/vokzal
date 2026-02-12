@@ -28,12 +28,14 @@ services:
     image: redis:7.2-alpine
     container_name: vokzal-redis
     command: redis-server --requirepass vokzal_redis_2026
+    environment:
+      REDISCLI_AUTH: vokzal_redis_2026
     ports:
       - "6379:6379"
     volumes:
       - redis-data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "--no-auth-warning", "-a", "vokzal_redis_2026", "ping"]
+      test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5

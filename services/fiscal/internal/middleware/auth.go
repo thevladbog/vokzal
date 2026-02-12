@@ -8,27 +8,17 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 	"go.uber.org/zap"
-)
 
-// Claims — JWT claims (must match auth-service token shape).
-type Claims struct {
-	UserID    string `json:"user_id"`
-	Username  string `json:"username"`
-	Role      string `json:"role"`
-	StationID string `json:"station_id"`
-	jwt.RegisteredClaims
-}
+	commonjwt "github.com/vokzal-tech/go-common/jwt"
+)
 
 // AuthMiddleware returns a gin.HandlerFunc that validates the JWT in the Authorization header,
 // verifies signature/claims, sets user_id, username, role, station_id in context, and aborts with 401 if invalid.
 func AuthMiddleware(jwtSecret string, logger *zap.Logger) gin.HandlerFunc {
+	if jwtSecret == "" {
+		logger.Fatal("AuthMiddleware: jwtSecret must not be empty; set JWT secret in config (e.g. VOKZAL_FISCAL_JWT_SECRET)")
+	}
 	return func(c *gin.Context) {
-		if jwtSecret == "" {
-			logger.Error("AuthMiddleware: jwtSecret must not be empty; set JWT secret in config (e.g. VOKZAL_FISCAL_JWT_SECRET)")
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Server misconfiguration: JWT secret not set"})
-			c.Abort()
-			return
-		}
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
 			c.JSON(http.StatusUnauthorized, gin.H{
@@ -48,7 +38,7 @@ func AuthMiddleware(jwtSecret string, logger *zap.Logger) gin.HandlerFunc {
 		}
 
 		tokenStr := parts[1]
-		token, err := jwt.ParseWithClaims(tokenStr, &Claims{}, func(t *jwt.Token) (interface{}, error) {
+		token, err := jwt.ParseWithClaims(tokenStr, &commonjwt.Claims{}, func(t *jwt.Token) (interface{}, error) {
 			if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
 				return nil, jwt.ErrSignatureInvalid
 			}
@@ -63,7 +53,7 @@ func AuthMiddleware(jwtSecret string, logger *zap.Logger) gin.HandlerFunc {
 			return
 		}
 
-		claims, ok := token.Claims.(*Claims)
+		claims, ok := token.Claims.(*commonjwt.Claims)
 		if !ok || !token.Valid {
 			c.JSON(http.StatusUnauthorized, gin.H{
 				"error": "Invalid or expired token",

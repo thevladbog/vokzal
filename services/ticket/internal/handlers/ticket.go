@@ -210,6 +210,10 @@ func (h *TicketHandler) GetDashboardStats(c *gin.Context) {
 	if userID == "" {
 		userID = c.GetHeader("X-User-ID")
 	}
+	if userID == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "user_id required (missing JWT or X-User-ID)"})
+		return
+	}
 	h.logger.Debug("Dashboard stats request", zap.String("user_id", userID))
 
 	date := c.Query("date")

@@ -60,7 +60,7 @@ SELECT * FROM (
 ) AS v(route_id, departure_time, days_of_week, platform, is_active)
 ON CONFLICT DO NOTHING;
 
--- Users (password_hash matches update_passwords.sql for disp1/cashier1/ctrl1; dev/test only)
+-- Users (password_hash MUST match update_passwords.sql for disp1/cashier1/ctrl1; see README.md "Тестовый пароль")
 WITH s AS (
   SELECT id FROM stations WHERE code = 'MSK-BEL' LIMIT 1
 )
