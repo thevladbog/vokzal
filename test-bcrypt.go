@@ -1,6 +1,6 @@
 // Test helper for bcrypt: generates a hash and verifies compare.
 // Password is read from BCRYPT_TEST_PASSWORD (test-only; never use real credentials).
-// Set BCRYPT_VERBOSE=1 to log non-sensitive status; secrets are only in structured fields when needed.
+// Set BCRYPT_VERBOSE=1 to log non-sensitive status (hash only; password is never logged).
 package main
 
 import (
@@ -28,22 +28,22 @@ func main() {
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		wrapped := fmt.Errorf("generate bcrypt hash: %w", err)
-		logger.Error("failed to generate bcrypt hash", zap.Error(wrapped), zap.String("password", password))
+		logger.Error("failed to generate bcrypt hash", zap.Error(wrapped))
 		os.Exit(1)
 	}
 
 	if os.Getenv("BCRYPT_VERBOSE") == "1" {
-		logger.Info("generated hash OK", zap.String("password", password), zap.String("hash", string(hash)))
+		logger.Info("generated hash OK", zap.String("hash", string(hash)))
 	}
 
 	err = bcrypt.CompareHashAndPassword(hash, []byte(password))
 	if err != nil {
 		wrapped := fmt.Errorf("compare hash and password: %w", err)
-		logger.Error("compare failed", zap.Error(wrapped), zap.String("password", password), zap.String("hash", string(hash)))
+		logger.Error("compare failed", zap.Error(wrapped), zap.String("hash", string(hash)))
 		os.Exit(1)
 	}
 	if os.Getenv("BCRYPT_VERBOSE") == "1" {
-		logger.Info("compare OK", zap.String("password", password), zap.String("hash", string(hash)))
+		logger.Info("compare OK", zap.String("hash", string(hash)))
 	}
 
 	// Test with a fixture hash (matches defaultTestPassword only; test-only, not a real credential)
@@ -52,15 +52,15 @@ func main() {
 	if err != nil {
 		wrapped := fmt.Errorf("compare fixture hash and password: %w", err)
 		if password == defaultTestPassword {
-			logger.Error("fixture compare failed (fixture is for default test password only)", zap.Error(wrapped), zap.String("password", password), zap.String("hash", fixtureHash))
+			logger.Error("fixture compare failed (fixture is for default test password only)", zap.Error(wrapped), zap.String("hash", fixtureHash))
 			os.Exit(1)
 		}
 		if os.Getenv("BCRYPT_VERBOSE") == "1" {
-			logger.Warn("fixture compare skipped (custom password)", zap.Error(wrapped), zap.String("password", password))
+			logger.Warn("fixture compare skipped (custom password)", zap.Error(wrapped))
 		}
 	} else {
 		if os.Getenv("BCRYPT_VERBOSE") == "1" {
-			logger.Info("fixture compare OK", zap.String("password", password), zap.String("hash", fixtureHash))
+			logger.Info("fixture compare OK", zap.String("hash", fixtureHash))
 		}
 	}
 }

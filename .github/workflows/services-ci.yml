@@ -109,9 +109,9 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Vendor dependencies (schedule uses local go-common)
-        if: matrix.service == 'schedule'
-        working-directory: services/schedule
+      - name: Vendor dependencies (schedule and ticket use local go-common)
+        if: matrix.service == 'schedule' || matrix.service == 'ticket'
+        working-directory: services/${{ matrix.service }}
         run: go mod vendor
 
       - name: Extract metadata

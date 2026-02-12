@@ -40,6 +40,10 @@ func (h *TicketHandler) SellTicket(c *gin.Context) {
 	} else {
 		req.UserID = c.GetHeader("X-User-ID")
 	}
+	if req.UserID == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "user_id required (missing JWT or X-User-ID)"})
+		return
+	}
 
 	ticket, err := h.svc.SellTicket(c.Request.Context(), &req)
 	if err != nil {

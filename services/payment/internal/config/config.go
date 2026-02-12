@@ -16,6 +16,12 @@ type Config struct {
 	Server   ServerConfig   `mapstructure:"server"`
 	Logger   LoggerConfig   `mapstructure:"logger"`
 	Database DatabaseConfig `mapstructure:"database"`
+	JWT      JWTConfig      `mapstructure:"jwt"`
+}
+
+// JWTConfig — настройки JWT (тот же секрет, что у auth-service, для проверки токенов).
+type JWTConfig struct {
+	Secret string `mapstructure:"secret"`
 }
 
 // ServerConfig — настройки HTTP-сервера.
@@ -86,6 +92,7 @@ func Load() (*Config, error) {
 	viper.SetDefault("logger.level", "debug")
 	viper.SetDefault("tinkoff.api_url", "https://securepay.tinkoff.ru/v2")
 	viper.SetDefault("sbp.api_url", "https://api.sbp.nspk.ru")
+	viper.SetDefault("jwt.secret", "vokzal-tech-jwt-secret-change-me") // override in production; must match auth-service
 
 	if err := viper.ReadInConfig(); err != nil {
 		var notFound viper.ConfigFileNotFoundError

@@ -100,6 +100,9 @@ func Load() (*Config, error) {
 	// In release mode, refuse to run with default/placeholder JWT secret (use VOKZAL_SCHEDULE_JWT_SECRET in production).
 	if config.Server.Mode == "release" {
 		s := strings.TrimSpace(config.JWT.Secret)
+		if s == "" {
+			return nil, fmt.Errorf("jwt.secret must not be empty or blank in release mode; set VOKZAL_SCHEDULE_JWT_SECRET")
+		}
 		for _, bad := range insecureJWTSecrets {
 			if s == bad {
 				return nil, fmt.Errorf("jwt.secret must not be the default/placeholder in release mode; set VOKZAL_SCHEDULE_JWT_SECRET")

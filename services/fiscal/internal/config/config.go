@@ -16,6 +16,12 @@ type Config struct {
 	Logger     LoggerConfig     `mapstructure:"logger"`
 	LocalAgent LocalAgentConfig `mapstructure:"local_agent"`
 	Database   DatabaseConfig   `mapstructure:"database"`
+	JWT        JWTConfig        `mapstructure:"jwt"`
+}
+
+// JWTConfig — настройки JWT (тот же секрет, что у auth-service, для проверки токенов).
+type JWTConfig struct {
+	Secret string `mapstructure:"secret"`
 }
 
 // ServerConfig — настройки HTTP-сервера.
@@ -85,6 +91,7 @@ func Load() (*Config, error) {
 	viper.SetDefault("atol.company_name", "ООО «Вокзал.ТЕХ»")
 	viper.SetDefault("atol.tax_system", "osn")
 	viper.SetDefault("local_agent.url", "http://localhost:8081")
+	viper.SetDefault("jwt.secret", "vokzal-tech-jwt-secret-change-me") // override in production; must match auth-service
 
 	if err := viper.ReadInConfig(); err != nil {
 		var notFound viper.ConfigFileNotFoundError

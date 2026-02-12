@@ -4,70 +4,70 @@
     [http.routers.auth]
       rule = "Host(`api.vokzal.tech`) && (PathPrefix(`/v1/auth`) || PathPrefix(`/v1/users`))"
       service = "auth-service"
-      middlewares = ["cors-headers", "strip-v1-auth"]
+      middlewares = ["cors-headers", "rate-limit", "strip-v1-auth"]
       entryPoints = ["web", "websecure"]
     
     # Schedule Service (handles stations, routes, trips, buses, drivers, schedules)
     [http.routers.schedule]
       rule = "Host(`api.vokzal.tech`) && (PathPrefix(`/v1/schedule`) || PathPrefix(`/v1/stations`) || PathPrefix(`/v1/routes`) || PathPrefix(`/v1/trips`) || PathPrefix(`/v1/buses`) || PathPrefix(`/v1/drivers`) || PathPrefix(`/v1/schedules`))"
       service = "schedule-service"
-      middlewares = ["cors-headers", "strip-v1-schedule"]
+      middlewares = ["cors-headers", "rate-limit", "strip-v1-schedule"]
       entryPoints = ["web", "websecure"]
     
     # Ticket Service: /v1/ticket/ (stats only; trailing slash avoids matching /v1/tickets), /v1/tickets, /v1/boarding
     [http.routers.ticket]
       rule = "Host(`api.vokzal.tech`) && (PathPrefix(`/v1/ticket/`) || PathPrefix(`/v1/tickets`) || PathPrefix(`/v1/boarding`))"
       service = "ticket-service"
-      middlewares = ["cors-headers", "strip-v1-ticket"]
+      middlewares = ["cors-headers", "rate-limit", "strip-v1-ticket"]
       entryPoints = ["web", "websecure"]
     
     # Fiscal Service
     [http.routers.fiscal]
       rule = "Host(`api.vokzal.tech`) && (PathPrefix(`/v1/receipts`) || PathPrefix(`/v1/z-reports`) || PathPrefix(`/v1/kkt`))"
       service = "fiscal-service"
-      middlewares = ["cors-headers", "strip-v1-fiscal"]
+      middlewares = ["cors-headers", "rate-limit", "strip-v1-fiscal"]
       entryPoints = ["web", "websecure"]
     
     # Payment Service
     [http.routers.payment]
       rule = "Host(`api.vokzal.tech`) && PathPrefix(`/v1/payment`)"
       service = "payment-service"
-      middlewares = ["cors-headers", "strip-v1-payment"]
+      middlewares = ["cors-headers", "rate-limit", "strip-v1-payment"]
       entryPoints = ["web", "websecure"]
     
     # Board Service
     [http.routers.board]
       rule = "Host(`api.vokzal.tech`) && PathPrefix(`/v1/board`)"
       service = "board-service"
-      middlewares = ["cors-headers", "strip-v1-board"]
+      middlewares = ["cors-headers", "rate-limit", "strip-v1-board"]
       entryPoints = ["web", "websecure"]
     
     # Notify Service
     [http.routers.notify]
       rule = "Host(`api.vokzal.tech`) && PathPrefix(`/v1/notify`)"
       service = "notify-service"
-      middlewares = ["cors-headers", "strip-v1-notify"]
+      middlewares = ["cors-headers", "rate-limit", "strip-v1-notify"]
       entryPoints = ["web", "websecure"]
     
     # Audit Service
     [http.routers.audit]
       rule = "Host(`api.vokzal.tech`) && PathPrefix(`/v1/audit`)"
       service = "audit-service"
-      middlewares = ["cors-headers", "strip-v1-audit"]
+      middlewares = ["cors-headers", "rate-limit", "strip-v1-audit"]
       entryPoints = ["web", "websecure"]
     
     # Document Service
     [http.routers.document]
       rule = "Host(`api.vokzal.tech`) && PathPrefix(`/v1/document`)"
       service = "document-service"
-      middlewares = ["cors-headers", "strip-v1-document"]
+      middlewares = ["cors-headers", "rate-limit", "strip-v1-document"]
       entryPoints = ["web", "websecure"]
     
     # Geo Service
     [http.routers.geo]
       rule = "Host(`api.vokzal.tech`) && PathPrefix(`/v1/geo`)"
       service = "geo-service"
-      middlewares = ["cors-headers", "strip-v1-geo"]
+      middlewares = ["cors-headers", "rate-limit", "strip-v1-geo"]
       entryPoints = ["web", "websecure"]
     
     # Admin Panel UI

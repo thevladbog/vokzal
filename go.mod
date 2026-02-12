@@ -9,4 +9,7 @@ require (
 	golang.org/x/crypto v0.47.0
 )
 
-require go.uber.org/multierr v1.10.0 // indirect
+require (
+	github.com/stretchr/testify v1.11.1 // indirect
+	go.uber.org/multierr v1.10.0 // indirect
+)

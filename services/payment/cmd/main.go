@@ -18,6 +18,7 @@ import (
 
 	"github.com/vokzal-tech/payment-service/internal/config"
 	"github.com/vokzal-tech/payment-service/internal/handlers"
+	"github.com/vokzal-tech/payment-service/internal/middleware"
 	"github.com/vokzal-tech/payment-service/internal/models"
 	"github.com/vokzal-tech/payment-service/internal/repository"
 	"github.com/vokzal-tech/payment-service/internal/sbp"
@@ -127,14 +128,20 @@ func main() {
 	})
 
 	// Traefik strips /v1/payment prefix, service receives /, /:id, /tinkoff/init, etc.
-	router.POST("/tinkoff/init", paymentHandler.InitTinkoff)
-	router.POST("/sbp/init", paymentHandler.InitSBP)
-	router.POST("/cash/init", paymentHandler.InitCash)
-	router.GET("/list", paymentHandler.ListPayments)
-	router.GET("/", paymentHandler.GetPaymentsByTicket)
-	router.GET("/:id", paymentHandler.GetPayment)
-	router.GET("/:id/status", paymentHandler.CheckStatus)
+	// Webhook is provider-signed; no JWT.
 	router.POST("/webhooks/tinkoff", paymentHandler.TinkoffWebhook)
+
+	// All other routes require JWT.
+	authMW := middleware.AuthMiddleware(cfg.JWT.Secret, logger)
+	authorized := router.Group("")
+	authorized.Use(authMW)
+	authorized.POST("/tinkoff/init", paymentHandler.InitTinkoff)
+	authorized.POST("/sbp/init", paymentHandler.InitSBP)
+	authorized.POST("/cash/init", paymentHandler.InitCash)
+	authorized.GET("/list", paymentHandler.ListPayments)
+	authorized.GET("/", paymentHandler.GetPaymentsByTicket)
+	authorized.GET("/:id", paymentHandler.GetPayment)
+	authorized.GET("/:id/status", paymentHandler.CheckStatus)
 
 	// Создать HTTP сервер
 	srv := &http.Server{
