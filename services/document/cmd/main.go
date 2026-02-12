@@ -17,6 +17,7 @@ import (
 
 	"github.com/vokzal-tech/document-service/internal/config"
 	"github.com/vokzal-tech/document-service/internal/handlers"
+	"github.com/vokzal-tech/document-service/internal/middleware"
 	"github.com/vokzal-tech/document-service/internal/models"
 	"github.com/vokzal-tech/document-service/internal/pdf"
 	"github.com/vokzal-tech/document-service/internal/repository"
@@ -88,12 +89,14 @@ func main() {
 		})
 	})
 
-	v1 := router.Group("/v1")
-	doc := v1.Group("/document")
-	doc.POST("/ticket", docHandler.GenerateTicket)
-	doc.POST("/pd2", docHandler.GeneratePD2)
-	doc.GET("/:id", docHandler.GetDocument)
-	doc.GET("/list", docHandler.ListDocuments)
+	// Traefik strips /v1/document prefix; service receives /documents/ticket, /documents/pd2, /documents/list, /documents/:id (all protected by JWT)
+	authMW := middleware.AuthMiddleware(cfg.JWT.Secret, logger)
+	documents := router.Group("/documents")
+	documents.Use(authMW)
+	documents.POST("/ticket", docHandler.GenerateTicket)
+	documents.POST("/pd2", docHandler.GeneratePD2)
+	documents.GET("/list", docHandler.ListDocuments)
+	documents.GET("/:id", docHandler.GetDocument)
 
 	srv := &http.Server{
 		Addr:         ":" + cfg.Server.Port,

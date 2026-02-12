@@ -4,7 +4,7 @@ server:
 
 database:
   host: "localhost"
-  port: 5432
+  port: 5440
   user: "admin"
   password: "vokzal_secret_2026"
   dbname: "vokzal"

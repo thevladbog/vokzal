@@ -34,6 +34,16 @@ func (h *TicketHandler) SellTicket(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+	// user_id из JWT middleware (защищённый маршрут)
+	if userID := c.GetString("user_id"); userID != "" {
+		req.UserID = userID
+	} else {
+		req.UserID = c.GetHeader("X-User-ID")
+	}
+	if req.UserID == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "user_id required (missing JWT or X-User-ID)"})
+		return
+	}
 
 	ticket, err := h.svc.SellTicket(c.Request.Context(), &req)
 	if err != nil {
@@ -102,7 +112,8 @@ func (h *TicketHandler) RefundTicket(c *gin.Context) {
 		userID = c.GetHeader("X-User-ID")
 	}
 	if userID == "" {
-		userID = "system"
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "user_id required (missing JWT or X-User-ID)"})
+		return
 	}
 
 	result, err := h.svc.RefundTicket(c.Request.Context(), ticketID, userID)
@@ -135,7 +146,8 @@ func (h *TicketHandler) StartBoarding(c *gin.Context) {
 		userID = c.GetHeader("X-User-ID")
 	}
 	if userID == "" {
-		userID = "system"
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "user_id required (missing JWT or X-User-ID)"})
+		return
 	}
 
 	if err := h.svc.StartBoarding(c.Request.Context(), req.TripID, userID); err != nil {
@@ -154,6 +166,16 @@ func (h *TicketHandler) MarkBoarding(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+	// user_id only from JWT context or X-User-ID header; never from request body
+	userID := c.GetString("user_id")
+	if userID == "" {
+		userID = c.GetHeader("X-User-ID")
+	}
+	if userID == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "user_id required (missing JWT or X-User-ID)"})
+		return
+	}
+	req.UserID = userID
 
 	if err := h.svc.MarkBoarding(c.Request.Context(), &req); err != nil {
 		h.logger.Error("Failed to mark boarding", zap.Error(err))
@@ -184,6 +206,16 @@ func (h *TicketHandler) GetBoardingStatus(c *gin.Context) {
 
 // GetDashboardStats возвращает статистику билетов за дату для дашборда.
 func (h *TicketHandler) GetDashboardStats(c *gin.Context) {
+	userID := c.GetString("user_id")
+	if userID == "" {
+		userID = c.GetHeader("X-User-ID")
+	}
+	if userID == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "user_id required (missing JWT or X-User-ID)"})
+		return
+	}
+	h.logger.Debug("Dashboard stats request", zap.String("user_id", userID))
+
 	date := c.Query("date")
 	if date == "" {
 		date = time.Now().Format("2006-01-02")

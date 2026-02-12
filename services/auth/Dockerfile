@@ -1,16 +1,12 @@
-FROM golang:1.25.6-alpine AS builder
+FROM golang:1.25.7-alpine AS builder
 
 WORKDIR /build
 
-# Установить зависимости
-COPY go.mod go.sum ./
-RUN go mod download
-
-# Скопировать исходники
+# go-common is replaced by ../../shared/go-common; CI runs `go mod vendor` so vendor/ is in context.
 COPY . .
 
 # Собрать бинарник
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o auth-service ./cmd/main.go
+RUN CGO_ENABLED=0 GOOS=linux go build -mod=vendor -a -installsuffix cgo -o auth-service ./cmd/main.go
 
 # Финальный образ
 FROM alpine:latest

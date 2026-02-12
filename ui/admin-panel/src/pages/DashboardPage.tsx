@@ -11,7 +11,6 @@ import {
   makeStyles,
   Button,
   Select,
-  Option,
   Spinner,
 } from '@fluentui/react-components';
 import { useAuthStore } from '@/stores/authStore';
@@ -130,8 +129,8 @@ export const DashboardPage: React.FC = () => {
             className={styles.langSwitcher}
             aria-label={t('common.language')}
           >
-            <Option value="ru" text="RU">RU</Option>
-            <Option value="en" text="EN">EN</Option>
+            <option value="ru">RU</option>
+            <option value="en">EN</option>
           </Select>
         </div>
 

@@ -4,19 +4,20 @@ package config
 import (
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/spf13/viper"
+
+	commonjwt "github.com/vokzal-tech/go-common/jwt"
 )
 
 // Config — корневая конфигурация сервиса.
-//
-//nolint:govet // fieldalignment: порядок полей для mapstructure
 type Config struct {
-	Server   ServerConfig   `mapstructure:"server"`
 	Database DatabaseConfig `mapstructure:"database"`
-	JWT      JWTConfig      `mapstructure:"jwt"`
+	Server   ServerConfig   `mapstructure:"server"`
 	Logger   LoggerConfig   `mapstructure:"logger"`
+	JWT      JWTConfig      `mapstructure:"jwt"`
 }
 
 // ServerConfig — настройки HTTP-сервера.
@@ -26,15 +27,13 @@ type ServerConfig struct {
 }
 
 // DatabaseConfig — настройки подключения к PostgreSQL.
-//
-//nolint:govet // fieldalignment: порядок полей для DSN
 type DatabaseConfig struct {
 	Host     string `mapstructure:"host"`
-	Port     int    `mapstructure:"port"`
 	User     string `mapstructure:"user"`
 	Password string `mapstructure:"password"`
 	DBName   string `mapstructure:"dbname"`
 	SSLMode  string `mapstructure:"sslmode"`
+	Port     int    `mapstructure:"port"`
 }
 
 // JWTConfig — настройки JWT.
@@ -88,6 +87,19 @@ func Load() (*Config, error) {
 	var config Config
 	if err := viper.Unmarshal(&config); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal config: %w", err)
+	}
+
+	// In release mode, refuse to run with default/placeholder JWT secret (use VOKZAL_AUTH_JWT_SECRET in production).
+	if config.Server.Mode == "release" {
+		s := strings.TrimSpace(config.JWT.Secret)
+		if s == "" {
+			return nil, fmt.Errorf("jwt.secret must not be empty or blank in release mode; set VOKZAL_AUTH_JWT_SECRET")
+		}
+		for _, bad := range commonjwt.InsecureJWTSecrets {
+			if s == bad {
+				return nil, fmt.Errorf("jwt.secret must not be the default/placeholder in release mode; set VOKZAL_AUTH_JWT_SECRET")
+			}
+		}
 	}
 
 	return &config, nil

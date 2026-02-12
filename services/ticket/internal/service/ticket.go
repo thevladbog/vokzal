@@ -44,6 +44,8 @@ type ticketService struct {
 }
 
 // SellTicketRequest — запрос на продажу билета.
+//
+//nolint:govet // fieldalignment: keep JSON tag order for API
 type SellTicketRequest struct {
 	SeatID        *string `json:"seat_id"`
 	PassengerName *string `json:"passenger_name"`
@@ -53,6 +55,8 @@ type SellTicketRequest struct {
 	TripID        string  `json:"trip_id" binding:"required"`
 	PaymentMethod string  `json:"payment_method" binding:"required"`
 	Price         float64 `json:"price" binding:"required,gt=0"`
+	// UserID — ID аутентифицированного пользователя (из JWT middleware), для аудита/логирования; любая роль (кассир, диспетчер, контролёр, админ).
+	UserID string `json:"-"`
 }
 
 // RefundResult — результат возврата билета.
@@ -62,10 +66,10 @@ type RefundResult struct {
 	RefundAmount   float64 `json:"refund_amount"`
 }
 
-// MarkBoardingRequest — запрос на отметку посадки.
+// MarkBoardingRequest — запрос на отметку посадки. UserID не биндится из тела — задаётся из JWT или X-User-ID.
 type MarkBoardingRequest struct {
 	TicketID   string `json:"ticket_id" binding:"required"`
-	UserID     string `json:"user_id" binding:"required"`
+	UserID     string `json:"-"` // set by handler from JWT or X-User-ID; never accept from body
 	ScanMethod string `json:"scan_method"`
 }
 
@@ -130,6 +134,7 @@ func (s *ticketService) SellTicket(ctx context.Context, req *SellTicketRequest) 
 
 	s.logger.Info("Ticket sold",
 		zap.String("ticket_id", ticket.ID),
+		zap.String("user_id", req.UserID),
 		zap.String("trip_id", ticket.TripID),
 		zap.Float64("price", ticket.Price))
 

@@ -96,14 +96,13 @@ func main() {
 		})
 	})
 
-	v1 := router.Group("/v1")
-	audit := v1.Group("/audit")
-	audit.POST("/log", auditHandler.CreateLog)
-	audit.GET("/list", auditHandler.ListLogs)
-	audit.GET("/entity", auditHandler.GetLogsByEntity)
-	audit.GET("/user", auditHandler.GetLogsByUser)
-	audit.GET("/date-range", auditHandler.GetLogsByDateRange)
-	audit.GET("/:id", auditHandler.GetLog)
+	// Traefik strips /v1/audit prefix, service receives /log, /list, /:id, etc.
+	router.POST("/log", auditHandler.CreateLog)
+	router.GET("/list", auditHandler.ListLogs)
+	router.GET("/entity", auditHandler.GetLogsByEntity)
+	router.GET("/user", auditHandler.GetLogsByUser)
+	router.GET("/date-range", auditHandler.GetLogsByDateRange)
+	router.GET("/:id", auditHandler.GetLog)
 
 	srv := &http.Server{
 		Addr:         ":" + cfg.Server.Port,

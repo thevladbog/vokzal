@@ -23,7 +23,6 @@ import {
   DialogActions,
   DialogContent,
   Select,
-  Option,
 } from '@fluentui/react-components';
 import { Edit24Regular } from '@fluentui/react-icons';
 import { scheduleService } from '@/services/schedule';
@@ -261,9 +260,9 @@ export const TripsPage: React.FC = () => {
                       style={{ width: '100%' }}
                     >
                       {TRIP_STATUSES.map((s) => (
-                        <Option key={s} value={s} text={getStatusLabel(s)}>
+                        <option key={s} value={s}>
                           {getStatusLabel(s)}
-                        </Option>
+                        </option>
                       ))}
                     </Select>
                   </div>
@@ -302,11 +301,11 @@ export const TripsPage: React.FC = () => {
                       onChange={(_, d) => setEditBusId(d.value ?? '')}
                       style={{ width: '100%' }}
                     >
-                      <Option value="" text="—">—</Option>
+                      <option value="">—</option>
                       {buses.map((b) => (
-                        <Option key={b.id} value={b.id} text={`${b.plate_number} (${b.model})`}>
+                        <option key={b.id} value={b.id}>
                           {b.plate_number} ({b.model})
-                        </Option>
+                        </option>
                       ))}
                     </Select>
                   </div>
@@ -317,11 +316,11 @@ export const TripsPage: React.FC = () => {
                       onChange={(_, d) => setEditDriverId(d.value ?? '')}
                       style={{ width: '100%' }}
                     >
-                      <Option value="" text="—">—</Option>
+                      <option value="">—</option>
                       {drivers.map((d) => (
-                        <Option key={d.id} value={d.id} text={`${d.full_name} (${d.license_number})`}>
+                        <option key={d.id} value={d.id}>
                           {d.full_name} ({d.license_number})
-                        </Option>
+                        </option>
                       ))}
                     </Select>
                   </div>

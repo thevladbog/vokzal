@@ -15,6 +15,13 @@ var (
 	ErrExpiredToken = errors.New("token expired")
 )
 
+// InsecureJWTSecrets — плейсхолдеры секретов, с которыми приложение не должно запускаться в release (используется в config Load всех сервисов).
+var InsecureJWTSecrets = []string{
+	"vokzal_jwt_secret_change_in_production",
+	"vokzal-tech-jwt-secret-change-me-in-production",
+	"vokzal-tech-jwt-secret-change-me",
+}
+
 // Claims содержит JWT claims для Вокзал.ТЕХ.
 type Claims struct {
 	UserID    string `json:"user_id"`

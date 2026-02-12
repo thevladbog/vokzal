@@ -99,9 +99,18 @@ export const authService = {
     try {
       const response = await apiClient.post<{ success: boolean; data?: AuthResponse }>(
         '/auth/refresh',
-        { refresh_token: refreshToken }
+        { refresh_token: refreshToken },
+        { validateStatus: (status) => status < 500 } // Don't throw on 4xx
       );
-      if (response.data?.success !== true || !response.data?.data) return false;
+      if (response.status !== 200 || response.data?.success !== true || !response.data?.data) {
+        // Token expired or invalid, clean up
+        try {
+          sessionStorage.removeItem(REFRESH_TOKEN_STORAGE_KEY);
+        } catch {
+          // ignore
+        }
+        return false;
+      }
 
       const parsed = AuthResponseSchema.safeParse(response.data.data);
       if (!parsed.success) return false;

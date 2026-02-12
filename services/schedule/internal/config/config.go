@@ -4,8 +4,11 @@ package config
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/spf13/viper"
+
+	commonjwt "github.com/vokzal-tech/go-common/jwt"
 )
 
 // Config — корневая конфигурация сервиса.
@@ -87,6 +90,19 @@ func Load() (*Config, error) {
 	var config Config
 	if err := viper.Unmarshal(&config); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal config: %w", err)
+	}
+
+	// In release mode, refuse to run with default/placeholder JWT secret (use VOKZAL_SCHEDULE_JWT_SECRET in production).
+	if config.Server.Mode == "release" {
+		s := strings.TrimSpace(config.JWT.Secret)
+		if s == "" {
+			return nil, fmt.Errorf("jwt.secret must not be empty or blank in release mode; set VOKZAL_SCHEDULE_JWT_SECRET")
+		}
+		for _, bad := range commonjwt.InsecureJWTSecrets {
+			if s == bad {
+				return nil, fmt.Errorf("jwt.secret must not be the default/placeholder in release mode; set VOKZAL_SCHEDULE_JWT_SECRET")
+			}
+		}
 	}
 
 	return &config, nil

@@ -24,7 +24,6 @@ import {
   Input,
   Label,
   Select,
-  Option,
 } from '@fluentui/react-components';
 import { Add24Regular, Delete24Regular, Edit24Regular } from '@fluentui/react-icons';
 import { scheduleService } from '@/services/schedule';
@@ -185,9 +184,9 @@ export const DriversPage: React.FC = () => {
                     style={{ width: '100%' }}
                   >
                     {stations.map((s) => (
-                      <Option key={s.id} value={s.id}>
+                      <option key={s.id} value={s.id}>
                         {s.name}
-                      </Option>
+                      </option>
                     ))}
                   </Select>
                 </div>
@@ -225,11 +224,11 @@ export const DriversPage: React.FC = () => {
           onChange={(_, d) => setStationFilter(d.value ?? '')}
           style={{ minWidth: '200px' }}
         >
-          <Option value="">{t('drivers.allStations')}</Option>
+          <option value="">{t('drivers.allStations')}</option>
           {stations.map((s) => (
-            <Option key={s.id} value={s.id}>
+            <option key={s.id} value={s.id}>
               {s.name}
-            </Option>
+            </option>
           ))}
         </Select>
       </div>

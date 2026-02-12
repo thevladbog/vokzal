@@ -2,13 +2,13 @@ module github.com/vokzal-tech/board-service
 
 go 1.25
 
-toolchain go1.25.6
+toolchain go1.25.7
 
 require (
 	github.com/gin-gonic/gin v1.10.0
 	github.com/gorilla/websocket v1.5.3
 	github.com/nats-io/nats.go v1.37.0
-	github.com/redis/go-redis/v9 v9.7.0
+	github.com/redis/go-redis/v9 v9.7.3
 	github.com/spf13/viper v1.19.0
 	go.uber.org/zap v1.27.0
 	gorm.io/driver/postgres v1.5.9

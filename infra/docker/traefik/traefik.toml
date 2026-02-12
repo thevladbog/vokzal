@@ -11,13 +11,35 @@
   dashboard = true
   insecure = true
 
+# EntryPoints: explicit http options for Traefik v3.6+ (request-path percent-encoding behavior).
+# No Kubernetes Gateway API / CRD / experimental.kubernetesIngressNGINX in this setup.
 [entryPoints]
   [entryPoints.web]
     address = ":80"
-  
+    [entryPoints.web.http]
+      sanitizePath = true
+      [entryPoints.web.http.encodedCharacters]
+        allowEncodedSlash = false
+        allowEncodedBackSlash = false
+        allowEncodedNullCharacter = false
+        allowEncodedSemicolon = false
+        allowEncodedPercent = false
+        allowEncodedQuestionMark = false
+        allowEncodedHash = false
+
   [entryPoints.websecure]
     address = ":443"
-  
+    [entryPoints.websecure.http]
+      sanitizePath = true
+      [entryPoints.websecure.http.encodedCharacters]
+        allowEncodedSlash = false
+        allowEncodedBackSlash = false
+        allowEncodedNullCharacter = false
+        allowEncodedSemicolon = false
+        allowEncodedPercent = false
+        allowEncodedQuestionMark = false
+        allowEncodedHash = false
+
   [entryPoints.metrics]
     address = ":8082"
 
@@ -27,7 +49,8 @@
     network = "vokzal-network"
   
   [providers.file]
-    directory = "/etc/traefik/dynamic"
+    # Must match docker-compose mount ./traefik/config → /etc/traefik/config (host: ./traefik/config/dynamic/)
+    directory = "/etc/traefik/config/dynamic"
     watch = true
 
 [metrics]

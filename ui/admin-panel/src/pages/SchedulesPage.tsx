@@ -24,7 +24,6 @@ import {
   Label,
   Input,
   Select,
-  Option,
   Checkbox,
 } from '@fluentui/react-components';
 import { Add24Regular, CalendarLtr24Regular, Edit24Regular } from '@fluentui/react-icons';
@@ -158,8 +157,21 @@ export const SchedulesPage: React.FC = () => {
     },
   });
 
-  const formatDaysOfWeek = (days: number[]) => {
-    return days.map((d) => t(DAY_KEYS[d - 1])).join(', ');
+  const formatDaysOfWeek = (days: number[] | string) => {
+    if (Array.isArray(days)) {
+      return days.map((d: number) => t(DAY_KEYS[d - 1])).join(', ');
+    }
+    // PostgreSQL may return JSONB as string or already parsed
+    if (typeof days === 'string') {
+      try {
+        const parsed = JSON.parse(days);
+        return parsed.map((d: number) => t(DAY_KEYS[d - 1])).join(', ');
+      } catch {
+        // If parsing fails, try to use as-is or return empty
+        return '';
+      }
+    }
+    return '';
   };
 
   const toggleCreateDay = (day: number) => {
@@ -238,9 +250,9 @@ export const SchedulesPage: React.FC = () => {
             style={{ minWidth: '200px' }}
           >
             {routes.map((r) => (
-              <Option key={r.id} value={r.id} text={r.name}>
+              <option key={r.id} value={r.id}>
                 {r.name}
-              </Option>
+              </option>
             ))}
           </Select>
           <Dialog open={generateOpen} onOpenChange={(_, v) => setGenerateOpen(v.open)}>
@@ -268,9 +280,9 @@ export const SchedulesPage: React.FC = () => {
                       style={{ width: '100%' }}
                     >
                       {routes.map((r) => (
-                        <Option key={r.id} value={r.id}>
+                        <option key={r.id} value={r.id}>
                           {r.name}
-                        </Option>
+                        </option>
                       ))}
                     </Select>
                   </div>
@@ -283,9 +295,9 @@ export const SchedulesPage: React.FC = () => {
                       disabled={!generateRouteId}
                     >
                       {schedulesForGenerate.map((s) => (
-                        <Option key={s.id} value={s.id} text={`${s.departure_time} — ${formatDaysOfWeek(s.days_of_week ?? [])}`}>
+                        <option key={s.id} value={s.id}>
                           {s.departure_time} — {formatDaysOfWeek(s.days_of_week ?? [])}
-                        </Option>
+                        </option>
                       ))}
                     </Select>
                   </div>
@@ -343,9 +355,9 @@ export const SchedulesPage: React.FC = () => {
                       style={{ width: '100%' }}
                     >
                       {routes.map((r) => (
-                        <Option key={r.id} value={r.id} text={r.name}>
+                        <option key={r.id} value={r.id}>
                           {r.name}
-                        </Option>
+                        </option>
                       ))}
                     </Select>
                   </div>

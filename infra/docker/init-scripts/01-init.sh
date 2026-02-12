@@ -1,38 +1,19 @@
 #!/bin/bash
-# Скрипт инициализации базы данных PostgreSQL
-
+# PostgreSQL init for Вокзал.ТЕХ Docker Compose (local/dev).
+# Creates extensions and one schema per microservice. All services connect as the single
+# POSTGRES_USER (admin) with full privileges. This is intentional for simplicity in
+# local development; production deployments MUST use separate DB users per service,
+# grant each user only USAGE/CREATE on its own schema, and follow least privilege.
 set -e
-
-psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-EOSQL
-    -- Включить UUID расширение
-    CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-    
-    -- Создать схемы для микросервисов
-    CREATE SCHEMA IF NOT EXISTS auth;
-    CREATE SCHEMA IF NOT EXISTS schedule;
-    CREATE SCHEMA IF NOT EXISTS ticket;
-    CREATE SCHEMA IF NOT EXISTS fiscal;
-    CREATE SCHEMA IF NOT EXISTS payment;
-    CREATE SCHEMA IF NOT EXISTS board;
-    CREATE SCHEMA IF NOT EXISTS geo;
-    CREATE SCHEMA IF NOT EXISTS notify;
-    CREATE SCHEMA IF NOT EXISTS audit;
-    CREATE SCHEMA IF NOT EXISTS document;
-    
-    -- Создать пользователей для сервисов (опционально)
-    CREATE USER vokzal_auth WITH PASSWORD 'auth_pass_2026';
-    CREATE USER vokzal_ticket WITH PASSWORD 'ticket_pass_2026';
-    CREATE USER vokzal_schedule WITH PASSWORD 'schedule_pass_2026';
-    
-    -- Выдать права
-    GRANT ALL PRIVILEGES ON SCHEMA auth TO vokzal_auth;
-    GRANT ALL PRIVILEGES ON SCHEMA ticket TO vokzal_ticket;
-    GRANT ALL PRIVILEGES ON SCHEMA schedule TO vokzal_schedule;
-    
-    -- Общие привилегии
-    GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO admin;
-    GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO admin;
-    
-    -- Вывести информацию
-    SELECT 'Вокзал.ТЕХ database initialized successfully!' AS message;
-EOSQL
+PGPASSWORD=$POSTGRES_PASSWORD psql -v ON_ERROR_STOP=1 -U $POSTGRES_USER -d $POSTGRES_DB -c "CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\";"
+PGPASSWORD=$POSTGRES_PASSWORD psql -v ON_ERROR_STOP=1 -U $POSTGRES_USER -d $POSTGRES_DB -c "CREATE SCHEMA IF NOT EXISTS auth;"
+PGPASSWORD=$POSTGRES_PASSWORD psql -v ON_ERROR_STOP=1 -U $POSTGRES_USER -d $POSTGRES_DB -c "CREATE SCHEMA IF NOT EXISTS schedule;"
+PGPASSWORD=$POSTGRES_PASSWORD psql -v ON_ERROR_STOP=1 -U $POSTGRES_USER -d $POSTGRES_DB -c "CREATE SCHEMA IF NOT EXISTS ticket;"
+PGPASSWORD=$POSTGRES_PASSWORD psql -v ON_ERROR_STOP=1 -U $POSTGRES_USER -d $POSTGRES_DB -c "CREATE SCHEMA IF NOT EXISTS fiscal;"
+PGPASSWORD=$POSTGRES_PASSWORD psql -v ON_ERROR_STOP=1 -U $POSTGRES_USER -d $POSTGRES_DB -c "CREATE SCHEMA IF NOT EXISTS payment;"
+PGPASSWORD=$POSTGRES_PASSWORD psql -v ON_ERROR_STOP=1 -U $POSTGRES_USER -d $POSTGRES_DB -c "CREATE SCHEMA IF NOT EXISTS board;"
+PGPASSWORD=$POSTGRES_PASSWORD psql -v ON_ERROR_STOP=1 -U $POSTGRES_USER -d $POSTGRES_DB -c "CREATE SCHEMA IF NOT EXISTS geo;"
+PGPASSWORD=$POSTGRES_PASSWORD psql -v ON_ERROR_STOP=1 -U $POSTGRES_USER -d $POSTGRES_DB -c "CREATE SCHEMA IF NOT EXISTS notify;"
+PGPASSWORD=$POSTGRES_PASSWORD psql -v ON_ERROR_STOP=1 -U $POSTGRES_USER -d $POSTGRES_DB -c "CREATE SCHEMA IF NOT EXISTS audit;"
+PGPASSWORD=$POSTGRES_PASSWORD psql -v ON_ERROR_STOP=1 -U $POSTGRES_USER -d $POSTGRES_DB -c "CREATE SCHEMA IF NOT EXISTS document;"
+echo 'Database initialized successfully!'

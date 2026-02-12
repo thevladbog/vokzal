@@ -2,6 +2,7 @@
 package models
 
 import (
+	"bytes"
 	"database/sql/driver"
 	"encoding/json"
 	"errors"
@@ -32,7 +33,29 @@ func (j *JSONB) Scan(value interface{}) error {
 	if !ok {
 		return errors.New("failed to scan JSONB value")
 	}
-	*j = s
+	*j = JSONB(bytes.Clone(s))
+	return nil
+}
+
+// MarshalJSON реализует json.Marshaler для JSONB.
+// Возвращает сырой JSON вместо base64. Проверяет валидность JSON перед возвратом.
+func (j JSONB) MarshalJSON() ([]byte, error) {
+	if len(j) == 0 {
+		return []byte("null"), nil
+	}
+	if !json.Valid(j) {
+		return nil, errors.New("JSONB contains invalid JSON")
+	}
+	return j, nil
+}
+
+// UnmarshalJSON реализует json.Unmarshaler для JSONB.
+func (j *JSONB) UnmarshalJSON(data []byte) error {
+	if string(data) == "null" {
+		*j = nil
+		return nil
+	}
+	*j = JSONB(bytes.Clone(data))
 	return nil
 }
 

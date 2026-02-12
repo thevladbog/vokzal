@@ -24,7 +24,6 @@ import {
   Input,
   Label,
   Select,
-  Option,
 } from '@fluentui/react-components';
 import { Add24Regular, Delete24Regular, Edit24Regular } from '@fluentui/react-icons';
 import { scheduleService } from '@/services/schedule';
@@ -176,9 +175,9 @@ export const BusesPage: React.FC = () => {
                     style={{ width: '100%' }}
                   >
                     {stations.map((s) => (
-                      <Option key={s.id} value={s.id}>
+                      <option key={s.id} value={s.id}>
                         {s.name}
-                      </Option>
+                      </option>
                     ))}
                   </Select>
                 </div>
@@ -190,9 +189,9 @@ export const BusesPage: React.FC = () => {
                     style={{ width: '100%' }}
                   >
                     {STATUS_OPTIONS.map((s) => (
-                      <Option key={s} value={s}>
+                      <option key={s} value={s}>
                         {s === 'active' ? t('buses.statusActive') : s === 'maintenance' ? t('buses.statusMaintenance') : t('buses.statusOutOfService')}
-                      </Option>
+                      </option>
                     ))}
                   </Select>
                 </div>
@@ -229,11 +228,11 @@ export const BusesPage: React.FC = () => {
           onChange={(_, d) => setStationFilter(d.value ?? '')}
           style={{ minWidth: '200px' }}
         >
-          <Option value="">{t('buses.allStations')}</Option>
+          <option value="">{t('buses.allStations')}</option>
           {stations.map((s) => (
-            <Option key={s.id} value={s.id}>
+            <option key={s.id} value={s.id}>
               {s.name}
-            </Option>
+            </option>
           ))}
         </Select>
       </div>
@@ -319,9 +318,9 @@ export const BusesPage: React.FC = () => {
                       style={{ width: '100%' }}
                     >
                       {STATUS_OPTIONS.map((s) => (
-                        <Option key={s} value={s}>
+                        <option key={s} value={s}>
                           {s === 'active' ? t('buses.statusActive') : s === 'maintenance' ? t('buses.statusMaintenance') : t('buses.statusOutOfService')}
-                        </Option>
+                        </option>
                       ))}
                     </Select>
                   </div>

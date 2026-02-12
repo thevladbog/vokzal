@@ -24,7 +24,6 @@ import {
   Input,
   Label,
   Select,
-  Option,
   useId,
   Toaster,
   useToastController,
@@ -219,11 +218,11 @@ export const UsersPage: React.FC = () => {
           onChange={(_, v) => setRoleFilter(v.value ?? '')}
           style={{ minWidth: '160px' }}
         >
-          <Option value="">{t('users.allRoles')}</Option>
+          <option value="">{t('users.allRoles')}</option>
           {ROLE_VALUES.map((r) => (
-            <Option key={r} value={r}>
+            <option key={r} value={r}>
               {getRoleLabel(r)}
-            </Option>
+            </option>
           ))}
         </Select>
       </div>
@@ -405,9 +404,9 @@ const CreateUserForm: React.FC<{
           onChange={(_, v) => setRole((v.value ?? 'cashier') as CreateUserRequest['role'])}
         >
           {ROLE_VALUES.map((r) => (
-            <Option key={r} value={r}>
+            <option key={r} value={r}>
               {getRoleLabel(r)}
-            </Option>
+            </option>
           ))}
         </Select>
       </div>
@@ -501,9 +500,9 @@ const EditUserForm: React.FC<{
           onChange={(_, v) => setRole((v.value ?? user.role) as UpdateUserRequest['role'])}
         >
           {ROLE_VALUES.map((r) => (
-            <Option key={r} value={r}>
+            <option key={r} value={r}>
               {getRoleLabel(r)}
-            </Option>
+            </option>
           ))}
         </Select>
       </div>

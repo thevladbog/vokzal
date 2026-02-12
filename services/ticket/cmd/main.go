@@ -18,6 +18,7 @@ import (
 
 	"github.com/vokzal-tech/ticket-service/internal/config"
 	"github.com/vokzal-tech/ticket-service/internal/handlers"
+	"github.com/vokzal-tech/ticket-service/internal/middleware"
 	"github.com/vokzal-tech/ticket-service/internal/models"
 	"github.com/vokzal-tech/ticket-service/internal/repository"
 	"github.com/vokzal-tech/ticket-service/internal/service"
@@ -94,7 +95,7 @@ func main() {
 	}
 	router := gin.Default()
 
-	// Health check
+	// Health check (no auth)
 	router.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"status":  "ok",
@@ -103,19 +104,29 @@ func main() {
 		})
 	})
 
-	v1 := router.Group("/v1")
-	ticketStats := v1.Group("/ticket")
-	ticketStats.GET("/stats/dashboard", ticketHandler.GetDashboardStats)
-	tickets := v1.Group("/tickets")
-	tickets.POST("/sell", ticketHandler.SellTicket)
-	tickets.GET("", ticketHandler.ListTicketsByTrip)
-	tickets.GET("/:id", ticketHandler.GetTicket)
-	tickets.GET("/qr", ticketHandler.GetTicketByQR)
-	tickets.POST("/:id/refund", ticketHandler.RefundTicket)
-	boarding := v1.Group("/boarding")
+	// Protected routes: JWT required; user_id injected into context.
+	// Traefik strip-v1-ticket strips /v1/ticket, /v1/tickets, /v1/boarding so service receives
+	// /stats/dashboard, /sell, /, /qr, /:id, /:id/refund, /start, /mark, /status.
+	authMW := middleware.AuthMiddleware(cfg.JWT.Secret, logger)
+
+	// Ticket stats and sell (Traefik strips /v1/ticket)
+	router.GET("/stats/dashboard", authMW, ticketHandler.GetDashboardStats)
+	router.POST("/sell", authMW, ticketHandler.SellTicket)
+
+	// Boarding (Traefik strips /v1/boarding). Register before tickets so GET /status is not shadowed by GET /:id.
+	boarding := router.Group("/")
+	boarding.Use(authMW)
 	boarding.POST("/start", ticketHandler.StartBoarding)
 	boarding.POST("/mark", ticketHandler.MarkBoarding)
 	boarding.GET("/status", ticketHandler.GetBoardingStatus)
+
+	// Tickets CRUD (Traefik strips /v1/tickets): list, qr, get, refund
+	tickets := router.Group("/")
+	tickets.Use(authMW)
+	tickets.GET("", ticketHandler.ListTicketsByTrip)
+	tickets.GET("/qr", ticketHandler.GetTicketByQR)
+	tickets.GET("/:id", ticketHandler.GetTicket)
+	tickets.POST("/:id/refund", ticketHandler.RefundTicket)
 
 	// Создать HTTP сервер
 	srv := &http.Server{

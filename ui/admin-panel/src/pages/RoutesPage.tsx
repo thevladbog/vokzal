@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Select, Option } from '@fluentui/react-components';
+import { Select } from '@fluentui/react-components';
 import {
   Card,
   Title2,
@@ -330,9 +330,9 @@ const RouteForm: React.FC<{
             style={{ minWidth: '100%' }}
           >
             {stations.map((s: Station) => (
-              <Option key={s.id} value={s.id} text={`${s.name} (${s.code})`}>
+              <option key={s.id} value={s.id}>
                 {s.name} ({s.code})
-              </Option>
+              </option>
             ))}
           </Select>
         </div>

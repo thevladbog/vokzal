@@ -172,12 +172,11 @@ func main() {
 			"version": "1.0.0",
 		})
 	})
-	v1 := router.Group("/v1")
-	board := v1.Group("/board")
-	board.GET("/ws", boardHandler.HandleWebSocket)
-	board.GET("/public", boardHandler.GetPublicBoard)
-	board.GET("/platform/:platform", boardHandler.GetPlatformBoard)
-	board.GET("/stats", boardHandler.GetWebSocketStats)
+	// Traefik strips /v1/board prefix, service receives /ws, /public, /platform/:platform, /stats
+	router.GET("/ws", boardHandler.HandleWebSocket)
+	router.GET("/public", boardHandler.GetPublicBoard)
+	router.GET("/platform/:platform", boardHandler.GetPlatformBoard)
+	router.GET("/stats", boardHandler.GetWebSocketStats)
 
 	srv := &http.Server{
 		Addr:         ":" + cfg.Server.Port,

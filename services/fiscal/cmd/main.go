@@ -19,6 +19,7 @@ import (
 	"github.com/vokzal-tech/fiscal-service/internal/atol"
 	"github.com/vokzal-tech/fiscal-service/internal/config"
 	"github.com/vokzal-tech/fiscal-service/internal/handlers"
+	"github.com/vokzal-tech/fiscal-service/internal/middleware"
 	"github.com/vokzal-tech/fiscal-service/internal/models"
 	"github.com/vokzal-tech/fiscal-service/internal/repository"
 	"github.com/vokzal-tech/fiscal-service/internal/service"
@@ -109,15 +110,28 @@ func main() {
 		})
 	})
 
-	v1 := router.Group("/v1")
-	receipts := v1.Group("/receipts")
-	receipts.GET("/:id", fiscalHandler.GetReceipt)
+	// Traefik strip-v1-fiscal removes only the leading "/v1" segment, so e.g. /v1/receipts/abc
+	// becomes /receipts/abc. Routes below are registered under /receipts, /z-reports, and /kkt.
+
+	authMW := middleware.AuthMiddleware(cfg.JWT.Secret, logger)
+
+	// Receipts routes (JWT required)
+	receipts := router.Group("/receipts")
+	receipts.Use(authMW)
 	receipts.GET("", fiscalHandler.GetReceiptsByTicket)
-	reports := v1.Group("/z-reports")
+	receipts.GET("/:id", fiscalHandler.GetReceipt)
+
+	// Z-reports routes (JWT required)
+	reports := router.Group("/z-reports")
+	reports.Use(authMW)
 	reports.POST("", fiscalHandler.CreateZReport)
 	reports.GET("", fiscalHandler.ListZReports)
 	reports.GET("/date", fiscalHandler.GetZReport)
-	v1.GET("/kkt/status", fiscalHandler.GetKKTStatus)
+
+	// KKT routes (JWT required)
+	kkt := router.Group("/kkt")
+	kkt.Use(authMW)
+	kkt.GET("/status", fiscalHandler.GetKKTStatus)
 
 	// Создать HTTP сервер
 	srv := &http.Server{
