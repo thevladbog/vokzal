@@ -12,10 +12,10 @@ import (
 //
 //nolint:govet // fieldalignment: порядок полей для mapstructure
 type Config struct {
-	Database DatabaseConfig `mapstructure:"database"`
 	NATS     NATSConfig     `mapstructure:"nats"`
 	Server   ServerConfig   `mapstructure:"server"`
 	Logger   LoggerConfig   `mapstructure:"logger"`
+	Database DatabaseConfig `mapstructure:"database"`
 }
 
 // ServerConfig — настройки HTTP-сервера.

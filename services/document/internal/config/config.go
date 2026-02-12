@@ -12,13 +12,26 @@ import (
 	"github.com/spf13/viper"
 )
 
-// Config — корневая конфигурация сервиса.
+// Insecure JWT secret placeholders; app must not start in release mode when secret is one of these.
+var insecureJWTSecrets = []string{
+	"vokzal_jwt_secret_change_in_production",
+	"vokzal-tech-jwt-secret-change-me-in-production",
+	"vokzal-tech-jwt-secret-change-me",
+}
+
+// Config — корневая конфигурация сервиса (поля по убыванию размера для выравнивания).
 type Config struct {
-	Server   ServerConfig   `mapstructure:"server"`
-	Database DatabaseConfig `mapstructure:"database"`
 	NATS     NATSConfig     `mapstructure:"nats"`
+	Server   ServerConfig   `mapstructure:"server"`
+	JWT      JWTConfig      `mapstructure:"jwt"`
 	Logger   LoggerConfig   `mapstructure:"logger"`
+	Database DatabaseConfig `mapstructure:"database"`
 	MinIO    MinIOConfig    `mapstructure:"minio"`
+}
+
+// JWTConfig — настройки JWT (тот же секрет, что у auth-service, для проверки токенов).
+type JWTConfig struct {
+	Secret string `mapstructure:"secret"`
 }
 
 // ServerConfig — настройки HTTP-сервера.
@@ -80,10 +93,14 @@ func loadDotEnv() {
 			val := strings.TrimSpace(line[idx+1:])
 			val = strings.Trim(val, "\"'")
 			if key != "" {
-				_ = os.Setenv(key, val)
+				if setErr := os.Setenv(key, val); setErr != nil {
+					continue
+				}
 			}
 		}
-		_ = f.Close()
+		if closeErr := f.Close(); closeErr != nil {
+			_ = closeErr // ignore close error on .env read
+		}
 		break
 	}
 }
@@ -127,8 +144,8 @@ func Load() (*Config, error) {
 	viper.SetDefault("server.mode", "debug")
 	viper.SetDefault("database.host", "localhost")
 	viper.SetDefault("database.port", 5432)
-	viper.SetDefault("database.user", "")
-	viper.SetDefault("database.password", "")
+	viper.SetDefault("database.user", "admin")
+	viper.SetDefault("database.password", "changeme")
 	viper.SetDefault("database.dbname", "vokzal")
 	viper.SetDefault("database.sslmode", "disable")
 	viper.SetDefault("nats.url", "nats://localhost:4222")
@@ -140,6 +157,7 @@ func Load() (*Config, error) {
 	viper.SetDefault("minio.secret_key", "")
 	viper.SetDefault("minio.bucket", "vokzal-documents")
 	viper.SetDefault("minio.use_ssl", false)
+	viper.SetDefault("jwt.secret", "vokzal-tech-jwt-secret-change-me") // override in production; must match auth-service
 
 	if err := viper.ReadInConfig(); err != nil {
 		var notFound viper.ConfigFileNotFoundError
@@ -166,6 +184,23 @@ func Load() (*Config, error) {
 	config.MinIO.AccessKey = expandEnv(config.MinIO.AccessKey)
 	config.MinIO.SecretKey = expandEnv(config.MinIO.SecretKey)
 	config.MinIO.Bucket = expandEnv(config.MinIO.Bucket)
+
+	if strings.TrimSpace(config.Database.User) == "" || strings.TrimSpace(config.Database.Password) == "" {
+		return nil, fmt.Errorf("database.user and database.password must be set (e.g. via DB_USER, DB_PASSWORD or .env)")
+	}
+
+	// In release mode, refuse to run with default/placeholder JWT secret (use VOKZAL_DOCUMENT_JWT_SECRET in production).
+	if config.Server.Mode == "release" {
+		s := strings.TrimSpace(config.JWT.Secret)
+		if s == "" {
+			return nil, fmt.Errorf("jwt.secret must not be empty or blank in release mode; set VOKZAL_DOCUMENT_JWT_SECRET")
+		}
+		for _, bad := range insecureJWTSecrets {
+			if s == bad {
+				return nil, fmt.Errorf("jwt.secret must not be the default/placeholder in release mode; set VOKZAL_DOCUMENT_JWT_SECRET")
+			}
+		}
+	}
 
 	return &config, nil
 }

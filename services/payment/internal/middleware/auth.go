@@ -22,6 +22,9 @@ type Claims struct {
 // AuthMiddleware returns a gin.HandlerFunc that validates the JWT in the Authorization header,
 // verifies signature/claims, sets user_id, username, role, station_id in context, and aborts with 401 if invalid.
 func AuthMiddleware(jwtSecret string, logger *zap.Logger) gin.HandlerFunc {
+	if jwtSecret == "" {
+		logger.Fatal("AuthMiddleware: jwtSecret must not be empty; set JWT secret in config (e.g. VOKZAL_PAYMENT_JWT_SECRET)")
+	}
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {

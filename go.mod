@@ -2,7 +2,7 @@ module github.com/vokzal-tech/vokzal
 
 go 1.25
 
-toolchain go1.25.6
+toolchain go1.25.7
 
 require (
 	go.uber.org/zap v1.26.0

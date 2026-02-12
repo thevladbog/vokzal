@@ -17,8 +17,11 @@ const (
 )
 
 func main() {
-	logger, _ := zap.NewProduction()
-	defer logger.Sync()
+	logger, err := zap.NewProduction()
+	if err != nil {
+		_, _ = fmt.Fprintf(os.Stderr, "failed to create logger: %v\n", err)
+		os.Exit(1)
+	}
 
 	password := os.Getenv("BCRYPT_TEST_PASSWORD")
 	if password == "" {
@@ -27,40 +30,42 @@ func main() {
 
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
-		wrapped := fmt.Errorf("generate bcrypt hash: %w", err)
-		logger.Error("failed to generate bcrypt hash", zap.Error(wrapped))
-		os.Exit(1)
+		logger.Error("failed to generate bcrypt hash", zap.Error(fmt.Errorf("generate bcrypt hash: %w", err)))
+		syncAndExit(logger, 1)
 	}
-
 	if os.Getenv("BCRYPT_VERBOSE") == "1" {
 		logger.Info("generated hash OK", zap.String("hash", string(hash)))
 	}
 
 	err = bcrypt.CompareHashAndPassword(hash, []byte(password))
 	if err != nil {
-		wrapped := fmt.Errorf("compare hash and password: %w", err)
-		logger.Error("compare failed", zap.Error(wrapped), zap.String("hash", string(hash)))
-		os.Exit(1)
+		logger.Error("compare failed", zap.Error(fmt.Errorf("compare hash and password: %w", err)), zap.String("hash", string(hash)))
+		syncAndExit(logger, 1)
 	}
 	if os.Getenv("BCRYPT_VERBOSE") == "1" {
 		logger.Info("compare OK", zap.String("hash", string(hash)))
 	}
 
-	// Test with a fixture hash (matches defaultTestPassword only; test-only, not a real credential)
 	fixtureHash := "$2a$10$GMHnZVK5kA0QRmCLqJBo3.zKoWmuR0yYZFjUSXaiCtKWEduv1eSTe"
 	err = bcrypt.CompareHashAndPassword([]byte(fixtureHash), []byte(password))
-	if err != nil {
-		wrapped := fmt.Errorf("compare fixture hash and password: %w", err)
-		if password == defaultTestPassword {
-			logger.Error("fixture compare failed (fixture is for default test password only)", zap.Error(wrapped), zap.String("hash", fixtureHash))
-			os.Exit(1)
-		}
-		if os.Getenv("BCRYPT_VERBOSE") == "1" {
-			logger.Warn("fixture compare skipped (custom password)", zap.Error(wrapped))
-		}
-	} else {
-		if os.Getenv("BCRYPT_VERBOSE") == "1" {
-			logger.Info("fixture compare OK", zap.String("hash", fixtureHash))
-		}
+	if err != nil && password == defaultTestPassword {
+		logger.Error("fixture compare failed (fixture is for default test password only)",
+			zap.Error(fmt.Errorf("compare fixture hash and password: %w", err)), zap.String("hash", fixtureHash))
+		syncAndExit(logger, 1)
 	}
+	if err != nil && os.Getenv("BCRYPT_VERBOSE") == "1" {
+		logger.Warn("fixture compare skipped (custom password)", zap.Error(err))
+	}
+	if err == nil && os.Getenv("BCRYPT_VERBOSE") == "1" {
+		logger.Info("fixture compare OK", zap.String("hash", fixtureHash))
+	}
+
+	syncAndExit(logger, 0)
+}
+
+func syncAndExit(logger *zap.Logger, code int) {
+	if syncErr := logger.Sync(); syncErr != nil {
+		_, _ = fmt.Fprintf(os.Stderr, "logger sync: %v\n", syncErr)
+	}
+	os.Exit(code)
 }

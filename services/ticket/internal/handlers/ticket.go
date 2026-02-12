@@ -112,7 +112,8 @@ func (h *TicketHandler) RefundTicket(c *gin.Context) {
 		userID = c.GetHeader("X-User-ID")
 	}
 	if userID == "" {
-		userID = "system"
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "user_id required (missing JWT or X-User-ID)"})
+		return
 	}
 
 	result, err := h.svc.RefundTicket(c.Request.Context(), ticketID, userID)
@@ -145,7 +146,8 @@ func (h *TicketHandler) StartBoarding(c *gin.Context) {
 		userID = c.GetHeader("X-User-ID")
 	}
 	if userID == "" {
-		userID = "system"
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "user_id required (missing JWT or X-User-ID)"})
+		return
 	}
 
 	if err := h.svc.StartBoarding(c.Request.Context(), req.TripID, userID); err != nil {

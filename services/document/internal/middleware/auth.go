@@ -1,4 +1,4 @@
-// Package middleware — HTTP middleware для Fiscal Service.
+// Package middleware — HTTP middleware для Document Service.
 package middleware
 
 import (
@@ -22,13 +22,10 @@ type Claims struct {
 // AuthMiddleware returns a gin.HandlerFunc that validates the JWT in the Authorization header,
 // verifies signature/claims, sets user_id, username, role, station_id in context, and aborts with 401 if invalid.
 func AuthMiddleware(jwtSecret string, logger *zap.Logger) gin.HandlerFunc {
+	if jwtSecret == "" {
+		logger.Fatal("AuthMiddleware: jwtSecret must not be empty; set JWT secret in config (e.g. VOKZAL_DOCUMENT_JWT_SECRET)")
+	}
 	return func(c *gin.Context) {
-		if jwtSecret == "" {
-			logger.Error("AuthMiddleware: jwtSecret must not be empty; set JWT secret in config (e.g. VOKZAL_FISCAL_JWT_SECRET)")
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Server misconfiguration: JWT secret not set"})
-			c.Abort()
-			return
-		}
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
 			c.JSON(http.StatusUnauthorized, gin.H{

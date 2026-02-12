@@ -13,10 +13,10 @@ import (
 //
 //nolint:govet // fieldalignment: порядок полей для mapstructure
 type Config struct {
-	Server   ServerConfig   `mapstructure:"server"`
 	Database DatabaseConfig `mapstructure:"database"`
-	JWT      JWTConfig      `mapstructure:"jwt"`
+	Server   ServerConfig   `mapstructure:"server"`
 	Logger   LoggerConfig   `mapstructure:"logger"`
+	JWT      JWTConfig      `mapstructure:"jwt"`
 }
 
 // ServerConfig — настройки HTTP-сервера.
@@ -30,11 +30,11 @@ type ServerConfig struct {
 //nolint:govet // fieldalignment: порядок полей для DSN
 type DatabaseConfig struct {
 	Host     string `mapstructure:"host"`
-	Port     int    `mapstructure:"port"`
 	User     string `mapstructure:"user"`
 	Password string `mapstructure:"password"`
 	DBName   string `mapstructure:"dbname"`
 	SSLMode  string `mapstructure:"sslmode"`
+	Port     int    `mapstructure:"port"`
 }
 
 // JWTConfig — настройки JWT.

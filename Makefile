@@ -1,4 +1,7 @@
-.PHONY: help dev-up dev-down services-build services-run ui-dev test test-unit test-services test-ui test-load test-load-smoke lint
+# Вокзал.ТЕХ — Makefile
+# Требуется Unix-подобная оболочка (sh/bash). На Windows запускайте make из Git Bash, WSL или MSYS2.
+
+.PHONY: help dev-up dev-down services-build services-run ui-dev test test-unit test-services test-ui test-load test-load-smoke lint lint-fix
 
 help:
 	@echo "Вокзал.ТЕХ — Makefile команды:"
@@ -17,6 +20,9 @@ help:
 	@echo "  make test-load-smoke   - Запустить smoke load тест"
 	@echo ""
 	@echo "  make lint              - Запустить линтеры"
+	@echo "  make lint-fix          - Автофикс выравнивания полей (fieldalignment)"
+	@echo ""
+	@echo "На Windows запускайте make из Git Bash, WSL или MSYS2."
 
 dev-up:
 	cd infra/docker && docker-compose up -d
@@ -112,3 +118,14 @@ lint:
 			(cd $$service && golangci-lint run) || exit 1; \
 		fi \
 	done
+
+# Автофикс выравнивания полей структур (govet fieldalignment) в internal/config
+lint-fix:
+	@echo "Запуск fieldalignment -fix..."
+	@for service in services/*; do \
+		if [ -d "$$service" ] && [ -f "$$service/go.mod" ] && [ -d "$$service/internal/config" ]; then \
+			echo "Fixing $$service/internal/config..."; \
+			(cd $$service && go run golang.org/x/tools/go/analysis/passes/fieldalignment/cmd/fieldalignment@latest -fix ./internal/config/) || exit 1; \
+		fi \
+	done
+	@echo "✅ fieldalignment завершён!"

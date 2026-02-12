@@ -8,15 +8,15 @@ import (
 	"github.com/spf13/viper"
 )
 
-// Config — корневая конфигурация сервиса.
+// Config — корневая конфигурация сервиса (поля по убыванию размера для выравнивания).
 type Config struct {
 	NATS       NATSConfig       `mapstructure:"nats"`
 	ATOL       ATOLConfig       `mapstructure:"atol"`
 	Server     ServerConfig     `mapstructure:"server"`
-	Logger     LoggerConfig     `mapstructure:"logger"`
 	LocalAgent LocalAgentConfig `mapstructure:"local_agent"`
-	Database   DatabaseConfig   `mapstructure:"database"`
 	JWT        JWTConfig        `mapstructure:"jwt"`
+	Logger     LoggerConfig     `mapstructure:"logger"`
+	Database   DatabaseConfig   `mapstructure:"database"`
 }
 
 // JWTConfig — настройки JWT (тот же секрет, что у auth-service, для проверки токенов).

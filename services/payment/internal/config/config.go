@@ -4,19 +4,27 @@ package config
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/spf13/viper"
 )
 
-// Config — корневая конфигурация сервиса.
+// Insecure JWT secret placeholders; app must not start in release mode when secret is one of these.
+var insecureJWTSecrets = []string{
+	"vokzal_jwt_secret_change_in_production",
+	"vokzal-tech-jwt-secret-change-me-in-production",
+	"vokzal-tech-jwt-secret-change-me",
+}
+
+// Config — корневая конфигурация сервиса (поля по убыванию размера для выравнивания).
 type Config struct {
-	NATS     NATSConfig     `mapstructure:"nats"`
 	Tinkoff  TinkoffConfig  `mapstructure:"tinkoff"`
 	SBP      SBPConfig      `mapstructure:"sbp"`
+	NATS     NATSConfig     `mapstructure:"nats"`
 	Server   ServerConfig   `mapstructure:"server"`
+	JWT      JWTConfig      `mapstructure:"jwt"`
 	Logger   LoggerConfig   `mapstructure:"logger"`
 	Database DatabaseConfig `mapstructure:"database"`
-	JWT      JWTConfig      `mapstructure:"jwt"`
 }
 
 // JWTConfig — настройки JWT (тот же секрет, что у auth-service, для проверки токенов).
@@ -104,6 +112,19 @@ func Load() (*Config, error) {
 	var config Config
 	if err := viper.Unmarshal(&config); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal config: %w", err)
+	}
+
+	// In release mode, refuse to run with default/placeholder JWT secret (use VOKZAL_PAYMENT_JWT_SECRET in production).
+	if config.Server.Mode == "release" {
+		s := strings.TrimSpace(config.JWT.Secret)
+		if s == "" {
+			return nil, fmt.Errorf("jwt.secret must not be empty or blank in release mode; set VOKZAL_PAYMENT_JWT_SECRET")
+		}
+		for _, bad := range insecureJWTSecrets {
+			if s == bad {
+				return nil, fmt.Errorf("jwt.secret must not be the default/placeholder in release mode; set VOKZAL_PAYMENT_JWT_SECRET")
+			}
+		}
 	}
 
 	return &config, nil
