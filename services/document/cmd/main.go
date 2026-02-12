@@ -89,14 +89,14 @@ func main() {
 		})
 	})
 
-	// Traefik strips /v1/document prefix, service receives /ticket, /pd2, /:id, /list (all protected by JWT)
+	// Traefik strips /v1/document prefix; service receives /documents/ticket, /documents/pd2, /documents/list, /documents/:id (all protected by JWT)
 	authMW := middleware.AuthMiddleware(cfg.JWT.Secret, logger)
-	authorized := router.Group("")
-	authorized.Use(authMW)
-	authorized.POST("/ticket", docHandler.GenerateTicket)
-	authorized.POST("/pd2", docHandler.GeneratePD2)
-	authorized.GET("/:id", docHandler.GetDocument)
-	authorized.GET("/list", docHandler.ListDocuments)
+	documents := router.Group("/documents")
+	documents.Use(authMW)
+	documents.POST("/ticket", docHandler.GenerateTicket)
+	documents.POST("/pd2", docHandler.GeneratePD2)
+	documents.GET("/list", docHandler.ListDocuments)
+	documents.GET("/:id", docHandler.GetDocument)
 
 	srv := &http.Server{
 		Addr:         ":" + cfg.Server.Port,

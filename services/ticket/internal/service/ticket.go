@@ -66,10 +66,10 @@ type RefundResult struct {
 	RefundAmount   float64 `json:"refund_amount"`
 }
 
-// MarkBoardingRequest — запрос на отметку посадки.
+// MarkBoardingRequest — запрос на отметку посадки. UserID не биндится из тела — задаётся из JWT или X-User-ID.
 type MarkBoardingRequest struct {
 	TicketID   string `json:"ticket_id" binding:"required"`
-	UserID     string `json:"user_id" binding:"required"`
+	UserID     string `json:"-"` // set by handler from JWT or X-User-ID; never accept from body
 	ScanMethod string `json:"scan_method"`
 }
 

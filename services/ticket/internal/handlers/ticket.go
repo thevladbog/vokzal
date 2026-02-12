@@ -166,16 +166,16 @@ func (h *TicketHandler) MarkBoarding(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	// user_id из JWT middleware имеет приоритет над телом запроса
-	if userID := c.GetString("user_id"); userID != "" {
-		req.UserID = userID
-	} else if req.UserID == "" {
-		req.UserID = c.GetHeader("X-User-ID")
+	// user_id only from JWT context or X-User-ID header; never from request body
+	userID := c.GetString("user_id")
+	if userID == "" {
+		userID = c.GetHeader("X-User-ID")
 	}
-	if req.UserID == "" {
+	if userID == "" {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "user_id required (missing JWT or X-User-ID)"})
 		return
 	}
+	req.UserID = userID
 
 	if err := h.svc.MarkBoarding(c.Request.Context(), &req); err != nil {
 		h.logger.Error("Failed to mark boarding", zap.Error(err))

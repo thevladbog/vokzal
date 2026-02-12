@@ -184,6 +184,7 @@ func Load() (*Config, error) {
 	config.MinIO.AccessKey = expandEnv(config.MinIO.AccessKey)
 	config.MinIO.SecretKey = expandEnv(config.MinIO.SecretKey)
 	config.MinIO.Bucket = expandEnv(config.MinIO.Bucket)
+	config.JWT.Secret = expandEnv(config.JWT.Secret)
 
 	if strings.TrimSpace(config.Database.User) == "" || strings.TrimSpace(config.Database.Password) == "" {
 		return nil, fmt.Errorf("database.user and database.password must be set (e.g. via DB_USER, DB_PASSWORD or .env)")

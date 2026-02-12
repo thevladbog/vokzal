@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"go.uber.org/zap"
 
 	"github.com/vokzal-tech/document-service/internal/pdf"
@@ -60,6 +61,10 @@ func (h *DocumentHandler) GeneratePD2(c *gin.Context) {
 // GetDocument возвращает документ по ID.
 func (h *DocumentHandler) GetDocument(c *gin.Context) {
 	id := c.Param("id")
+	if _, err := uuid.Parse(id); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid document id: must be a valid UUID"})
+		return
+	}
 	doc, err := h.svc.GetDocument(c.Request.Context(), id)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Document not found"})
