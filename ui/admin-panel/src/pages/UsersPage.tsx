@@ -366,7 +366,7 @@ const CreateUserForm: React.FC<{
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!username.trim() || !password.trim() || !fullName.trim()) return;
-    onSubmit({ username: username.trim(), password, full_name: fullName.trim(), role });
+    onSubmit({ username: username.trim(), password: password.trim(), full_name: fullName.trim(), role });
   };
 
   return (

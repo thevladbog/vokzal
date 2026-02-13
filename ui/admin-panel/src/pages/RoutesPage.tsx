@@ -358,7 +358,11 @@ const RouteForm: React.FC<{
           <Button type="button" appearance="secondary" onClick={onCancel}>
             {t('common.cancel')}
           </Button>
-          <Button type="submit" appearance="primary" disabled={isLoading}>
+          <Button
+            type="submit"
+            appearance="primary"
+            disabled={isLoading || (!isEdit && !firstStationId)}
+          >
             {isEdit ? t('common.save') : t('common.create')}
           </Button>
         </div>

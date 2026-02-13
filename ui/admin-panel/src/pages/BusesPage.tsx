@@ -89,6 +89,7 @@ export const BusesPage: React.FC = () => {
       setCreateModel('');
       setCreateCapacity(45);
       setCreateStationId('');
+      setCreateStatus('active');
     },
   });
 

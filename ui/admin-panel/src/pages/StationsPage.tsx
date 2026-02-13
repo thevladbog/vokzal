@@ -47,6 +47,7 @@ const useStyles = makeStyles({
 export const StationsPage: React.FC = () => {
   const { t } = useTranslation();
   const styles = useStyles();
+  const actionsStyles = useDialogActionsStyles();
   const queryClient = useQueryClient();
   const [cityFilter, setCityFilter] = useState('');
   const [createOpen, setCreateOpen] = useState(false);
@@ -213,16 +214,18 @@ export const StationsPage: React.FC = () => {
                 </Text>
               </DialogContent>
               <DialogActions>
-                <Button appearance="secondary" onClick={() => setDeleteStation(null)}>
-                  {t('common.cancel')}
-                </Button>
-                <Button
-                  appearance="primary"
-                  onClick={() => deleteMutation.mutate(deleteStation.id)}
-                  disabled={deleteMutation.isPending}
-                >
-                  {t('common.delete')}
-                </Button>
+                <div className={actionsStyles.wrapper}>
+                  <Button appearance="secondary" onClick={() => setDeleteStation(null)}>
+                    {t('common.cancel')}
+                  </Button>
+                  <Button
+                    appearance="primary"
+                    onClick={() => deleteMutation.mutate(deleteStation.id)}
+                    disabled={deleteMutation.isPending}
+                  >
+                    {t('common.delete')}
+                  </Button>
+                </div>
               </DialogActions>
             </DialogBody>
           </DialogSurface>

@@ -8,7 +8,11 @@ import type { Schedule, Trip, Route, Station, Bus, Driver } from '@/types';
 function unwrap<T>(response: { data: { data?: T } }): T {
   const body = response.data;
   if (body && typeof body === 'object' && 'data' in body) {
-    return body.data as T;
+    const data = body.data;
+    if (data !== null && data !== undefined) {
+      return data;
+    }
+    throw new Error('Unexpected API response: "data" wrapper contains null or undefined value');
   }
   throw new Error('Unexpected API response shape: missing "data" wrapper');
 }
@@ -93,7 +97,7 @@ export const scheduleService = {
     to_date?: string;
   }): Promise<Trip[]> => {
     const response = await apiClient.get<{ data: Trip[] }>('/trips', {
-      params: params?.date ? { date: params.date } : params,
+      params: params,
     });
     return unwrap<Trip[]>(response) ?? [];
   },

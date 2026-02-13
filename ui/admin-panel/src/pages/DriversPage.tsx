@@ -204,7 +204,7 @@ export const DriversPage: React.FC = () => {
                   </Button>
                   <Button
                     appearance="primary"
-                  disabled={!createFullName.trim() || !createLicense.trim() || !createStationId}
+                  disabled={!createFullName.trim() || !createLicense.trim() || !createStationId || createMutation.isPending}
                   onClick={() =>
                     createMutation.mutate({
                       full_name: createFullName.trim(),

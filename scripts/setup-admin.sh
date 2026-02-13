@@ -113,10 +113,11 @@ echo ""
 echo "Генерация безопасного хэша пароля..."
 
 # Генерация bcrypt хэша с помощью Go
-PASSWORD_HASH=$(docker run --rm golang:1.22-alpine sh -c "
+# Передаём пароль через переменную окружения для предотвращения инъекции команд
+PASSWORD_HASH=$(docker run --rm -e NEW_PASSWORD="$NEW_PASSWORD" golang:1.22-alpine sh -c '
 go install golang.org/x/crypto/bcrypt/cmd/bcrypt@latest && \
-echo -n '$NEW_PASSWORD' | /root/go/bin/bcrypt
-" 2>/dev/null | tail -n 1)
+echo -n "$NEW_PASSWORD" | /root/go/bin/bcrypt
+' 2>/dev/null | tail -n 1)
 
 if [ -z "$PASSWORD_HASH" ]; then
     echo "Ошибка: Не удалось сгенерировать хэш пароля"
@@ -130,27 +131,23 @@ echo "Хэш сгенерирован успешно"
 echo ""
 echo "Обновление администратора в базе данных..."
 
-# Обновление пароля в БД
+# Обновление пароля в БД с использованием переменных psql для безопасности
 export PGPASSWORD="$DB_PASSWORD"
-psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" <<EOF
+psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" \
+  -v password_hash="$PASSWORD_HASH" <<'EOF'
 UPDATE users 
-SET password_hash = '$PASSWORD_HASH', 
+SET password_hash = :'password_hash', 
     is_active = true,
     updated_at = NOW()
 WHERE id = '00000000-0000-0000-0000-000000000001';
 EOF
 
-if [ $? -eq 0 ]; then
-    echo ""
-    echo "✅ Администратор успешно настроен!"
-    echo ""
-    echo "Данные для входа:"
-    echo "  Логин: admin"
-    echo "  Пароль: <введенный вами пароль>"
-    echo ""
-    echo "URL админ-панели: http://localhost:3001"
-else
-    echo ""
-    echo "❌ Ошибка при обновлении базы данных"
-    exit 1
-fi
+# Если psql завершился успешно (set -e остановит скрипт при ошибке), выводим сообщение
+echo ""
+echo "✅ Администратор успешно настроен!"
+echo ""
+echo "Данные для входа:"
+echo "  Логин: admin"
+echo "  Пароль: <введенный вами пароль>"
+echo ""
+echo "URL админ-панели: http://localhost:3001"

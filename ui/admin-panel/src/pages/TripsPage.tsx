@@ -14,7 +14,6 @@ import {
   Spinner,
   Text,
   Input,
-  Label,
   Button,
   Dialog,
   DialogSurface,
@@ -209,11 +208,12 @@ export const TripsPage: React.FC = () => {
         <Title2>{t('trips.title')}</Title2>
       </div>
       <div className={styles.filters}>
-        <Label htmlFor="trip-date">{t('trips.date')}</Label>
-        <VokzalDatePicker
-          value={date}
-          onSelectDate={(selectedDate) => setDate(selectedDate ?? null)}
-        />
+        <Field label={t('trips.date')}>
+          <VokzalDatePicker
+            value={date}
+            onSelectDate={(selectedDate) => setDate(selectedDate ?? null)}
+          />
+        </Field>
       </div>
       <Card>
         <Table>
