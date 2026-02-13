@@ -86,15 +86,36 @@ cd vokzal-tech
 cd infra/docker
 docker-compose up -d
 
+# Применить миграции
+cd ../../
+make migrate-up
+
+# ⚠️ ВАЖНО: Настроить администратора
+./scripts/setup-admin.sh
+
 # Запустить сервис (пример: auth)
 cd services/auth
 go run cmd/main.go
 
 # Запустить UI (пример: admin)
-cd ui/admin
+cd ui/admin-panel
 npm install
 npm run dev
 ```
+
+### Первый запуск
+
+**⚠️ Критично для безопасности:**
+
+После применения миграций администратор по умолчанию **неактивен**. Обязательно выполните настройку:
+
+```bash
+./scripts/setup-admin.sh
+```
+
+Скрипт запросит надежный пароль (минимум 12 символов с заглавными/строчными буквами, цифрами и спецсимволами).
+
+Подробнее: [docs/ADMIN_SETUP.md](docs/ADMIN_SETUP.md)
 
 ## Документация
 
@@ -102,6 +123,7 @@ npm run dev
 - [Архитектура](docs/initial/03.md)
 - [API](docs/initial/05.md)
 - [Модель данных](docs/initial/04.md)
+- **[Безопасная настройка администратора](docs/ADMIN_SETUP.md)** ⚠️
 
 ## Соответствие законодательству
 

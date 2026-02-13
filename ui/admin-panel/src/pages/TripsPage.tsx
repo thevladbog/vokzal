@@ -14,7 +14,6 @@ import {
   Spinner,
   Text,
   Input,
-  Label,
   Button,
   Dialog,
   DialogSurface,
@@ -22,9 +21,15 @@ import {
   DialogBody,
   DialogActions,
   DialogContent,
-  Select,
+  Field,
+  Dropdown,
+  Option,
 } from '@fluentui/react-components';
 import { Edit24Regular } from '@fluentui/react-icons';
+import { AppLayout } from '@/components/layout/AppLayout';
+import { VokzalDatePicker } from '@/components/common/VokzalDatePicker';
+import { useDialogFormStyles } from '@/styles/dialogFormStyles';
+import { useDialogActionsStyles } from '@/styles/dialogActionsStyles';
 import { scheduleService } from '@/services/schedule';
 import type { Trip, Bus, Driver } from '@/types';
 import { formatDate } from '@/utils/format';
@@ -32,18 +37,18 @@ import { formatDate } from '@/utils/format';
 const TRIP_STATUSES = ['scheduled', 'boarding', 'delayed', 'cancelled', 'departed', 'arrived'] as const;
 
 const useStyles = makeStyles({
-  container: { padding: '24px' },
   header: { marginBottom: '24px' },
   filters: { display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '16px' },
   loading: { display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' },
-  formRow: { marginBottom: '16px' },
 });
 
 export const TripsPage: React.FC = () => {
   const { t } = useTranslation();
   const styles = useStyles();
+  const formStyles = useDialogFormStyles();
+  const actionsStyles = useDialogActionsStyles();
   const queryClient = useQueryClient();
-  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [date, setDate] = useState<Date | null>(() => new Date());
   const [editTrip, setEditTrip] = useState<Trip | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editStatus, setEditStatus] = useState<string>('');
@@ -69,9 +74,21 @@ export const TripsPage: React.FC = () => {
     return t(key, { defaultValue: status });
   };
 
+  // Format date to YYYY-MM-DD using local timezone to avoid UTC offset issues
+  const formatLocalDate = (date: Date): string => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   const { data: trips = [], isLoading, error } = useQuery<Trip[]>({
     queryKey: ['trips', date],
-    queryFn: () => scheduleService.getTrips({ date }),
+    queryFn: () => {
+      if (!date) return Promise.resolve([]);
+      const dateStr = formatLocalDate(date);
+      return scheduleService.getTrips({ date: dateStr });
+    },
   });
 
   // Two API calls (status/delay then platform/bus/driver); on second failure we rollback the first.
@@ -170,33 +187,33 @@ export const TripsPage: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className={styles.loading}>
-        <Spinner label={t('trips.loading')} />
-      </div>
+      <AppLayout>
+        <div className={styles.loading}>
+          <Spinner label={t('trips.loading')} />
+        </div>
+      </AppLayout>
     );
   }
   if (error) {
     return (
-      <div className={styles.container}>
+      <AppLayout>
         <Text>{t('trips.loadError')}</Text>
-      </div>
+      </AppLayout>
     );
   }
 
   return (
-    <div className={styles.container}>
+    <AppLayout>
       <div className={styles.header}>
         <Title2>{t('trips.title')}</Title2>
       </div>
       <div className={styles.filters}>
-        <Label htmlFor="trip-date">{t('trips.date')}</Label>
-        <Input
-          id="trip-date"
-          type="date"
-          value={date}
-          onChange={(_, v) => setDate(v.value)}
-          style={{ width: '160px' }}
-        />
+        <Field label={t('trips.date')}>
+          <VokzalDatePicker
+            value={date}
+            onSelectDate={(selectedDate) => setDate(selectedDate ?? null)}
+          />
+        </Field>
       </div>
       <Card>
         <Table>
@@ -251,97 +268,91 @@ export const TripsPage: React.FC = () => {
             <DialogTitle>{t('trips.editTrip')}</DialogTitle>
             <DialogContent>
               {editTrip && (
-                <>
-                  <div className={styles.formRow}>
-                    <Label>{t('trips.status')}</Label>
-                    <Select
-                      value={editStatus}
-                      onChange={(_, data) => setEditStatus(data.value ?? '')}
-                      style={{ width: '100%' }}
+                <div className={formStyles.formContainer}>
+                  <Field label={t('trips.status')} required>
+                    <Dropdown
+                      value={getStatusLabel(editStatus)}
+                      selectedOptions={[editStatus]}
+                      onOptionSelect={(_, data) => setEditStatus(data.optionValue ?? '')}
                     >
                       {TRIP_STATUSES.map((s) => (
-                        <option key={s} value={s}>
+                        <Option key={s} value={s}>
                           {getStatusLabel(s)}
-                        </option>
+                        </Option>
                       ))}
-                    </Select>
-                  </div>
-                  <div className={styles.formRow}>
-                    <Label htmlFor="edit-delay">
-                      {t('trips.delay')} ({t('trips.minutes')})
-                    </Label>
+                    </Dropdown>
+                  </Field>
+                  <Field 
+                    label={`${t('trips.delay')} (${t('trips.minutes')})`}
+                    validationMessage={editDelayError}
+                    validationState={editDelayError ? 'error' : undefined}
+                  >
                     <Input
                       id="edit-delay"
                       type="text"
                       inputMode="numeric"
                       value={editDelayInput}
                       onChange={(_, v) => handleDelayChange(v.value)}
-                      aria-invalid={!!editDelayError}
-                      aria-describedby={editDelayError ? 'edit-delay-error' : undefined}
                     />
-                    {editDelayError && (
-                      <Text id="edit-delay-error" style={{ color: 'var(--colorPaletteRedForeground1)', fontSize: '12px', marginTop: '4px' }}>
-                        {editDelayError}
-                      </Text>
-                    )}
-                  </div>
-                  <div className={styles.formRow}>
-                    <Label htmlFor="edit-platform">{t('trips.platform')}</Label>
+                  </Field>
+                  <Field label={t('trips.platform')}>
                     <Input
                       id="edit-platform"
                       value={editPlatform}
                       onChange={(_, v) => setEditPlatform(v.value)}
                       placeholder={t('trips.platformPlaceholder')}
                     />
-                  </div>
-                  <div className={styles.formRow}>
-                    <Label>{t('trips.bus')}</Label>
-                    <Select
-                      value={editBusId}
-                      onChange={(_, d) => setEditBusId(d.value ?? '')}
-                      style={{ width: '100%' }}
+                  </Field>
+                  <Field label={t('trips.bus')}>
+                    <Dropdown
+                      placeholder="—"
+                      value={buses.find(b => b.id === editBusId)?.plate_number || ''}
+                      selectedOptions={[editBusId]}
+                      onOptionSelect={(_, data) => setEditBusId(data.optionValue ?? '')}
                     >
-                      <option value="">—</option>
+                      <Option value="" text="—">—</Option>
                       {buses.map((b) => (
-                        <option key={b.id} value={b.id}>
+                        <Option key={b.id} value={b.id} text={`${b.plate_number} (${b.model})`}>
                           {b.plate_number} ({b.model})
-                        </option>
+                        </Option>
                       ))}
-                    </Select>
-                  </div>
-                  <div className={styles.formRow}>
-                    <Label>{t('trips.driver')}</Label>
-                    <Select
-                      value={editDriverId}
-                      onChange={(_, d) => setEditDriverId(d.value ?? '')}
-                      style={{ width: '100%' }}
+                    </Dropdown>
+                  </Field>
+                  <Field label={t('trips.driver')}>
+                    <Dropdown
+                      placeholder="—"
+                      value={drivers.find(d => d.id === editDriverId)?.full_name || ''}
+                      selectedOptions={[editDriverId]}
+                      onOptionSelect={(_, data) => setEditDriverId(data.optionValue ?? '')}
                     >
-                      <option value="">—</option>
+                      <Option value="" text="—">—</Option>
                       {drivers.map((d) => (
-                        <option key={d.id} value={d.id}>
+                        <Option key={d.id} value={d.id} text={`${d.full_name} (${d.license_number})`}>
                           {d.full_name} ({d.license_number})
-                        </option>
+                        </Option>
                       ))}
-                    </Select>
-                  </div>
-                </>
+                    </Dropdown>
+                  </Field>
+                </div>
               )}
             </DialogContent>
             <DialogActions>
-              <Button appearance="secondary" onClick={closeEditDialog}>
-                {t('common.cancel')}
-              </Button>
-              <Button
-                appearance="primary"
-                onClick={handleEditSubmit}
-                disabled={!editTrip || updateTripMutation.isPending || !!editDelayError}
-              >
-                {updateTripMutation.isPending ? t('common.saving') : t('common.save')}
-              </Button>
+              <div className={actionsStyles.wrapper}>
+                <Button appearance="secondary" onClick={closeEditDialog}>
+                  {t('common.cancel')}
+                </Button>
+                <Button
+                  appearance="primary"
+                  onClick={handleEditSubmit}
+                  disabled={!editTrip || updateTripMutation.isPending || !!editDelayError}
+                >
+                  {updateTripMutation.isPending ? t('common.saving') : t('common.save')}
+                </Button>
+              </div>
             </DialogActions>
           </DialogBody>
         </DialogSurface>
       </Dialog>
-    </div>
+    </AppLayout>
   );
 };

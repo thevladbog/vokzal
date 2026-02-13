@@ -23,14 +23,18 @@ import {
   DialogContent,
   Input,
   Label,
-  Select,
+  Field,
+  Dropdown,
+  Option,
 } from '@fluentui/react-components';
 import { Add24Regular, Delete24Regular, Edit24Regular } from '@fluentui/react-icons';
+import { AppLayout } from '@/components/layout/AppLayout';
+import { useDialogFormStyles } from '@/styles/dialogFormStyles';
+import { useDialogActionsStyles } from '@/styles/dialogActionsStyles';
 import { scheduleService } from '@/services/schedule';
 import type { Bus, Station } from '@/types';
 
 const useStyles = makeStyles({
-  container: { padding: '24px' },
   header: {
     display: 'flex',
     justifyContent: 'space-between',
@@ -39,7 +43,7 @@ const useStyles = makeStyles({
   },
   filters: { display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '16px' },
   loading: { display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' },
-  formRow: { marginBottom: '16px' },
+  actions: { display: 'flex', gap: '8px' },
 });
 
 const STATUS_OPTIONS: Bus['status'][] = ['active', 'maintenance', 'out_of_service'];
@@ -47,6 +51,8 @@ const STATUS_OPTIONS: Bus['status'][] = ['active', 'maintenance', 'out_of_servic
 export const BusesPage: React.FC = () => {
   const { t } = useTranslation();
   const styles = useStyles();
+  const formStyles = useDialogFormStyles();
+  const actionsStyles = useDialogActionsStyles();
   const queryClient = useQueryClient();
   const [stationFilter, setStationFilter] = useState('');
   const [createOpen, setCreateOpen] = useState(false);
@@ -83,6 +89,7 @@ export const BusesPage: React.FC = () => {
       setCreateModel('');
       setCreateCapacity(45);
       setCreateStationId('');
+      setCreateStatus('active');
     },
   });
 
@@ -115,21 +122,23 @@ export const BusesPage: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className={styles.loading}>
-        <Spinner label={t('buses.loading')} />
-      </div>
+      <AppLayout>
+        <div className={styles.loading}>
+          <Spinner label={t('buses.loading')} />
+        </div>
+      </AppLayout>
     );
   }
   if (error) {
     return (
-      <div className={styles.container}>
+      <AppLayout>
         <Text>{t('buses.loadError')}</Text>
-      </div>
+      </AppLayout>
     );
   }
 
   return (
-    <div className={styles.container}>
+    <AppLayout>
       <div className={styles.header}>
         <Title2>{t('buses.title')}</Title2>
         <Dialog open={createOpen} onOpenChange={(_, d) => setCreateOpen(d.open)}>
@@ -142,69 +151,68 @@ export const BusesPage: React.FC = () => {
             <DialogBody>
               <DialogTitle>{t('buses.createBusTitle')}</DialogTitle>
               <DialogContent>
-                <div className={styles.formRow}>
-                  <Label>{t('buses.plateNumber')}</Label>
-                  <Input
-                    value={createPlate}
-                    onChange={(_, v) => setCreatePlate(v.value)}
-                    placeholder={t('buses.platePlaceholder')}
-                  />
-                </div>
-                <div className={styles.formRow}>
-                  <Label>{t('buses.model')}</Label>
-                  <Input
-                    value={createModel}
-                    onChange={(_, v) => setCreateModel(v.value)}
-                    placeholder={t('buses.modelPlaceholder')}
-                  />
-                </div>
-                <div className={styles.formRow}>
-                  <Label>{t('buses.capacity')}</Label>
-                  <Input
-                    type="number"
-                    min={1}
-                    value={String(createCapacity)}
-                    onChange={(_, v) => setCreateCapacity(parseInt(v.value, 10) || 0)}
-                  />
-                </div>
-                <div className={styles.formRow}>
-                  <Label>{t('buses.station')}</Label>
-                  <Select
-                    value={createStationId}
-                    onChange={(_, d) => setCreateStationId(d.value ?? '')}
-                    style={{ width: '100%' }}
-                  >
-                    {stations.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.name}
-                      </option>
-                    ))}
-                  </Select>
-                </div>
-                <div className={styles.formRow}>
-                  <Label>{t('buses.status')}</Label>
-                  <Select
-                    value={createStatus}
-                    onChange={(_, d) => setCreateStatus((d.value as Bus['status']) ?? 'active')}
-                    style={{ width: '100%' }}
-                  >
-                    {STATUS_OPTIONS.map((s) => (
-                      <option key={s} value={s}>
-                        {s === 'active' ? t('buses.statusActive') : s === 'maintenance' ? t('buses.statusMaintenance') : t('buses.statusOutOfService')}
-                      </option>
-                    ))}
-                  </Select>
+                <div className={formStyles.formContainer}>
+                  <Field label={t('buses.plateNumber')} required>
+                    <Input
+                      value={createPlate}
+                      onChange={(_, v) => setCreatePlate(v.value)}
+                      placeholder={t('buses.platePlaceholder')}
+                    />
+                  </Field>
+                  <Field label={t('buses.model')} required>
+                    <Input
+                      value={createModel}
+                      onChange={(_, v) => setCreateModel(v.value)}
+                      placeholder={t('buses.modelPlaceholder')}
+                    />
+                  </Field>
+                  <Field label={t('buses.capacity')} required>
+                    <Input
+                      type="number"
+                      min={1}
+                      value={String(createCapacity)}
+                      onChange={(_, v) => setCreateCapacity(parseInt(v.value, 10) || 0)}
+                    />
+                  </Field>
+                  <Field label={t('buses.station')} required>
+                    <Dropdown
+                      placeholder={t('buses.selectStation')}
+                      value={stations.find(s => s.id === createStationId)?.name || ''}
+                      selectedOptions={[createStationId]}
+                      onOptionSelect={(_, d) => setCreateStationId(d.optionValue ?? '')}
+                    >
+                      {stations.map((s) => (
+                        <Option key={s.id} value={s.id}>
+                          {s.name}
+                        </Option>
+                      ))}
+                    </Dropdown>
+                  </Field>
+                  <Field label={t('buses.status')} required>
+                    <Dropdown
+                      value={createStatus === 'active' ? t('buses.statusActive') : createStatus === 'maintenance' ? t('buses.statusMaintenance') : t('buses.statusOutOfService')}
+                      selectedOptions={[createStatus]}
+                      onOptionSelect={(_, d) => setCreateStatus((d.optionValue as Bus['status']) ?? 'active')}
+                    >
+                      {STATUS_OPTIONS.map((s) => (
+                        <Option key={s} value={s}>
+                          {s === 'active' ? t('buses.statusActive') : s === 'maintenance' ? t('buses.statusMaintenance') : t('buses.statusOutOfService')}
+                        </Option>
+                      ))}
+                    </Dropdown>
+                  </Field>
                 </div>
               </DialogContent>
               <DialogActions>
-                <Button appearance="secondary" onClick={() => setCreateOpen(false)}>
-                  {t('common.cancel')}
-                </Button>
-                <Button
-                  appearance="primary"
-                  disabled={!createPlate.trim() || !createModel.trim() || createCapacity < 1 || !createStationId}
-                  onClick={() =>
-                    createMutation.mutate({
+                <div className={actionsStyles.wrapper}>
+                  <Button appearance="secondary" onClick={() => setCreateOpen(false)}>
+                    {t('common.cancel')}
+                  </Button>
+                  <Button
+                    appearance="primary"
+                    disabled={!createPlate.trim() || !createModel.trim() || createCapacity < 1 || !createStationId}
+                    onClick={() =>
+                      createMutation.mutate({
                       plate_number: createPlate.trim(),
                       model: createModel.trim(),
                       capacity: createCapacity,
@@ -215,6 +223,7 @@ export const BusesPage: React.FC = () => {
                 >
                   {t('common.create')}
                 </Button>
+                </div>
               </DialogActions>
             </DialogBody>
           </DialogSurface>
@@ -223,18 +232,20 @@ export const BusesPage: React.FC = () => {
 
       <div className={styles.filters}>
         <Label>{t('buses.station')}:</Label>
-        <Select
-          value={stationFilter}
-          onChange={(_, d) => setStationFilter(d.value ?? '')}
-          style={{ minWidth: '200px' }}
+        <Dropdown
+          placeholder={t('buses.allStations')}
+          value={stationFilter ? stations.find(s => s.id === stationFilter)?.name : t('buses.allStations')}
+          selectedOptions={[stationFilter]}
+          onOptionSelect={(_, d) => setStationFilter(d.optionValue ?? '')}
+          style={{ minWidth: '220px' }}
         >
-          <option value="">{t('buses.allStations')}</option>
+          <Option value="">{t('buses.allStations')}</Option>
           {stations.map((s) => (
-            <option key={s.id} value={s.id}>
+            <Option key={s.id} value={s.id}>
               {s.name}
-            </option>
+            </Option>
           ))}
-        </Select>
+        </Dropdown>
       </div>
 
       <Card>
@@ -289,54 +300,51 @@ export const BusesPage: React.FC = () => {
             <DialogTitle>{t('buses.editBusTitle')}</DialogTitle>
             <DialogContent>
               {editBus && (
-                <>
-                  <div className={styles.formRow}>
-                    <Label>{t('buses.plateNumber')}</Label>
+                <div className={formStyles.formContainer}>
+                  <Field label={t('buses.plateNumber')} required>
                     <Input
                       value={editPlate}
                       onChange={(_, v) => setEditPlate(v.value)}
                     />
-                  </div>
-                  <div className={styles.formRow}>
-                    <Label>{t('buses.model')}</Label>
+                  </Field>
+                  <Field label={t('buses.model')} required>
                     <Input value={editModel} onChange={(_, v) => setEditModel(v.value)} />
-                  </div>
-                  <div className={styles.formRow}>
-                    <Label>{t('buses.capacity')}</Label>
+                  </Field>
+                  <Field label={t('buses.capacity')} required>
                     <Input
                       type="number"
                       min={1}
                       value={String(editCapacity)}
                       onChange={(_, v) => setEditCapacity(parseInt(v.value, 10) || 0)}
                     />
-                  </div>
-                  <div className={styles.formRow}>
-                    <Label>{t('buses.status')}</Label>
-                    <Select
-                      value={editStatus}
-                      onChange={(_, d) => setEditStatus((d.value as Bus['status']) ?? 'active')}
-                      style={{ width: '100%' }}
+                  </Field>
+                  <Field label={t('buses.status')} required>
+                    <Dropdown
+                      value={editStatus === 'active' ? t('buses.statusActive') : editStatus === 'maintenance' ? t('buses.statusMaintenance') : t('buses.statusOutOfService')}
+                      selectedOptions={[editStatus]}
+                      onOptionSelect={(_, d) => setEditStatus((d.optionValue as Bus['status']) ?? 'active')}
                     >
                       {STATUS_OPTIONS.map((s) => (
-                        <option key={s} value={s}>
+                        <Option key={s} value={s}>
                           {s === 'active' ? t('buses.statusActive') : s === 'maintenance' ? t('buses.statusMaintenance') : t('buses.statusOutOfService')}
-                        </option>
+                        </Option>
                       ))}
-                    </Select>
-                  </div>
-                </>
+                    </Dropdown>
+                  </Field>
+                </div>
               )}
             </DialogContent>
             <DialogActions>
-              <Button appearance="secondary" onClick={() => setEditBus(null)}>
-                {t('common.cancel')}
-              </Button>
-              <Button
-                appearance="primary"
-                disabled={!editBus || !editPlate.trim() || !editModel.trim() || editCapacity < 1}
-                onClick={() =>
-                  editBus &&
-                  updateMutation.mutate({
+              <div className={actionsStyles.wrapper}>
+                <Button appearance="secondary" onClick={() => setEditBus(null)}>
+                  {t('common.cancel')}
+                </Button>
+                <Button
+                  appearance="primary"
+                  disabled={!editBus || !editPlate.trim() || !editModel.trim() || editCapacity < 1}
+                  onClick={() =>
+                    editBus &&
+                    updateMutation.mutate({
                     id: editBus.id,
                     data: {
                       plate_number: editPlate.trim(),
@@ -349,6 +357,7 @@ export const BusesPage: React.FC = () => {
               >
                 {t('common.save')}
               </Button>
+              </div>
             </DialogActions>
           </DialogBody>
         </DialogSurface>
@@ -366,19 +375,21 @@ export const BusesPage: React.FC = () => {
               )}
             </DialogContent>
             <DialogActions>
-              <Button appearance="secondary" onClick={() => setDeleteBus(null)}>
-                {t('common.cancel')}
-              </Button>
-              <Button
-                appearance="primary"
-                onClick={() => deleteBus && deleteMutation.mutate(deleteBus.id)}
-              >
-                {t('common.delete')}
-              </Button>
+              <div className={actionsStyles.wrapper}>
+                <Button appearance="secondary" onClick={() => setDeleteBus(null)}>
+                  {t('common.cancel')}
+                </Button>
+                <Button
+                  appearance="primary"
+                  onClick={() => deleteBus && deleteMutation.mutate(deleteBus.id)}
+                >
+                  {t('common.delete')}
+                </Button>
+              </div>
             </DialogActions>
           </DialogBody>
         </DialogSurface>
       </Dialog>
-    </div>
+    </AppLayout>
   );
 };

@@ -1,50 +1,49 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import {
-  FluentProvider,
-  webLightTheme,
   Text,
   Title2,
   Card,
   makeStyles,
-  Button,
-  Select,
   Spinner,
+  tokens,
+  shorthands,
 } from '@fluentui/react-components';
+import { AppLayout } from '@/components/layout/AppLayout';
 import { useAuthStore } from '@/stores/authStore';
 import { scheduleService } from '@/services/schedule';
 import { ticketService } from '@/services/ticket';
 import i18n from '@/i18n';
 
 const useStyles = makeStyles({
-  container: {
-    padding: '24px',
-  },
-  card: {
-    padding: '24px',
-    marginBottom: '16px',
+  welcomeCard: {
+    ...shorthands.padding('24px'),
+    marginBottom: '24px',
   },
   stats: {
     display: 'grid',
     gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-    gap: '16px',
-    marginTop: '24px',
+    ...shorthands.gap('16px'),
   },
   statCard: {
-    padding: '20px',
+    ...shorthands.padding('20px'),
     textAlign: 'center',
+    ...shorthands.transition('transform', '150ms', 'ease-in-out'),
+    ':hover': {
+      transform: 'translateY(-2px)',
+      boxShadow: tokens.shadow8,
+    },
   },
-  nav: {
-    display: 'flex',
-    gap: '12px',
-    marginBottom: '24px',
-    flexWrap: 'wrap',
+  statValue: {
+    display: 'block',
+    fontSize: tokens.fontSizeHero900,
+    fontWeight: tokens.fontWeightSemibold,
+    color: tokens.colorBrandForeground1,
+    marginBottom: '8px',
   },
-  langSwitcher: {
-    marginLeft: 'auto',
-    minWidth: '100px',
+  statLabel: {
+    color: tokens.colorNeutralForeground3,
   },
 });
 
@@ -79,94 +78,46 @@ export const DashboardPage: React.FC = () => {
     (totalSeats > 0 ? Math.round((ticketsSold / totalSeats) * 100) : 0);
 
   return (
-    <FluentProvider theme={webLightTheme}>
-      <div className={styles.container}>
-        <Card className={styles.card}>
-          <Title2>
-            {t('dashboard.welcome')}, {user?.full_name || user?.fio || user?.username}!
-          </Title2>
-          <Text>{t('dashboard.role')}: {user?.role}</Text>
-        </Card>
+    <AppLayout>
+      <Card className={styles.welcomeCard}>
+        <Title2>
+          {t('dashboard.welcome')}, {user?.full_name || user?.fio || user?.username}!
+        </Title2>
+        <Text>{t('dashboard.role')}: {user?.role}</Text>
+      </Card>
 
-        <div className={styles.nav}>
-          <Link to="/schedules">
-            <Button appearance="secondary">{t('nav.schedules')}</Button>
-          </Link>
-          <Link to="/stations">
-            <Button appearance="secondary">{t('nav.stations')}</Button>
-          </Link>
-          <Link to="/routes">
-            <Button appearance="secondary">{t('nav.routes')}</Button>
-          </Link>
-          <Link to="/trips">
-            <Button appearance="secondary">{t('nav.trips')}</Button>
-          </Link>
-          <Link to="/buses">
-            <Button appearance="secondary">{t('nav.buses')}</Button>
-          </Link>
-          <Link to="/drivers">
-            <Button appearance="secondary">{t('nav.drivers')}</Button>
-          </Link>
-          <Link to="/reports">
-            <Button appearance="secondary">{t('nav.reports')}</Button>
-          </Link>
-          <Link to="/monitoring">
-            <Button appearance="secondary">{t('nav.monitoring')}</Button>
-          </Link>
-          {user?.role === 'admin' && (
-            <>
-              <Link to="/users">
-                <Button appearance="secondary">{t('nav.users')}</Button>
-              </Link>
-              <Link to="/audit">
-                <Button appearance="secondary">{t('nav.audit')}</Button>
-              </Link>
-            </>
-          )}
-          <Select
-            value={i18n.language}
-            onChange={(_, v) => v.value && i18n.changeLanguage(v.value)}
-            className={styles.langSwitcher}
-            aria-label={t('common.language')}
-          >
-            <option value="ru">RU</option>
-            <option value="en">EN</option>
-          </Select>
+      <Title2 style={{ marginBottom: '16px' }}>{t('dashboard.statsTitle')}</Title2>
+
+      {isLoading ? (
+        <Spinner label={t('dashboard.loading')} />
+      ) : (
+        <div className={styles.stats}>
+          <Card className={styles.statCard}>
+            <Text className={styles.statValue}>{tripsTotal}</Text>
+            <Text className={styles.statLabel}>{t('dashboard.statsTrips')}</Text>
+          </Card>
+
+          <Card className={styles.statCard}>
+            <Text className={styles.statValue}>{ticketsSold}</Text>
+            <Text className={styles.statLabel}>{t('dashboard.statsTickets')}</Text>
+          </Card>
+
+          <Card className={styles.statCard}>
+            <Text className={styles.statValue}>{revenue.toLocaleString(i18n.language === 'en' ? 'en-US' : 'ru-RU')} ₽</Text>
+            <Text className={styles.statLabel}>{t('dashboard.statsRevenue')}</Text>
+          </Card>
+
+          <Card className={styles.statCard}>
+            <Text className={styles.statValue}>{ticketsReturned}</Text>
+            <Text className={styles.statLabel}>{t('dashboard.statsReturns')}</Text>
+          </Card>
+
+          <Card className={styles.statCard}>
+            <Text className={styles.statValue}>{occupancyPercent}%</Text>
+            <Text className={styles.statLabel}>{t('dashboard.statsOccupancy')}</Text>
+          </Card>
         </div>
-
-        <Title2 style={{ marginBottom: '16px' }}>{t('dashboard.statsTitle')}</Title2>
-
-        {isLoading ? (
-          <Spinner label={t('dashboard.loading')} />
-        ) : (
-          <div className={styles.stats}>
-            <Card className={styles.statCard}>
-              <Text size={600} weight="bold">{tripsTotal}</Text>
-              <Text block>{t('dashboard.statsTrips')}</Text>
-            </Card>
-
-            <Card className={styles.statCard}>
-              <Text size={600} weight="bold">{ticketsSold}</Text>
-              <Text block>{t('dashboard.statsTickets')}</Text>
-            </Card>
-
-            <Card className={styles.statCard}>
-              <Text size={600} weight="bold">{revenue.toLocaleString(i18n.language === 'en' ? 'en-US' : 'ru-RU')} ₽</Text>
-              <Text block>{t('dashboard.statsRevenue')}</Text>
-            </Card>
-
-            <Card className={styles.statCard}>
-              <Text size={600} weight="bold">{ticketsReturned}</Text>
-              <Text block>{t('dashboard.statsReturns')}</Text>
-            </Card>
-
-            <Card className={styles.statCard}>
-              <Text size={600} weight="bold">{occupancyPercent}%</Text>
-              <Text block>{t('dashboard.statsOccupancy')}</Text>
-            </Card>
-          </div>
-        )}
-      </div>
-    </FluentProvider>
+      )}
+    </AppLayout>
   );
 };

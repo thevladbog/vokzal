@@ -68,7 +68,7 @@ go run cmd/main.go
 - NATS: `localhost:4222` (vokzal/nats_secret_2026)
 
 **Мониторинг:**
-- Grafana: http://localhost:3000 (admin/grafana_secret_2026)
+- Grafana: http://localhost:30001 (admin/grafana_secret_2026)
 - Prometheus: http://localhost:9090
 - Traefik Dashboard: http://localhost:8080
 

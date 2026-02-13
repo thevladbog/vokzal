@@ -13,7 +13,7 @@
 ### Инфраструктура
 - **Traefik 3.0** - API Gateway (порты 80, 443, 8080)
 - **Prometheus** - метрики (порт 9090)
-- **Grafana** - визуализация (порт 3000)
+- **Grafana** - визуализация (порт 30001)
 - **Loki** - логирование (порт 3100)
 
 ## Запуск
@@ -47,7 +47,7 @@ docker-compose down -v
   - Password: `vokzal_redis_2026`
 
 ### Мониторинг
-- Grafana: http://localhost:3000
+- Grafana: http://localhost:30001
   - User: `admin`
   - Password: `grafana_secret_2026`
 

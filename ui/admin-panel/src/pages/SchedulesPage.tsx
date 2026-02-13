@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -23,10 +23,16 @@ import {
   DialogContent,
   Label,
   Input,
-  Select,
   Checkbox,
+  Field,
+  Dropdown,
+  Option,
 } from '@fluentui/react-components';
 import { Add24Regular, CalendarLtr24Regular, Edit24Regular } from '@fluentui/react-icons';
+import { AppLayout } from '@/components/layout/AppLayout';
+import { VokzalDatePicker } from '@/components/common/VokzalDatePicker';
+import { useDialogFormStyles } from '@/styles/dialogFormStyles';
+import { useDialogActionsStyles } from '@/styles/dialogActionsStyles';
 import { scheduleService } from '@/services/schedule';
 import type { Schedule, Route } from '@/types';
 
@@ -34,9 +40,6 @@ const DAY_KEYS = ['schedules.dayMon', 'schedules.dayTue', 'schedules.dayWed', 's
 const DAYS_OF_WEEK = [1, 2, 3, 4, 5, 6, 7] as const;
 
 const useStyles = makeStyles({
-  container: {
-    padding: '24px',
-  },
   header: {
     display: 'flex',
     justifyContent: 'space-between',
@@ -51,13 +54,22 @@ const useStyles = makeStyles({
     alignItems: 'center',
     minHeight: '400px',
   },
-  formRow: { marginBottom: '16px' },
-  dayCheckbox: { marginRight: '12px' },
+  filterGroup: {
+    display: 'flex',
+    gap: '8px',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+  },
+  dayCheckbox: {
+    marginRight: '4px',
+  },
 });
 
 export const SchedulesPage: React.FC = () => {
   const { t } = useTranslation();
   const styles = useStyles();
+  const formStyles = useDialogFormStyles();
+  const actionsStyles = useDialogActionsStyles();
   const queryClient = useQueryClient();
   const [routeFilter, setRouteFilter] = useState<string>('');
   const hasInitializedRoute = useRef(false);
@@ -74,13 +86,11 @@ export const SchedulesPage: React.FC = () => {
   const [generateOpen, setGenerateOpen] = useState(false);
   const [generateRouteId, setGenerateRouteId] = useState('');
   const [generateScheduleId, setGenerateScheduleId] = useState('');
-  const [generateFromDate, setGenerateFromDate] = useState(() =>
-    new Date().toISOString().slice(0, 10)
-  );
-  const [generateToDate, setGenerateToDate] = useState(() => {
+  const [generateFromDate, setGenerateFromDate] = useState<Date | null>(() => new Date());
+  const [generateToDate, setGenerateToDate] = useState<Date | null>(() => {
     const d = new Date();
     d.setDate(d.getDate() + 7);
-    return d.toISOString().slice(0, 10);
+    return d;
   });
 
   const { data: routes = [] } = useQuery<Route[]>({
@@ -225,36 +235,47 @@ export const SchedulesPage: React.FC = () => {
     hasInitializedRoute.current = true;
   }, [routes]);
 
-  const isGenerateRangeInvalid = generateFromDate > generateToDate;
+  const isGenerateRangeInvalid = !generateFromDate || !generateToDate || generateFromDate > generateToDate;
+
+  // Format date to YYYY-MM-DD using local timezone to avoid UTC offset issues
+  const formatLocalDate = (date: Date): string => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
 
   const handleGenerateSubmit = () => {
     if (!generateScheduleId || !generateFromDate || !generateToDate) return;
     if (isGenerateRangeInvalid) return;
+    const fromStr = formatLocalDate(generateFromDate);
+    const toStr = formatLocalDate(generateToDate);
     generateMutation.mutate({
       scheduleId: generateScheduleId,
-      fromDate: generateFromDate,
-      toDate: generateToDate,
+      fromDate: fromStr,
+      toDate: toStr,
     });
   };
 
   return (
-    <div className={styles.container}>
+    <AppLayout>
       <div className={styles.header}>
         <Title2>{t('schedules.title')}</Title2>
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+        <div className={styles.filterGroup}>
           <Label htmlFor="schedule-route-filter">{t('schedules.route')}:</Label>
-          <Select
+          <Dropdown
             id="schedule-route-filter"
-            value={routeFilter}
-            onChange={(_, data) => setRouteFilter(data.value ?? '')}
-            style={{ minWidth: '200px' }}
+            value={routes.find(r => r.id === routeFilter)?.name || ''}
+            selectedOptions={[routeFilter]}
+            onOptionSelect={(_, data) => setRouteFilter(data.optionValue ?? '')}
+            style={{ minWidth: '220px' }}
           >
             {routes.map((r) => (
-              <option key={r.id} value={r.id}>
+              <Option key={r.id} value={r.id}>
                 {r.name}
-              </option>
+              </Option>
             ))}
-          </Select>
+          </Dropdown>
           <Dialog open={generateOpen} onOpenChange={(_, v) => setGenerateOpen(v.open)}>
             <DialogTrigger disableButtonEnhancement>
               <Button
@@ -269,70 +290,72 @@ export const SchedulesPage: React.FC = () => {
               <DialogBody>
                 <DialogTitle>{t('schedules.generateTripsTitle')}</DialogTitle>
                 <DialogContent>
-                  <div className={styles.formRow}>
-                    <Label>{t('schedules.route')}</Label>
-                    <Select
-                      value={generateRouteId}
-                      onChange={(_, data) => {
-                        setGenerateRouteId(data.value ?? '');
-                        setGenerateScheduleId('');
-                      }}
-                      style={{ width: '100%' }}
-                    >
-                      {routes.map((r) => (
-                        <option key={r.id} value={r.id}>
-                          {r.name}
-                        </option>
-                      ))}
-                    </Select>
-                  </div>
-                  <div className={styles.formRow}>
-                    <Label>{t('schedules.schedule')}</Label>
-                    <Select
-                      value={generateScheduleId}
-                      onChange={(_, data) => setGenerateScheduleId(data.value ?? '')}
-                      style={{ width: '100%' }}
-                      disabled={!generateRouteId}
-                    >
-                      {schedulesForGenerate.map((s) => (
-                        <option key={s.id} value={s.id}>
-                          {s.departure_time} — {formatDaysOfWeek(s.days_of_week ?? [])}
-                        </option>
-                      ))}
-                    </Select>
-                  </div>
-                  <div className={styles.formRow}>
-                    <Label htmlFor="gen-from">{t('schedules.fromDate')}</Label>
-                    <Input
-                      id="gen-from"
-                      type="date"
-                      value={generateFromDate}
-                      onChange={(_, v) => setGenerateFromDate(v.value)}
-                    />
-                  </div>
-                  <div className={styles.formRow}>
-                    <Label htmlFor="gen-to">{t('schedules.toDate')}</Label>
-                    <Input
-                      id="gen-to"
-                      type="date"
-                      value={generateToDate}
-                      onChange={(_, v) => setGenerateToDate(v.value)}
-                    />
+                  <div className={formStyles.formContainer}>
+                    <Field label={t('schedules.route')} required>
+                      <Dropdown
+                        placeholder={t('schedules.selectRoute')}
+                        value={routes.find(r => r.id === generateRouteId)?.name || ''}
+                        selectedOptions={[generateRouteId]}
+                        onOptionSelect={(_, data) => {
+                          setGenerateRouteId(data.optionValue ?? '');
+                          setGenerateScheduleId('');
+                        }}
+                      >
+                        {routes.map((r) => (
+                          <Option key={r.id} value={r.id}>
+                            {r.name}
+                          </Option>
+                        ))}
+                      </Dropdown>
+                    </Field>
+                    <Field label={t('schedules.schedule')} required>
+                      <Dropdown
+                        placeholder={t('schedules.selectSchedule')}
+                        value={
+                          schedulesForGenerate.find(s => s.id === generateScheduleId)
+                            ? `${schedulesForGenerate.find(s => s.id === generateScheduleId)?.departure_time} — ${formatDaysOfWeek(schedulesForGenerate.find(s => s.id === generateScheduleId)?.days_of_week ?? [])}`
+                            : ''
+                        }
+                        selectedOptions={[generateScheduleId]}
+                        onOptionSelect={(_, data) => setGenerateScheduleId(data.optionValue ?? '')}
+                        disabled={!generateRouteId}
+                      >
+                        {schedulesForGenerate.map((s) => (
+                          <Option key={s.id} value={s.id} text={`${s.departure_time} — ${formatDaysOfWeek(s.days_of_week ?? [])}`}>
+                            {s.departure_time} — {formatDaysOfWeek(s.days_of_week ?? [])}
+                          </Option>
+                        ))}
+                      </Dropdown>
+                    </Field>
+                    <Field label={t('schedules.fromDate')} required>
+                      <VokzalDatePicker
+                        value={generateFromDate}
+                        onSelectDate={(date) => setGenerateFromDate(date ?? null)}
+                      />
+                    </Field>
+                    <Field label={t('schedules.toDate')} required>
+                      <VokzalDatePicker
+                        value={generateToDate}
+                        onSelectDate={(date) => setGenerateToDate(date ?? null)}
+                      />
+                    </Field>
                   </div>
                 </DialogContent>
                 <DialogActions>
-                  <DialogTrigger disableButtonEnhancement>
-                    <Button appearance="secondary">{t('common.cancel')}</Button>
-                  </DialogTrigger>
-                  <Button
-                    appearance="primary"
-                    onClick={handleGenerateSubmit}
-                    disabled={
-                      !generateScheduleId || !generateFromDate || !generateToDate || isGenerateRangeInvalid || generateMutation.isPending
-                    }
-                  >
-                    {generateMutation.isPending ? t('schedules.creating') : t('schedules.generateTrips')}
-                  </Button>
+                  <div className={actionsStyles.wrapper}>
+                    <DialogTrigger disableButtonEnhancement>
+                      <Button appearance="secondary">{t('common.cancel')}</Button>
+                    </DialogTrigger>
+                    <Button
+                      appearance="primary"
+                      onClick={handleGenerateSubmit}
+                      disabled={
+                        !generateScheduleId || !generateFromDate || !generateToDate || isGenerateRangeInvalid || generateMutation.isPending
+                      }
+                    >
+                      {generateMutation.isPending ? t('schedules.creating') : t('schedules.generateTrips')}
+                    </Button>
+                  </div>
                 </DialogActions>
               </DialogBody>
             </DialogSurface>
@@ -347,66 +370,67 @@ export const SchedulesPage: React.FC = () => {
               <DialogBody>
                 <DialogTitle>{t('schedules.createScheduleTitle')}</DialogTitle>
                 <DialogContent>
-                  <div className={styles.formRow}>
-                    <Label>{t('schedules.route')}</Label>
-                    <Select
-                      value={createRouteId}
-                      onChange={(_, data) => setCreateRouteId(data.value ?? '')}
-                      style={{ width: '100%' }}
-                    >
-                      {routes.map((r) => (
-                        <option key={r.id} value={r.id}>
-                          {r.name}
-                        </option>
-                      ))}
-                    </Select>
-                  </div>
-                  <div className={styles.formRow}>
-                    <Label htmlFor="create-time">{t('schedules.departureTime')}</Label>
-                    <Input
-                      id="create-time"
-                      type="time"
-                      value={createDepartureTime}
-                      onChange={(_, v) => setCreateDepartureTime(v.value)}
-                    />
-                  </div>
-                  <div className={styles.formRow}>
-                    <Label>{t('schedules.daysOfWeek')}</Label>
-                    <div style={{ display: 'flex', flexWrap: 'wrap' }}>
-                      {DAYS_OF_WEEK.map((day) => (
-                        <Checkbox
-                          key={day}
-                          className={styles.dayCheckbox}
-                          label={t(DAY_KEYS[day - 1])}
-                          checked={createDaysOfWeek.includes(day)}
-                          onChange={() => toggleCreateDay(day)}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                  <div className={styles.formRow}>
-                    <Label htmlFor="create-platform">{t('schedules.platformOptional')}</Label>
-                    <Input
-                      id="create-platform"
-                      value={createPlatform}
-                      onChange={(_, v) => setCreatePlatform(v.value)}
-                      placeholder={t('schedules.platformPlaceholder')}
-                    />
+                  <div className={formStyles.formContainer}>
+                    <Field label={t('schedules.route')} required>
+                      <Dropdown
+                        placeholder={t('schedules.selectRoute')}
+                        value={routes.find(r => r.id === createRouteId)?.name || ''}
+                        selectedOptions={[createRouteId]}
+                        onOptionSelect={(_, data) => setCreateRouteId(data.optionValue ?? '')}
+                      >
+                        {routes.map((r) => (
+                          <Option key={r.id} value={r.id}>
+                            {r.name}
+                          </Option>
+                        ))}
+                      </Dropdown>
+                    </Field>
+                    <Field label={t('schedules.departureTime')} required>
+                      <Input
+                        id="create-time"
+                        type="time"
+                        value={createDepartureTime}
+                        onChange={(_, v) => setCreateDepartureTime(v.value)}
+                      />
+                    </Field>
+                    <Field label={t('schedules.daysOfWeek')} required>
+                      <div className={formStyles.checkboxGroup}>
+                        {DAYS_OF_WEEK.map((day) => (
+                          <Checkbox
+                            key={day}
+                            className={styles.dayCheckbox}
+                            label={t(DAY_KEYS[day - 1])}
+                            checked={createDaysOfWeek.includes(day)}
+                            onChange={() => toggleCreateDay(day)}
+                          />
+                        ))}
+                      </div>
+                    </Field>
+                    <Field label={t('schedules.platformOptional')}>
+                      <Input
+                        id="create-platform"
+                        value={createPlatform}
+                        onChange={(_, v) => setCreatePlatform(v.value)}
+                        placeholder={t('schedules.platformPlaceholder')}
+                      />
+                    </Field>
                   </div>
                 </DialogContent>
                 <DialogActions>
-                  <DialogTrigger disableButtonEnhancement>
-                    <Button appearance="secondary">{t('common.cancel')}</Button>
-                  </DialogTrigger>
-                  <Button
-                    appearance="primary"
-                    onClick={handleCreateSubmit}
-                    disabled={
-                      !createRouteId || createDaysOfWeek.length === 0 || createScheduleMutation.isPending
-                    }
-                  >
-                    {createScheduleMutation.isPending ? t('schedules.creating') : t('common.create')}
-                  </Button>
+                  <div className={actionsStyles.wrapper}>
+                    <DialogTrigger disableButtonEnhancement>
+                      <Button appearance="secondary">{t('common.cancel')}</Button>
+                    </DialogTrigger>
+                    <Button
+                      appearance="primary"
+                      onClick={handleCreateSubmit}
+                      disabled={
+                        !createRouteId || createDaysOfWeek.length === 0 || createScheduleMutation.isPending
+                      }
+                    >
+                      {createScheduleMutation.isPending ? t('schedules.creating') : t('common.create')}
+                    </Button>
+                  </div>
                 </DialogActions>
               </DialogBody>
             </DialogSurface>
@@ -420,19 +444,17 @@ export const SchedulesPage: React.FC = () => {
             <DialogTitle>{t('schedules.editScheduleTitle')}</DialogTitle>
             <DialogContent>
               {editSchedule && (
-                <>
-                  <div className={styles.formRow}>
-                    <Label htmlFor="edit-time">{t('schedules.departureTime')}</Label>
+                <div className={formStyles.formContainer}>
+                  <Field label={t('schedules.departureTime')} required>
                     <Input
                       id="edit-time"
                       type="time"
                       value={editDepartureTime}
                       onChange={(_, v) => setEditDepartureTime(v.value)}
                     />
-                  </div>
-                  <div className={styles.formRow}>
-                    <Label>{t('schedules.daysOfWeek')}</Label>
-                    <div style={{ display: 'flex', flexWrap: 'wrap' }}>
+                  </Field>
+                  <Field label={t('schedules.daysOfWeek')} required>
+                    <div className={formStyles.checkboxGroup}>
                       {DAYS_OF_WEEK.map((day) => (
                         <Checkbox
                           key={day}
@@ -443,40 +465,41 @@ export const SchedulesPage: React.FC = () => {
                         />
                       ))}
                     </div>
-                  </div>
-                  <div className={styles.formRow}>
-                    <Label htmlFor="edit-platform">{t('schedules.platformOptional')}</Label>
+                  </Field>
+                  <Field label={t('schedules.platformOptional')}>
                     <Input
                       id="edit-platform"
                       value={editPlatform}
                       onChange={(_, v) => setEditPlatform(v.value)}
                     />
-                  </div>
-                  <div className={styles.formRow}>
+                  </Field>
+                  <Field>
                     <Checkbox
                       label={t('schedules.active')}
                       checked={editIsActive}
                       onChange={(_, v) => setEditIsActive(!!v.checked)}
                     />
-                  </div>
-                </>
+                  </Field>
+                </div>
               )}
             </DialogContent>
             <DialogActions>
-              <Button appearance="secondary" onClick={() => setEditSchedule(null)}>
-                {t('common.cancel')}
-              </Button>
-              <Button
-                appearance="primary"
-                onClick={handleEditSubmit}
-                disabled={
-                  !editSchedule ||
-                  editDaysOfWeek.length === 0 ||
-                  updateScheduleMutation.isPending
-                }
-              >
-                {updateScheduleMutation.isPending ? t('schedules.saving') : t('common.save')}
-              </Button>
+              <div className={actionsStyles.wrapper}>
+                <Button appearance="secondary" onClick={() => setEditSchedule(null)}>
+                  {t('common.cancel')}
+                </Button>
+                <Button
+                  appearance="primary"
+                  onClick={handleEditSubmit}
+                  disabled={
+                    !editSchedule ||
+                    editDaysOfWeek.length === 0 ||
+                    updateScheduleMutation.isPending
+                  }
+                >
+                  {updateScheduleMutation.isPending ? t('schedules.saving') : t('common.save')}
+                </Button>
+              </div>
             </DialogActions>
           </DialogBody>
         </DialogSurface>
@@ -531,6 +554,6 @@ export const SchedulesPage: React.FC = () => {
           </Table>
         </Card>
       )}
-    </div>
+    </AppLayout>
   );
 };

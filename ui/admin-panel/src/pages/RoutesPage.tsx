@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Select } from '@fluentui/react-components';
 import {
   Card,
   Title2,
@@ -23,14 +22,19 @@ import {
   DialogActions,
   DialogContent,
   Input,
-  Label,
+  Field,
+  Checkbox,
+  Dropdown,
+  Option,
 } from '@fluentui/react-components';
 import { Add24Regular, Delete24Regular, Edit24Regular } from '@fluentui/react-icons';
+import { AppLayout } from '@/components/layout/AppLayout';
+import { useDialogFormStyles } from '@/styles/dialogFormStyles';
+import { useDialogActionsStyles } from '@/styles/dialogActionsStyles';
 import { scheduleService } from '@/services/schedule';
 import type { Route, Station } from '@/types';
 
 const useStyles = makeStyles({
-  container: { padding: '24px' },
   header: {
     display: 'flex',
     justifyContent: 'space-between',
@@ -38,13 +42,13 @@ const useStyles = makeStyles({
     marginBottom: '24px',
   },
   loading: { display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' },
-  formRow: { marginBottom: '16px' },
   actions: { display: 'flex', gap: '8px' },
 });
 
 export const RoutesPage: React.FC = () => {
   const { t } = useTranslation();
   const styles = useStyles();
+  const actionsStyles = useDialogActionsStyles();
   const queryClient = useQueryClient();
   const [createOpen, setCreateOpen] = useState(false);
   const [editRoute, setEditRoute] = useState<Route | null>(null);
@@ -89,21 +93,23 @@ export const RoutesPage: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className={styles.loading}>
-        <Spinner label={t('routes.loading')} />
-      </div>
+      <AppLayout>
+        <div className={styles.loading}>
+          <Spinner label={t('routes.loading')} />
+        </div>
+      </AppLayout>
     );
   }
   if (error) {
     return (
-      <div className={styles.container}>
+      <AppLayout>
         <Text>{t('routes.loadError')}</Text>
-      </div>
+      </AppLayout>
     );
   }
 
   return (
-    <div className={styles.container}>
+    <AppLayout>
       <div className={styles.header}>
         <Title2>{t('routes.title')}</Title2>
         <Dialog open={createOpen} onOpenChange={(_, d) => setCreateOpen(d.open)}>
@@ -210,8 +216,9 @@ export const RoutesPage: React.FC = () => {
                 </Text>
               </DialogContent>
               <DialogActions>
-                <Button appearance="secondary" onClick={() => setDeleteRoute(null)}>
-                  {t('common.cancel')}
+                <div className={actionsStyles.wrapper}>
+                  <Button appearance="secondary" onClick={() => setDeleteRoute(null)}>
+                    {t('common.cancel')}
                 </Button>
                 <Button
                   appearance="primary"
@@ -220,12 +227,13 @@ export const RoutesPage: React.FC = () => {
                 >
                   {t('common.delete')}
                 </Button>
+                </div>
               </DialogActions>
             </DialogBody>
           </DialogSurface>
         </Dialog>
       )}
-    </div>
+    </AppLayout>
   );
 };
 
@@ -245,8 +253,9 @@ const RouteForm: React.FC<{
   isEdit?: boolean;
 }> = ({ initial, onSubmit, onCancel, isLoading, isEdit }) => {
   const { t } = useTranslation();
-  const styles = useStyles();
-  const { data: stationsRaw } = useQuery({
+  const formStyles = useDialogFormStyles();
+  const actionsStyles = useDialogActionsStyles();
+  const { data: stationsRaw, isLoading: stationsLoading, error: stationsError } = useQuery({
     queryKey: ['stations'],
     queryFn: () => scheduleService.getStations(),
   });
@@ -274,7 +283,7 @@ const RouteForm: React.FC<{
         is_active: isActive,
       });
     } else {
-      const sid = firstStationId || (stations[0]?.id ?? '');
+      const sid = firstStationId;
       if (!sid) {
         return;
       }
@@ -289,73 +298,86 @@ const RouteForm: React.FC<{
 
   return (
     <form onSubmit={handleSubmit}>
-      <div className={styles.formRow}>
-        <Label htmlFor="route-name">{t('routes.nameRequired')}</Label>
-        <Input
-          id="route-name"
-          value={name}
-          onChange={(_, v) => setName(v.value)}
-          required
-          maxLength={100}
-        />
-      </div>
-      <div className={styles.formRow}>
-        <Label htmlFor="route-distance">{t('routes.distanceKm')}</Label>
-        <Input
-          id="route-distance"
-          type="number"
-          min={0}
-          step={0.1}
-          value={distanceKm}
-          onChange={(_, v) => setDistanceKm(v.value)}
-        />
-      </div>
-      <div className={styles.formRow}>
-        <Label htmlFor="route-duration">{t('routes.durationLabel')}</Label>
-        <Input
-          id="route-duration"
-          type="number"
-          min={0}
-          value={durationMin}
-          onChange={(_, v) => setDurationMin(v.value)}
-        />
-      </div>
-      {!isEdit && stations.length > 0 && (
-        <div className={styles.formRow}>
-          <Label htmlFor="route-first-station">{t('routes.firstStationRequired')}</Label>
-          <Select
-            id="route-first-station"
-            value={firstStationId}
-            onChange={(_, v) => setFirstStationId(v.value ?? '')}
-            style={{ minWidth: '100%' }}
-          >
-            {stations.map((s: Station) => (
-              <option key={s.id} value={s.id}>
-                {s.name} ({s.code})
-              </option>
-            ))}
-          </Select>
-        </div>
-      )}
-      {isEdit && (
-        <div className={styles.formRow}>
-          <Label>
-            <input
-              type="checkbox"
+      <div className={formStyles.formContainer}>
+        <Field label={t('routes.nameRequired')} required>
+          <Input
+            id="route-name"
+            value={name}
+            onChange={(_, v) => setName(v.value)}
+            required
+            maxLength={100}
+          />
+        </Field>
+        <Field label={t('routes.distanceKm')}>
+          <Input
+            id="route-distance"
+            type="number"
+            min={0}
+            step={0.1}
+            value={distanceKm}
+            onChange={(_, v) => setDistanceKm(v.value)}
+          />
+        </Field>
+        <Field label={t('routes.durationLabel')}>
+          <Input
+            id="route-duration"
+            type="number"
+            min={0}
+            value={durationMin}
+            onChange={(_, v) => setDurationMin(v.value)}
+          />
+        </Field>
+        {!isEdit && (
+          <Field label={t('routes.firstStationRequired')} required>
+            {stationsLoading ? (
+              <Spinner size="small" label={t('routes.loadingStations')} />
+            ) : stationsError ? (
+              <Text style={{ color: 'var(--colorPaletteRedForeground1)' }}>
+                {t('routes.stationsLoadError')}
+              </Text>
+            ) : stations.length === 0 ? (
+              <Text style={{ color: 'var(--colorNeutralForeground3)' }}>
+                {t('routes.noStationsAvailable')}
+              </Text>
+            ) : (
+              <Dropdown
+                placeholder={t('routes.selectStation')}
+                value={stations.find(s => s.id === firstStationId)?.name || ''}
+                selectedOptions={[firstStationId]}
+                onOptionSelect={(_, data) => setFirstStationId(data.optionValue ?? '')}
+              >
+                {stations.map((s: Station) => (
+                  <Option key={s.id} value={s.id} text={s.name}>
+                    {s.name} ({s.code})
+                  </Option>
+                ))}
+              </Dropdown>
+            )}
+          </Field>
+        )}
+        {isEdit && (
+          <Field>
+            <Checkbox
+              label={t('routes.activeCheckbox')}
               checked={isActive}
-              onChange={(e) => setIsActive(e.target.checked)}
-            />{' '}
-            {t('routes.activeCheckbox')}
-          </Label>
-        </div>
-      )}
+              onChange={(_, data) => setIsActive(!!data.checked)}
+            />
+          </Field>
+        )}
+      </div>
       <DialogActions>
-        <Button type="button" appearance="secondary" onClick={onCancel}>
-          {t('common.cancel')}
-        </Button>
-        <Button type="submit" appearance="primary" disabled={isLoading}>
-          {isEdit ? t('common.save') : t('common.create')}
-        </Button>
+        <div className={actionsStyles.wrapper}>
+          <Button type="button" appearance="secondary" onClick={onCancel}>
+            {t('common.cancel')}
+          </Button>
+          <Button
+            type="submit"
+            appearance="primary"
+            disabled={isLoading || (!isEdit && !firstStationId)}
+          >
+            {isEdit ? t('common.save') : t('common.create')}
+          </Button>
+        </div>
       </DialogActions>
     </form>
   );

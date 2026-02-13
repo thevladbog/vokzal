@@ -23,14 +23,18 @@ import {
   DialogContent,
   Input,
   Label,
-  Select,
+  Field,
+  Dropdown,
+  Option,
 } from '@fluentui/react-components';
 import { Add24Regular, Delete24Regular, Edit24Regular } from '@fluentui/react-icons';
+import { AppLayout } from '@/components/layout/AppLayout';
+import { useDialogFormStyles } from '@/styles/dialogFormStyles';
+import { useDialogActionsStyles } from '@/styles/dialogActionsStyles';
 import { scheduleService } from '@/services/schedule';
 import type { Driver, Station } from '@/types';
 
 const useStyles = makeStyles({
-  container: { padding: '24px' },
   header: {
     display: 'flex',
     justifyContent: 'space-between',
@@ -39,12 +43,14 @@ const useStyles = makeStyles({
   },
   filters: { display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '16px' },
   loading: { display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' },
-  formRow: { marginBottom: '16px' },
+  actions: { display: 'flex', gap: '8px' },
 });
 
 export const DriversPage: React.FC = () => {
   const { t } = useTranslation();
   const styles = useStyles();
+  const formStyles = useDialogFormStyles();
+  const actionsStyles = useDialogActionsStyles();
   const queryClient = useQueryClient();
   const [stationFilter, setStationFilter] = useState('');
   const [createOpen, setCreateOpen] = useState(false);
@@ -114,21 +120,23 @@ export const DriversPage: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className={styles.loading}>
-        <Spinner label={t('drivers.loading')} />
-      </div>
+      <AppLayout>
+        <div className={styles.loading}>
+          <Spinner label={t('drivers.loading')} />
+        </div>
+      </AppLayout>
     );
   }
   if (error) {
     return (
-      <div className={styles.container}>
+      <AppLayout>
         <Text>{t('drivers.loadError')}</Text>
-      </div>
+      </AppLayout>
     );
   }
 
   return (
-    <div className={styles.container}>
+    <AppLayout>
       <div className={styles.header}>
         <Title2>{t('drivers.title')}</Title2>
         <Dialog open={createOpen} onOpenChange={(_, d) => setCreateOpen(d.open)}>
@@ -141,63 +149,62 @@ export const DriversPage: React.FC = () => {
             <DialogBody>
               <DialogTitle>{t('drivers.createDriverTitle')}</DialogTitle>
               <DialogContent>
-                <div className={styles.formRow}>
-                  <Label>{t('drivers.fullName')}</Label>
-                  <Input
-                    value={createFullName}
-                    onChange={(_, v) => setCreateFullName(v.value)}
-                    placeholder={t('drivers.fullNamePlaceholder')}
-                  />
-                </div>
-                <div className={styles.formRow}>
-                  <Label>{t('drivers.licenseNumber')}</Label>
-                  <Input
-                    value={createLicense}
-                    onChange={(_, v) => setCreateLicense(v.value)}
-                    placeholder={t('drivers.licensePlaceholder')}
-                  />
-                </div>
-                <div className={styles.formRow}>
-                  <Label>{t('drivers.experience')}</Label>
-                  <Input
-                    type="number"
-                    min={0}
-                    value={String(createExperience)}
-                    onChange={(_, v) =>
-                      setCreateExperience(v.value === '' ? '' : Math.max(0, parseInt(v.value, 10) || 0))
-                    }
-                  />
-                </div>
-                <div className={styles.formRow}>
-                  <Label>{t('drivers.phone')}</Label>
-                  <Input
-                    value={createPhone}
-                    onChange={(_, v) => setCreatePhone(v.value)}
-                    placeholder={t('drivers.phonePlaceholder')}
-                  />
-                </div>
-                <div className={styles.formRow}>
-                  <Label>{t('drivers.station')}</Label>
-                  <Select
-                    value={createStationId}
-                    onChange={(_, d) => setCreateStationId(d.value ?? '')}
-                    style={{ width: '100%' }}
-                  >
-                    {stations.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.name}
-                      </option>
-                    ))}
-                  </Select>
+                <div className={formStyles.formContainer}>
+                  <Field label={t('drivers.fullName')} required>
+                    <Input
+                      value={createFullName}
+                      onChange={(_, v) => setCreateFullName(v.value)}
+                      placeholder={t('drivers.fullNamePlaceholder')}
+                    />
+                  </Field>
+                  <Field label={t('drivers.licenseNumber')} required>
+                    <Input
+                      value={createLicense}
+                      onChange={(_, v) => setCreateLicense(v.value)}
+                      placeholder={t('drivers.licensePlaceholder')}
+                    />
+                  </Field>
+                  <Field label={t('drivers.experience')}>
+                    <Input
+                      type="number"
+                      min={0}
+                      value={String(createExperience)}
+                      onChange={(_, v) =>
+                        setCreateExperience(v.value === '' ? '' : Math.max(0, parseInt(v.value, 10) || 0))
+                      }
+                    />
+                  </Field>
+                  <Field label={t('drivers.phone')}>
+                    <Input
+                      value={createPhone}
+                      onChange={(_, v) => setCreatePhone(v.value)}
+                      placeholder={t('drivers.phonePlaceholder')}
+                    />
+                  </Field>
+                  <Field label={t('drivers.station')} required>
+                    <Dropdown
+                      placeholder={t('drivers.selectStation')}
+                      value={stations.find(s => s.id === createStationId)?.name || ''}
+                      selectedOptions={[createStationId]}
+                      onOptionSelect={(_, d) => setCreateStationId(d.optionValue ?? '')}
+                    >
+                      {stations.map((s) => (
+                        <Option key={s.id} value={s.id}>
+                          {s.name}
+                        </Option>
+                      ))}
+                    </Dropdown>
+                  </Field>
                 </div>
               </DialogContent>
               <DialogActions>
-                <Button appearance="secondary" onClick={() => setCreateOpen(false)}>
-                  {t('common.cancel')}
-                </Button>
-                <Button
-                  appearance="primary"
-                  disabled={!createFullName.trim() || !createLicense.trim() || !createStationId}
+                <div className={actionsStyles.wrapper}>
+                  <Button appearance="secondary" onClick={() => setCreateOpen(false)}>
+                    {t('common.cancel')}
+                  </Button>
+                  <Button
+                    appearance="primary"
+                  disabled={!createFullName.trim() || !createLicense.trim() || !createStationId || createMutation.isPending}
                   onClick={() =>
                     createMutation.mutate({
                       full_name: createFullName.trim(),
@@ -211,6 +218,7 @@ export const DriversPage: React.FC = () => {
                 >
                   {t('common.create')}
                 </Button>
+                </div>
               </DialogActions>
             </DialogBody>
           </DialogSurface>
@@ -219,18 +227,20 @@ export const DriversPage: React.FC = () => {
 
       <div className={styles.filters}>
         <Label>{t('drivers.station')}:</Label>
-        <Select
-          value={stationFilter}
-          onChange={(_, d) => setStationFilter(d.value ?? '')}
-          style={{ minWidth: '200px' }}
+        <Dropdown
+          placeholder={t('drivers.allStations')}
+          value={stationFilter ? stations.find(s => s.id === stationFilter)?.name : t('drivers.allStations')}
+          selectedOptions={[stationFilter]}
+          onOptionSelect={(_, d) => setStationFilter(d.optionValue ?? '')}
+          style={{ minWidth: '220px' }}
         >
-          <option value="">{t('drivers.allStations')}</option>
+          <Option value="">{t('drivers.allStations')}</Option>
           {stations.map((s) => (
-            <option key={s.id} value={s.id}>
+            <Option key={s.id} value={s.id}>
               {s.name}
-            </option>
+            </Option>
           ))}
-        </Select>
+        </Dropdown>
       </div>
 
       <Card>
@@ -279,17 +289,14 @@ export const DriversPage: React.FC = () => {
             <DialogTitle>{t('drivers.editDriverTitle')}</DialogTitle>
             <DialogContent>
               {editDriver && (
-                <>
-                  <div className={styles.formRow}>
-                    <Label>{t('drivers.fullName')}</Label>
+                <div className={formStyles.formContainer}>
+                  <Field label={t('drivers.fullName')} required>
                     <Input value={editFullName} onChange={(_, v) => setEditFullName(v.value)} />
-                  </div>
-                  <div className={styles.formRow}>
-                    <Label>{t('drivers.licenseNumber')}</Label>
+                  </Field>
+                  <Field label={t('drivers.licenseNumber')} required>
                     <Input value={editLicense} onChange={(_, v) => setEditLicense(v.value)} />
-                  </div>
-                  <div className={styles.formRow}>
-                    <Label>{t('drivers.experience')}</Label>
+                  </Field>
+                  <Field label={t('drivers.experience')}>
                     <Input
                       type="number"
                       min={0}
@@ -298,21 +305,21 @@ export const DriversPage: React.FC = () => {
                         setEditExperience(v.value === '' ? '' : Math.max(0, parseInt(v.value, 10) || 0))
                       }
                     />
-                  </div>
-                  <div className={styles.formRow}>
-                    <Label>{t('drivers.phone')}</Label>
+                  </Field>
+                  <Field label={t('drivers.phone')}>
                     <Input value={editPhone} onChange={(_, v) => setEditPhone(v.value)} />
-                  </div>
-                </>
+                  </Field>
+                </div>
               )}
             </DialogContent>
             <DialogActions>
-              <Button appearance="secondary" onClick={() => setEditDriver(null)}>
-                {t('common.cancel')}
-              </Button>
-              <Button
-                appearance="primary"
-                disabled={!editDriver || !editFullName.trim() || !editLicense.trim()}
+              <div className={actionsStyles.wrapper}>
+                <Button appearance="secondary" onClick={() => setEditDriver(null)}>
+                  {t('common.cancel')}
+                </Button>
+                <Button
+                  appearance="primary"
+                  disabled={!editDriver || !editFullName.trim() || !editLicense.trim() || updateMutation.isPending}
                 onClick={() =>
                   editDriver &&
                   updateMutation.mutate({
@@ -329,6 +336,7 @@ export const DriversPage: React.FC = () => {
               >
                 {t('common.save')}
               </Button>
+              </div>
             </DialogActions>
           </DialogBody>
         </DialogSurface>
@@ -346,19 +354,22 @@ export const DriversPage: React.FC = () => {
               )}
             </DialogContent>
             <DialogActions>
-              <Button appearance="secondary" onClick={() => setDeleteDriver(null)}>
-                {t('common.cancel')}
-              </Button>
-              <Button
-                appearance="primary"
+              <div className={actionsStyles.wrapper}>
+                <Button appearance="secondary" onClick={() => setDeleteDriver(null)}>
+                  {t('common.cancel')}
+                </Button>
+                <Button
+                  appearance="primary"
+                  disabled={deleteMutation.isPending}
                 onClick={() => deleteDriver && deleteMutation.mutate(deleteDriver.id)}
               >
                 {t('common.delete')}
               </Button>
+              </div>
             </DialogActions>
           </DialogBody>
         </DialogSurface>
       </Dialog>
-    </div>
+    </AppLayout>
   );
 };

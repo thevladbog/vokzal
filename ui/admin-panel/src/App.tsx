@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { FluentProvider, webLightTheme, Toaster, Spinner } from '@fluentui/react-components';
+import { Toaster, Spinner } from '@fluentui/react-components';
+import { ThemeProvider } from '@/components/ThemeProvider';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { LoginPage } from '@/pages/LoginPage';
 import { DashboardPage } from '@/pages/DashboardPage';
@@ -37,17 +38,17 @@ function App() {
 
   if (!sessionRestored) {
     return (
-      <FluentProvider theme={webLightTheme}>
+      <ThemeProvider>
         <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
           <Spinner labelPosition="after" />
         </div>
-      </FluentProvider>
+      </ThemeProvider>
     );
   }
 
   return (
     <QueryClientProvider client={queryClient}>
-      <FluentProvider theme={webLightTheme}>
+      <ThemeProvider>
         <Toaster />
         <BrowserRouter>
           <Routes>
@@ -160,7 +161,7 @@ function App() {
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </BrowserRouter>
-      </FluentProvider>
+      </ThemeProvider>
     </QueryClientProvider>
   );
 }

@@ -11,6 +11,26 @@
     "users": "Users",
     "audit": "Audit log"
   },
+  "layout": {
+    "nav": {
+      "dashboard": "Dashboard"
+    },
+    "groups": {
+      "overview": "Overview",
+      "transport": "Transport Management",
+      "reports": "Reports",
+      "admin": "Administration"
+    },
+    "logout": "Sign out",
+    "profile": "Profile",
+    "settings": "Settings",
+    "theme": "Theme",
+    "lightMode": "Light",
+    "darkMode": "Dark"
+  },
+  "sidebar": {
+    "toggle": "Toggle sidebar"
+  },
   "common": {
     "loading": "Loading...",
     "error": "Error",
@@ -68,8 +88,8 @@
     "address": "Address",
     "timezone": "Time zone",
     "actions": "Actions",
-    "nameRequired": "Name *",
-    "codeRequired": "Code *",
+    "nameRequired": "Name",
+    "codeRequired": "Code",
     "timezonePlaceholder": "Europe/Moscow"
   },
   "login": {
@@ -78,7 +98,8 @@
     "username": "Username",
     "password": "Password",
     "submit": "Sign in",
-    "submitting": "Signing in..."
+    "submitting": "Signing in...",
+    "error": "Login failed. Please check your credentials."
   },
   "users": {
     "title": "Users",
@@ -171,6 +192,8 @@
     "loadError": "Failed to load schedules",
     "creating": "Creating…",
     "saving": "Saving…",
+    "selectRoute": "Select route",
+    "selectSchedule": "Select schedule",
     "dayMon": "Mon",
     "dayTue": "Tue",
     "dayWed": "Wed",
@@ -196,6 +219,7 @@
     "statusActive": "Active",
     "statusMaintenance": "Maintenance",
     "statusOutOfService": "Out of service",
+    "selectStation": "Select station",
     "allStations": "All",
     "loading": "Loading buses...",
     "loadError": "Failed to load buses"
@@ -215,6 +239,7 @@
     "phone": "Phone",
     "phonePlaceholder": "+7 900 123-45-67",
     "station": "Station",
+    "selectStation": "Select station",
     "allStations": "All",
     "loading": "Loading drivers...",
     "loadError": "Failed to load drivers"
@@ -229,7 +254,7 @@
     "deleteRouteTitle": "Delete route?",
     "deleteConfirm": "Delete route «{{name}}»? This action cannot be undone.",
     "name": "Name",
-    "nameRequired": "Name *",
+    "nameRequired": "Name",
     "distanceKm": "Distance (km)",
     "durationMin": "Time (min)",
     "durationLabel": "Duration (min)",
@@ -238,7 +263,11 @@
     "actions": "Actions",
     "active": "Active",
     "inactive": "Inactive",
-    "firstStationRequired": "First stop (required)",
+    "firstStationRequired": "First stop",
+    "selectStation": "Select station",
+    "loadingStations": "Loading stations...",
+    "stationsLoadError": "Failed to load stations. Please refresh the page.",
+    "noStationsAvailable": "No stations available. Create stations before adding routes.",
     "activeCheckbox": "Active"
   },
   "auditPage": {

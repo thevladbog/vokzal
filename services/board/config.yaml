@@ -5,21 +5,21 @@ server:
 database:
   host: "localhost"
   port: 5440
-  user: "admin"
-  password: "vokzal_secret_2026"
+  user: "${VOKZAL_DB_USER}"
+  password: "${VOKZAL_DB_PASSWORD}"
   dbname: "vokzal"
   sslmode: "disable"
 
 redis:
   host: "localhost"
   port: 6379
-  password: "vokzal_redis_2026"
+  password: "${VOKZAL_REDIS_PASSWORD}"
   db: 0
 
 nats:
-  url: "nats://localhost:4222"
-  user: "vokzal"
-  password: "nats_secret_2026"
+  url: "${VOKZAL_NATS_URL}"
+  user: "${VOKZAL_NATS_USER}"
+  password: "${VOKZAL_NATS_PASSWORD}"
 
 logger:
   level: "debug"

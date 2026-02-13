@@ -20,7 +20,7 @@ type Config struct {
 
 // WebSocketConfig — настройки WebSocket (в т.ч. проверка Origin).
 type WebSocketConfig struct {
-	// AllowedOrigins — разрешённые origins через запятую (например, "http://localhost:3000,https://board.example.com").
+	// AllowedOrigins — разрешённые origins через запятую (например, "http://localhost:30001,https://board.example.com").
 	AllowedOrigins       string `mapstructure:"allowed_origins"`
 	AllowAllOriginsInDev bool   `mapstructure:"allow_all_origins_in_dev"`
 }
@@ -88,7 +88,7 @@ func Load() (*Config, error) {
 	viper.SetDefault("nats.user", "vokzal")
 	viper.SetDefault("nats.password", "nats_secret_2026")
 	viper.SetDefault("logger.level", "debug")
-	viper.SetDefault("websocket.allowed_origins", "http://localhost:3000,http://localhost:8086")
+	viper.SetDefault("websocket.allowed_origins", "http://localhost:30001,http://localhost:8086")
 	viper.SetDefault("websocket.allow_all_origins_in_dev", true)
 
 	if err := viper.ReadInConfig(); err != nil {
