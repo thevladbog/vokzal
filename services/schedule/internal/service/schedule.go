@@ -114,11 +114,11 @@ type CreateRouteRequest struct {
 
 // UpdateRouteRequest — запрос на обновление маршрута.
 type UpdateRouteRequest struct {
-	Name        *string                  `json:"name"`
-	DistanceKm  *float64                 `json:"distance_km"`
-	DurationMin *int                     `json:"duration_min"`
-	IsActive    *bool                    `json:"is_active"`
-	Stops       []map[string]interface{} `json:"stops"`
+	Name        *string                   `json:"name"`
+	DistanceKm  *float64                  `json:"distance_km"`
+	DurationMin *int                      `json:"duration_min"`
+	IsActive    *bool                     `json:"is_active"`
+	Stops       *[]map[string]interface{} `json:"stops"`
 }
 
 // CreateScheduleRequest — запрос на создание расписания.
@@ -324,7 +324,7 @@ func (s *scheduleService) UpdateRoute(ctx context.Context, id string, req *Updat
 		route.Name = *req.Name
 	}
 	if req.Stops != nil {
-		stopsJSON, err := json.Marshal(req.Stops)
+		stopsJSON, err := json.Marshal(*req.Stops)
 		if err != nil {
 			return nil, fmt.Errorf("failed to marshal stops: %w", err)
 		}

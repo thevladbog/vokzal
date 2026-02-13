@@ -255,7 +255,7 @@ const RouteForm: React.FC<{
   const { t } = useTranslation();
   const formStyles = useDialogFormStyles();
   const actionsStyles = useDialogActionsStyles();
-  const { data: stationsRaw } = useQuery({
+  const { data: stationsRaw, isLoading: stationsLoading, error: stationsError } = useQuery({
     queryKey: ['stations'],
     queryFn: () => scheduleService.getStations(),
   });
@@ -327,20 +327,32 @@ const RouteForm: React.FC<{
             onChange={(_, v) => setDurationMin(v.value)}
           />
         </Field>
-        {!isEdit && stations.length > 0 && (
+        {!isEdit && (
           <Field label={t('routes.firstStationRequired')} required>
-            <Dropdown
-              placeholder={t('routes.selectStation')}
-              value={stations.find(s => s.id === firstStationId)?.name || ''}
-              selectedOptions={[firstStationId]}
-              onOptionSelect={(_, data) => setFirstStationId(data.optionValue ?? '')}
-            >
-              {stations.map((s: Station) => (
-                <Option key={s.id} value={s.id} text={s.name}>
-                  {s.name} ({s.code})
-                </Option>
-              ))}
-            </Dropdown>
+            {stationsLoading ? (
+              <Spinner size="small" label={t('routes.loadingStations')} />
+            ) : stationsError ? (
+              <Text style={{ color: 'var(--colorPaletteRedForeground1)' }}>
+                {t('routes.stationsLoadError')}
+              </Text>
+            ) : stations.length === 0 ? (
+              <Text style={{ color: 'var(--colorNeutralForeground3)' }}>
+                {t('routes.noStationsAvailable')}
+              </Text>
+            ) : (
+              <Dropdown
+                placeholder={t('routes.selectStation')}
+                value={stations.find(s => s.id === firstStationId)?.name || ''}
+                selectedOptions={[firstStationId]}
+                onOptionSelect={(_, data) => setFirstStationId(data.optionValue ?? '')}
+              >
+                {stations.map((s: Station) => (
+                  <Option key={s.id} value={s.id} text={s.name}>
+                    {s.name} ({s.code})
+                  </Option>
+                ))}
+              </Dropdown>
+            )}
           </Field>
         )}
         {isEdit && (

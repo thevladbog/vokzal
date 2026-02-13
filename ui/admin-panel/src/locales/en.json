@@ -265,6 +265,9 @@
     "inactive": "Inactive",
     "firstStationRequired": "First stop",
     "selectStation": "Select station",
+    "loadingStations": "Loading stations...",
+    "stationsLoadError": "Failed to load stations. Please refresh the page.",
+    "noStationsAvailable": "No stations available. Create stations before adding routes.",
     "activeCheckbox": "Active"
   },
   "auditPage": {

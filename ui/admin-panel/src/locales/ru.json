@@ -265,6 +265,9 @@
     "inactive": "Неактивен",
     "firstStationRequired": "Первая остановка",
     "selectStation": "Выберите станцию",
+    "loadingStations": "Загрузка станций...",
+    "stationsLoadError": "Ошибка загрузки станций. Попробуйте обновить страницу.",
+    "noStationsAvailable": "Нет доступных станций. Создайте станции перед добавлением маршрута.",
     "activeCheckbox": "Активен"
   },
   "auditPage": {
