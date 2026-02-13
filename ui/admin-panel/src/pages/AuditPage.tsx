@@ -17,12 +17,13 @@ import {
   Label,
   Button,
 } from '@fluentui/react-components';
+import { AppLayout } from '@/components/layout/AppLayout';
+import { VokzalDatePicker } from '@/components/common/VokzalDatePicker';
 import { auditService } from '@/services/audit';
 import type { AuditLog } from '@/types';
 import { formatDateTime } from '@/utils/format';
 
 const useStyles = makeStyles({
-  container: { padding: '24px' },
   header: { marginBottom: '24px' },
   filters: {
     display: 'flex',
@@ -40,8 +41,8 @@ const useStyles = makeStyles({
 export const AuditPage: React.FC = () => {
   const { t } = useTranslation();
   const styles = useStyles();
-  const [from, setFrom] = useState('');
-  const [to, setTo] = useState('');
+  const [from, setFrom] = useState<Date | null>(null);
+  const [to, setTo] = useState<Date | null>(null);
   const [entityType, setEntityType] = useState('');
   const [entityId, setEntityId] = useState('');
   const [userId, setUserId] = useState('');
@@ -50,7 +51,7 @@ export const AuditPage: React.FC = () => {
 
   const handleApplyToggle = () => {
     if (!applyFilters) {
-      const dateRangeFilled = Boolean(from.trim() && to.trim());
+      const dateRangeFilled = Boolean(from && to);
       const entityFilled = Boolean(entityType.trim() && entityId.trim());
       const userFilled = Boolean(userId.trim());
       const filledCount = [dateRangeFilled, entityFilled, userFilled].filter(Boolean).length;
@@ -67,7 +68,9 @@ export const AuditPage: React.FC = () => {
     queryKey: ['audit', applyFilters, from, to, entityType, entityId, userId],
     queryFn: async () => {
       if (applyFilters && from && to) {
-        return auditService.getLogsByDateRange(from, to);
+        const fromStr = from.toISOString().split('T')[0];
+        const toStr = to.toISOString().split('T')[0];
+        return auditService.getLogsByDateRange(fromStr, toStr);
       }
       if (applyFilters && entityType && entityId) {
         return auditService.getLogsByEntity(entityType, entityId);
@@ -81,21 +84,23 @@ export const AuditPage: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className={styles.loading}>
-        <Spinner label={t('auditPage.loading')} />
-      </div>
+      <AppLayout>
+        <div className={styles.loading}>
+          <Spinner label={t('auditPage.loading')} />
+        </div>
+      </AppLayout>
     );
   }
   if (error) {
     return (
-      <div className={styles.container}>
+      <AppLayout>
         <Text>{t('auditPage.loadError')}</Text>
-      </div>
+      </AppLayout>
     );
   }
 
   return (
-    <div className={styles.container}>
+    <AppLayout>
       <div className={styles.header}>
         <Title2>{t('auditPage.title')}</Title2>
       </div>
@@ -105,28 +110,22 @@ export const AuditPage: React.FC = () => {
       <div className={styles.filters}>
         <div className={styles.filterRow}>
           <Label htmlFor="audit-from">{t('auditPage.dateFrom')}</Label>
-          <Input
-            id="audit-from"
-            type="date"
+          <VokzalDatePicker
             value={from}
-            onChange={(_, v) => {
-              setFrom(v.value);
+            onSelectDate={(date) => {
+              setFrom(date ?? null);
               setFilterError('');
             }}
-            style={{ width: '140px' }}
           />
         </div>
         <div className={styles.filterRow}>
           <Label htmlFor="audit-to">{t('auditPage.dateTo')}</Label>
-          <Input
-            id="audit-to"
-            type="date"
+          <VokzalDatePicker
             value={to}
-            onChange={(_, v) => {
-              setTo(v.value);
+            onSelectDate={(date) => {
+              setTo(date ?? null);
               setFilterError('');
             }}
-            style={{ width: '140px' }}
           />
         </div>
         <div className={styles.filterRow}>
@@ -209,6 +208,6 @@ export const AuditPage: React.FC = () => {
           </div>
         )}
       </Card>
-    </div>
+    </AppLayout>
   );
 };

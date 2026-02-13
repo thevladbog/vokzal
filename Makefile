@@ -1,14 +1,23 @@
 # Вокзал.ТЕХ — Makefile
 # Требуется Unix-подобная оболочка (sh/bash). На Windows запускайте make из Git Bash, WSL или MSYS2.
 
-.PHONY: help dev-up dev-down services-build services-run ui-dev test test-unit test-services test-ui test-load test-load-smoke lint lint-fix
+.PHONY: help dev-up dev-down services-build services-start services-stop services-restart services-status ui-dev test test-unit test-services test-ui test-load test-load-smoke lint lint-fix
 
 help:
 	@echo "Вокзал.ТЕХ — Makefile команды:"
+	@echo ""
+	@echo "Инфраструктура:"
 	@echo "  make dev-up            - Запустить инфраструктуру (Docker Compose)"
 	@echo "  make dev-down          - Остановить инфраструктуру"
+	@echo ""
+	@echo "Микросервисы:"
 	@echo "  make services-build    - Собрать все Go микросервисы"
-	@echo "  make services-run      - Запустить все микросервисы"
+	@echo "  make services-start    - Запустить все микросервисы в фоне"
+	@echo "  make services-stop     - Остановить все микросервисы"
+	@echo "  make services-restart  - Перезапустить все микросервисы"
+	@echo "  make services-status   - Проверить статус микросервисов"
+	@echo ""
+	@echo "UI:"
 	@echo "  make ui-dev            - Запустить UI приложения (dev mode)"
 	@echo ""
 	@echo "Тестирование:"
@@ -19,6 +28,7 @@ help:
 	@echo "  make test-load         - Запустить load тесты (k6)"
 	@echo "  make test-load-smoke   - Запустить smoke load тест"
 	@echo ""
+	@echo "Линтинг:"
 	@echo "  make lint              - Запустить линтеры"
 	@echo "  make lint-fix          - Автофикс выравнивания полей (fieldalignment)"
 	@echo ""
@@ -38,12 +48,103 @@ services-build:
 		fi \
 	done
 
+# PID файлы хранятся в logs/.pids/
+services-start:
+	@echo "🚀 Запуск всех микросервисов Вокзал.ТЕХ..."
+	@mkdir -p logs/.pids
+	@for service in services/*; do \
+		if [ -d "$$service" ] && [ -f "$$service/go.mod" ]; then \
+			service_name=$$(basename $$service); \
+			pid_file="$$(pwd)/logs/.pids/$$service_name.pid"; \
+			log_file="$$(pwd)/logs/$$service_name.log"; \
+			if [ -f "$$pid_file" ] && kill -0 $$(cat $$pid_file) 2>/dev/null; then \
+				echo "⚠️  $$service_name уже запущен (PID: $$(cat $$pid_file))"; \
+			else \
+				echo "▶️  Запуск $$service_name..."; \
+				(cd $$service && nohup go run cmd/main.go > $$log_file 2>&1 & echo $$! > $$pid_file); \
+				sleep 0.5; \
+			fi \
+		fi \
+	done
+	@echo "✅ Все микросервисы запущены! Логи: logs/"
+	@echo "💡 Используйте 'make services-status' для проверки статуса"
+
+services-stop:
+	@echo "🛑 Остановка всех микросервисов Вокзал.ТЕХ..."
+	@for service in services/*; do \
+		if [ -d "$$service" ] && [ -f "$$service/go.mod" ]; then \
+			service_name=$$(basename $$service); \
+			pid_file="$$(pwd)/logs/.pids/$$service_name.pid"; \
+			if [ -f "$$pid_file" ]; then \
+				pid=$$(cat $$pid_file); \
+				if kill -0 $$pid 2>/dev/null; then \
+					echo "⏹️  Остановка $$service_name (PID: $$pid)..."; \
+					kill $$pid 2>/dev/null || true; \
+					sleep 0.3; \
+					kill -0 $$pid 2>/dev/null && kill -9 $$pid 2>/dev/null || true; \
+				else \
+					echo "⚠️  $$service_name не запущен"; \
+				fi; \
+				rm -f "$$pid_file"; \
+			else \
+				echo "⚠️  PID файл для $$service_name не найден"; \
+			fi; \
+		fi; \
+	done
+	@echo "✅ Все микросервисы остановлены!"
+
+services-restart: services-stop
+	@sleep 2
+	@$(MAKE) services-start
+
+services-status:
+	@echo "📊 Статус микросервисов Вокзал.ТЕХ:"
+	@echo ""
+	@services_count=0; \
+	running_count=0; \
+	for service in services/*; do \
+		if [ -d "$$service" ] && [ -f "$$service/go.mod" ]; then \
+			services_count=$$((services_count + 1)); \
+			service_name=$$(basename $$service); \
+			pid_file="$$(pwd)/logs/.pids/$$service_name.pid"; \
+			case "$$service_name" in \
+				auth) port=8081;; \
+				schedule) port=8082;; \
+				ticket) port=8083;; \
+				fiscal) port=8084;; \
+				payment) port=8085;; \
+				board) port=8086;; \
+				notify) port=8087;; \
+				audit) port=8098;; \
+				document) port=8089;; \
+				geo) port=8090;; \
+				*) port="???";; \
+			esac; \
+			if [ -f "$$pid_file" ]; then \
+				pid=$$(cat $$pid_file); \
+				if kill -0 $$pid 2>/dev/null; then \
+					running_count=$$((running_count + 1)); \
+					if curl -s http://localhost:$$port/health > /dev/null 2>&1; then \
+						echo "✅ $$service_name (PID: $$pid, Port: $$port) - HEALTHY"; \
+					else \
+						echo "⚠️  $$service_name (PID: $$pid, Port: $$port) - RUNNING (не отвечает)"; \
+					fi \
+				else \
+					echo "❌ $$service_name - STOPPED (stale PID)"; \
+				fi \
+			else \
+				echo "❌ $$service_name - STOPPED"; \
+			fi \
+		fi \
+	done; \
+	echo ""; \
+	echo "📈 Статистика: $$running_count/$$services_count сервисов запущено"
+
 services-run:
-	@echo "Запуск микросервисов: каждый сервис — в отдельном терминале (подробнее: QUICKSTART.md)."
-	@echo "  cd services/auth && go run cmd/main.go"
-	@echo "  cd services/schedule && go run cmd/main.go"
-	@echo "  cd services/ticket && go run cmd/main.go"
-	@echo "  ... и т.д. Инфраструктура: make dev-up (infra/docker)."
+	@echo "⚠️  Команда устарела! Используйте:"
+	@echo "  make services-start  - для запуска всех сервисов"
+	@echo "  make services-stop   - для остановки всех сервисов"
+	@echo "  make services-status - для проверки статуса"
 
 ui-dev:
 	@echo "Запуск UI приложений в dev режиме..."

@@ -11,6 +11,23 @@
     "users": "Пользователи",
     "audit": "Журнал аудита"
   },
+  "layout": {
+    "nav": {
+      "dashboard": "Главная"
+    },
+    "groups": {
+      "overview": "Обзор",
+      "transport": "Управление транспортом",
+      "reports": "Отчётность",
+      "admin": "Администрирование"
+    },
+    "logout": "Выход",
+    "profile": "Профиль",
+    "settings": "Настройки",
+    "theme": "Тема",
+    "lightMode": "Светлая",
+    "darkMode": "Тёмная"
+  },
   "common": {
     "loading": "Загрузка...",
     "error": "Ошибка",
@@ -68,8 +85,8 @@
     "address": "Адрес",
     "timezone": "Часовой пояс",
     "actions": "Действия",
-    "nameRequired": "Название *",
-    "codeRequired": "Код *",
+    "nameRequired": "Название",
+    "codeRequired": "Код",
     "timezonePlaceholder": "Europe/Moscow"
   },
   "login": {
@@ -171,6 +188,8 @@
     "loadError": "Ошибка загрузки расписаний",
     "creating": "Создание…",
     "saving": "Сохранение…",
+    "selectRoute": "Выберите маршрут",
+    "selectSchedule": "Выберите расписание",
     "dayMon": "Пн",
     "dayTue": "Вт",
     "dayWed": "Ср",
@@ -196,6 +215,7 @@
     "statusActive": "Активен",
     "statusMaintenance": "На обслуживании",
     "statusOutOfService": "Не в работе",
+    "selectStation": "Выберите станцию",
     "allStations": "Все",
     "loading": "Загрузка автобусов...",
     "loadError": "Ошибка загрузки автобусов"
@@ -215,6 +235,7 @@
     "phone": "Телефон",
     "phonePlaceholder": "+7 900 123-45-67",
     "station": "Станция",
+    "selectStation": "Выберите станцию",
     "allStations": "Все",
     "loading": "Загрузка водителей...",
     "loadError": "Ошибка загрузки водителей"
@@ -229,7 +250,7 @@
     "deleteRouteTitle": "Удалить маршрут?",
     "deleteConfirm": "Удалить маршрут «{{name}}»? Это действие нельзя отменить.",
     "name": "Название",
-    "nameRequired": "Название *",
+    "nameRequired": "Название",
     "distanceKm": "Расстояние (км)",
     "durationMin": "Время (мин)",
     "durationLabel": "Время в пути (мин)",
@@ -238,7 +259,8 @@
     "actions": "Действия",
     "active": "Активен",
     "inactive": "Неактивен",
-    "firstStationRequired": "Первая остановка (обязательно)",
+    "firstStationRequired": "Первая остановка",
+    "selectStation": "Выберите станцию",
     "activeCheckbox": "Активен"
   },
   "auditPage": {

@@ -383,6 +383,6 @@ CREATE TRIGGER update_document_templates_updated_at BEFORE UPDATE ON document_te
 -- Создать системного администратора
 -- Пароль: admin123 (хэш bcrypt)
 INSERT INTO users (id, username, password_hash, full_name, role, is_active) VALUES
-('00000000-0000-0000-0000-000000000001', 'admin', '$2a$10$8K1p/a0dL3LzW6R3b6V7JuDMKYJ0hPXkQkp6p3LN9Y8f0X2KF7Z3e', 'Системный администратор', 'admin', true);
+('00000000-0000-0000-0000-000000000001', 'admin', '$2a$10$vcefhwLNOOXtMGLnXPKPjuqQGr.NHv/FeE4Nc1gZWURczZCi9vTVK', 'Системный администратор', 'admin', true);
 
 COMMENT ON TABLE users IS 'Пользователи системы. Пароль admin по умолчанию: admin123';

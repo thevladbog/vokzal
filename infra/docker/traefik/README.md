@@ -50,7 +50,7 @@ http://localhost/v1/board/ws (WebSocket)
 ## Middlewares
 
 ### CORS Headers
-- Разрешены origins: `localhost:5173`, `localhost:3000`, `*.vokzal.tech`
+- Разрешены origins: `localhost:5173`, `localhost:30001`, `*.vokzal.tech`
 - Methods: GET, POST, PUT, PATCH, DELETE, OPTIONS
 - Credentials: true
 

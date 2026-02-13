@@ -16,7 +16,7 @@
   - Обзор сервисов (Request Rate, Response Time, Errors)
   - База данных (PostgreSQL, Redis)
   - Бизнес метрики (продажи, платежи, посадка)
-- **URL**: http://localhost:3000
+- **URL**: http://localhost:30001
 - **Логин**: admin / admin (по умолчанию)
 
 ### Loki 2.9+
@@ -45,7 +45,7 @@ docker-compose ps
 ## Доступ к интерфейсам
 
 ### Grafana
-1. Откройте http://localhost:3000
+1. Откройте http://localhost:30001
 2. Войдите (admin / admin)
 3. Перейдите в "Dashboards" → выберите один из 3 дашбордов
 

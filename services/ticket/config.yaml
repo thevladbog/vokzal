@@ -10,6 +10,10 @@ database:
   dbname: "vokzal"
   sslmode: "disable"
 
+jwt:
+  secret: "vokzal-tech-jwt-secret-change-me-in-production"
+  issuer: "vokzal.tech"
+
 nats:
   url: "nats://localhost:4222"
   user: "vokzal"

@@ -23,13 +23,16 @@ import {
   DialogContent,
   Input,
   Label,
+  Field,
 } from '@fluentui/react-components';
 import { Add24Regular, Delete24Regular, Edit24Regular } from '@fluentui/react-icons';
+import { AppLayout } from '@/components/layout/AppLayout';
+import { useDialogFormStyles } from '@/styles/dialogFormStyles';
+import { useDialogActionsStyles } from '@/styles/dialogActionsStyles';
 import { scheduleService } from '@/services/schedule';
 import type { Station } from '@/types';
 
 const useStyles = makeStyles({
-  container: { padding: '24px' },
   header: {
     display: 'flex',
     justifyContent: 'space-between',
@@ -38,7 +41,6 @@ const useStyles = makeStyles({
   },
   filters: { display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '16px' },
   loading: { display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' },
-  formRow: { marginBottom: '16px' },
   actions: { display: 'flex', gap: '8px' },
 });
 
@@ -92,14 +94,14 @@ export const StationsPage: React.FC = () => {
   }
   if (error) {
     return (
-      <div className={styles.container}>
+      <AppLayout>
         <Text>{t('stations.loadError')}</Text>
-      </div>
+      </AppLayout>
     );
   }
 
   return (
-    <div className={styles.container}>
+    <AppLayout>
       <div className={styles.header}>
         <Title2>{t('stations.title')}</Title2>
         <Dialog open={createOpen} onOpenChange={(_, d) => setCreateOpen(d.open)}>
@@ -224,7 +226,7 @@ export const StationsPage: React.FC = () => {
           </DialogSurface>
         </Dialog>
       )}
-    </div>
+    </AppLayout>
   );
 };
 
@@ -236,7 +238,8 @@ const StationForm: React.FC<{
   isEdit?: boolean;
 }> = ({ initial, onSubmit, onCancel, isLoading, isEdit }) => {
   const { t } = useTranslation();
-  const styles = useStyles();
+  const formStyles = useDialogFormStyles();
+  const actionsStyles = useDialogActionsStyles();
   const [name, setName] = useState(initial?.name ?? '');
   const [code, setCode] = useState(initial?.code ?? '');
   const [address, setAddress] = useState(initial?.address ?? '');
@@ -255,51 +258,51 @@ const StationForm: React.FC<{
 
   return (
     <form onSubmit={handleSubmit}>
-      <div className={styles.formRow}>
-        <Label htmlFor="station-name">{t('stations.nameRequired')}</Label>
-        <Input
-          id="station-name"
-          value={name}
-          onChange={(_, v) => setName(v.value)}
-          required
-          maxLength={100}
-        />
-      </div>
-      <div className={styles.formRow}>
-        <Label htmlFor="station-code">{t('stations.codeRequired')}</Label>
-        <Input
-          id="station-code"
-          value={code}
-          onChange={(_, v) => setCode(v.value)}
-          required
-          maxLength={10}
-          disabled={!!isEdit}
-        />
-      </div>
-      <div className={styles.formRow}>
-        <Label htmlFor="station-address">{t('stations.address')}</Label>
-        <Input
-          id="station-address"
-          value={address}
-          onChange={(_, v) => setAddress(v.value)}
-        />
-      </div>
-      <div className={styles.formRow}>
-        <Label htmlFor="station-timezone">{t('stations.timezone')}</Label>
-        <Input
-          id="station-timezone"
-          value={timezone}
-          onChange={(_, v) => setTimezone(v.value)}
-          placeholder={t('stations.timezonePlaceholder')}
-        />
+      <div className={formStyles.formContainer}>
+        <Field label={t('stations.nameRequired')} required>
+          <Input
+            id="station-name"
+            value={name}
+            onChange={(_, v) => setName(v.value)}
+            required
+            maxLength={100}
+          />
+        </Field>
+        <Field label={t('stations.codeRequired')} required>
+          <Input
+            id="station-code"
+            value={code}
+            onChange={(_, v) => setCode(v.value)}
+            required
+            maxLength={10}
+            disabled={!!isEdit}
+          />
+        </Field>
+        <Field label={t('stations.address')}>
+          <Input
+            id="station-address"
+            value={address}
+            onChange={(_, v) => setAddress(v.value)}
+          />
+        </Field>
+        <Field label={t('stations.timezone')}>
+          <Input
+            id="station-timezone"
+            value={timezone}
+            onChange={(_, v) => setTimezone(v.value)}
+            placeholder={t('stations.timezonePlaceholder')}
+          />
+        </Field>
       </div>
       <DialogActions>
-        <Button type="button" appearance="secondary" onClick={onCancel}>
-          {t('common.cancel')}
-        </Button>
-        <Button type="submit" appearance="primary" disabled={isLoading}>
-          {isEdit ? t('common.save') : t('common.create')}
-        </Button>
+        <div className={actionsStyles.wrapper}>
+          <Button type="button" appearance="secondary" onClick={onCancel}>
+            {t('common.cancel')}
+          </Button>
+          <Button type="submit" appearance="primary" disabled={isLoading}>
+            {isEdit ? t('common.save') : t('common.create')}
+          </Button>
+        </div>
       </DialogActions>
     </form>
   );

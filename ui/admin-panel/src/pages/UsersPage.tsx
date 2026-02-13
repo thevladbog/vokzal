@@ -23,7 +23,8 @@ import {
   DialogContent,
   Input,
   Label,
-  Select,
+  Field,
+  Checkbox,
   useId,
   Toaster,
   useToastController,
@@ -31,14 +32,15 @@ import {
   ToastTitle,
   ToastBody,
 } from '@fluentui/react-components';
+import { Dropdown, Option } from '@fluentui/react-combobox';
 import { Add24Regular, Delete24Regular, Edit24Regular } from '@fluentui/react-icons';
+import { AppLayout } from '@/components/layout/AppLayout';
+import { useDialogFormStyles } from '@/styles/dialogFormStyles';
+import { useDialogActionsStyles } from '@/styles/dialogActionsStyles';
 import { usersService } from '@/services/users';
 import type { UserAdmin, CreateUserRequest, UpdateUserRequest, UserRole } from '@/types';
 
 const useStyles = makeStyles({
-  container: {
-    padding: '24px',
-  },
   header: {
     display: 'flex',
     justifyContent: 'space-between',
@@ -57,9 +59,6 @@ const useStyles = makeStyles({
     alignItems: 'center',
     minHeight: '400px',
   },
-  formRow: {
-    marginBottom: '16px',
-  },
   actions: {
     display: 'flex',
     gap: '8px',
@@ -71,6 +70,7 @@ const ROLE_VALUES: UserRole[] = ['admin', 'dispatcher', 'cashier', 'controller',
 export const UsersPage: React.FC = () => {
   const { t } = useTranslation();
   const styles = useStyles();
+  const actionsStyles = useDialogActionsStyles();
   const queryClient = useQueryClient();
   const listId = useId('list-users');
   const { dispatchToast } = useToastController(listId);
@@ -165,17 +165,19 @@ export const UsersPage: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className={styles.loading}>
-        <Spinner label={t('users.loading')} />
-      </div>
+      <AppLayout>
+        <div className={styles.loading}>
+          <Spinner label={t('users.loading')} />
+        </div>
+      </AppLayout>
     );
   }
 
   if (error) {
     return (
-      <div className={styles.container}>
+      <AppLayout>
         <Text>{t('users.loadError')}</Text>
-      </div>
+      </AppLayout>
     );
   }
 
@@ -184,7 +186,7 @@ export const UsersPage: React.FC = () => {
   const totalPages = Math.ceil(total / (data?.limit ?? 20));
 
   return (
-    <div className={styles.container}>
+    <AppLayout>
       <Toaster toasterId={listId} />
       <div className={styles.header}>
         <Title2>{t('users.title')}</Title2>
@@ -212,19 +214,20 @@ export const UsersPage: React.FC = () => {
 
       <div className={styles.filters}>
         <Label htmlFor="role-filter">{t('users.roleFilter')}</Label>
-        <Select
-          id="role-filter"
-          value={roleFilter}
-          onChange={(_, v) => setRoleFilter(v.value ?? '')}
-          style={{ minWidth: '160px' }}
+        <Dropdown
+          placeholder={t('users.allRoles')}
+          value={roleFilter ? getRoleLabel(roleFilter as UserRole) : t('users.allRoles')}
+          selectedOptions={[roleFilter]}
+          onOptionSelect={(_, data) => setRoleFilter(data.optionValue ?? '')}
+          style={{ minWidth: '180px' }}
         >
-          <option value="">{t('users.allRoles')}</option>
+          <Option value="">{t('users.allRoles')}</Option>
           {ROLE_VALUES.map((r) => (
-            <option key={r} value={r}>
+            <Option key={r} value={r}>
               {getRoleLabel(r)}
-            </option>
+            </Option>
           ))}
-        </Select>
+        </Dropdown>
       </div>
 
       <Card>
@@ -321,24 +324,26 @@ export const UsersPage: React.FC = () => {
                 </Text>
               </DialogContent>
               <DialogActions>
-                <DialogTrigger disableButtonEnhancement>
-                  <Button appearance="secondary" onClick={() => setDeleteUser(null)}>
-                    {t('common.cancel')}
+                <div className={actionsStyles.wrapper}>
+                  <DialogTrigger disableButtonEnhancement>
+                    <Button appearance="secondary" onClick={() => setDeleteUser(null)}>
+                      {t('common.cancel')}
+                    </Button>
+                  </DialogTrigger>
+                  <Button
+                    appearance="primary"
+                    onClick={() => deleteMutation.mutate(deleteUser.id)}
+                    disabled={deleteMutation.isPending}
+                  >
+                    {t('common.delete')}
                   </Button>
-                </DialogTrigger>
-                <Button
-                  appearance="primary"
-                  onClick={() => deleteMutation.mutate(deleteUser.id)}
-                  disabled={deleteMutation.isPending}
-                >
-                  {t('common.delete')}
-                </Button>
+                </div>
               </DialogActions>
             </DialogBody>
           </DialogSurface>
         </Dialog>
       )}
-    </div>
+    </AppLayout>
   );
 };
 
@@ -350,7 +355,8 @@ const CreateUserForm: React.FC<{
   isLoading: boolean;
 }> = ({ getRoleLabel, onSubmit, onCancel, isLoading }) => {
   const { t } = useTranslation();
-  const styles = useStyles();
+  const formStyles = useDialogFormStyles();
+  const actionsStyles = useDialogActionsStyles();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
@@ -364,59 +370,59 @@ const CreateUserForm: React.FC<{
 
   return (
     <form onSubmit={handleSubmit}>
-      <div className={styles.formRow}>
-        <Label htmlFor="create-username">{t('users.username')} *</Label>
-        <Input
-          id="create-username"
-          value={username}
-          onChange={(_, v) => setUsername(v.value)}
-          required
-          minLength={3}
-          maxLength={50}
-        />
-      </div>
-      <div className={styles.formRow}>
-        <Label htmlFor="create-password">{t('users.password')} *</Label>
-        <Input
-          id="create-password"
-          type="password"
-          value={password}
-          onChange={(_, v) => setPassword(v.value)}
-          required
-          minLength={8}
-        />
-      </div>
-      <div className={styles.formRow}>
-        <Label htmlFor="create-fullname">{t('users.fullName')} *</Label>
-        <Input
-          id="create-fullname"
-          value={fullName}
-          onChange={(_, v) => setFullName(v.value)}
-          required
-          maxLength={100}
-        />
-      </div>
-      <div className={styles.formRow}>
-        <Label htmlFor="create-role">{t('users.role')} *</Label>
-        <Select
-          id="create-role"
-          value={role}
-          onChange={(_, v) => setRole((v.value ?? 'cashier') as CreateUserRequest['role'])}
-        >
-          {ROLE_VALUES.map((r) => (
-            <option key={r} value={r}>
-              {getRoleLabel(r)}
-            </option>
-          ))}
-        </Select>
+      <div className={formStyles.formContainer}>
+        <Field label={t('users.username')} required>
+          <Input
+            id="create-username"
+            value={username}
+            onChange={(_, v) => setUsername(v.value)}
+            required
+            minLength={3}
+            maxLength={50}
+          />
+        </Field>
+        <Field label={t('users.password')} required validationMessage={t('users.passwordMinHint')}>
+          <Input
+            id="create-password"
+            type="password"
+            value={password}
+            onChange={(_, v) => setPassword(v.value)}
+            required
+            minLength={8}
+          />
+        </Field>
+        <Field label={t('users.fullName')} required>
+          <Input
+            id="create-fullname"
+            value={fullName}
+            onChange={(_, v) => setFullName(v.value)}
+            required
+            maxLength={100}
+          />
+        </Field>
+        <Field label={t('users.role')} required>
+          <Dropdown
+            value={getRoleLabel(role)}
+            selectedOptions={[role]}
+            onOptionSelect={(_, data) => setRole((data.optionValue ?? 'cashier') as CreateUserRequest['role'])}
+          >
+            {ROLE_VALUES.map((r) => (
+              <Option key={r} value={r}>
+                {getRoleLabel(r)}
+              </Option>
+            ))}
+          </Dropdown>
+        </Field>
       </div>
       <DialogActions>
-        <Button type="button" appearance="secondary" onClick={onCancel}>
-          {t('common.cancel')}
-        </Button>
-        <Button type="submit" appearance="primary" disabled={isLoading}>
-          {t('common.create')}
-        </Button>
+        <div className={actionsStyles.wrapper}>
+          <Button type="button" appearance="secondary" onClick={onCancel}>
+            {t('common.cancel')}
+          </Button>
+          <Button type="submit" appearance="primary" disabled={isLoading}>
+            {t('common.create')}
+          </Button>
+        </div>
       </DialogActions>
     </form>
   );
@@ -431,7 +437,8 @@ const EditUserForm: React.FC<{
   isLoading: boolean;
 }> = ({ user, getRoleLabel, onSubmit, onCancel, isLoading }) => {
   const { t } = useTranslation();
-  const styles = useStyles();
+  const formStyles = useDialogFormStyles();
+  const actionsStyles = useDialogActionsStyles();
   const [fullName, setFullName] = useState(user.full_name);
   const [password, setPassword] = useState('');
   const [role, setRole] = useState<UpdateUserRequest['role']>(user.role);
@@ -457,72 +464,66 @@ const EditUserForm: React.FC<{
 
   return (
     <form onSubmit={handleSubmit}>
-      <div className={styles.formRow}>
-        <Label>{t('users.username')}</Label>
-        <Text block>{user.username}</Text>
-      </div>
-      <div className={styles.formRow}>
-        <Label htmlFor="edit-fullname">{t('users.fullName')} *</Label>
-        <Input
-          id="edit-fullname"
-          value={fullName}
-          onChange={(_, v) => setFullName(v.value)}
-          required
-          maxLength={100}
-        />
-      </div>
-      <div className={styles.formRow}>
-        <Label htmlFor="edit-password">{t('users.newPasswordPlaceholder')}</Label>
-        <Input
-          id="edit-password"
-          type="password"
-          value={password}
-          onChange={(_, v) => {
-            setPassword(v.value);
-            setPasswordError(null);
-          }}
-          minLength={8}
-          placeholder={t('users.passwordMinHint')}
-          aria-invalid={!!passwordError}
-          aria-describedby={passwordError ? 'edit-password-error' : undefined}
-        />
-        {passwordError && (
-          <Text id="edit-password-error" style={{ color: 'var(--colorPaletteRedForeground1)', marginTop: '4px' }} role="alert">
-            {passwordError}
-          </Text>
-        )}
-      </div>
-      <div className={styles.formRow}>
-        <Label htmlFor="edit-role">{t('users.role')} *</Label>
-        <Select
-          id="edit-role"
-          value={role}
-          onChange={(_, v) => setRole((v.value ?? user.role) as UpdateUserRequest['role'])}
+      <div className={formStyles.formContainer}>
+        <Field label={t('users.username')}>
+          <Text block>{user.username}</Text>
+        </Field>
+        <Field label={t('users.fullName')} required>
+          <Input
+            id="edit-fullname"
+            value={fullName}
+            onChange={(_, v) => setFullName(v.value)}
+            required
+            maxLength={100}
+          />
+        </Field>
+        <Field 
+          label={t('users.newPasswordPlaceholder')}
+          validationMessage={passwordError || t('users.passwordMinHint')}
+          validationState={passwordError ? 'error' : undefined}
         >
-          {ROLE_VALUES.map((r) => (
-            <option key={r} value={r}>
-              {getRoleLabel(r)}
-            </option>
-          ))}
-        </Select>
-      </div>
-      <div className={styles.formRow}>
-        <Label>
-          <input
-            type="checkbox"
+          <Input
+            id="edit-password"
+            type="password"
+            value={password}
+            onChange={(_, v) => {
+              setPassword(v.value);
+              setPasswordError(null);
+            }}
+            minLength={8}
+            placeholder={t('users.passwordMinHint')}
+          />
+        </Field>
+        <Field label={t('users.role')} required>
+          <Dropdown
+            value={role ? getRoleLabel(role) : ''}
+            selectedOptions={role ? [role] : []}
+            onOptionSelect={(_, data) => setRole((data.optionValue ?? user.role) as UpdateUserRequest['role'])}
+          >
+            {ROLE_VALUES.map((r) => (
+              <Option key={r} value={r}>
+                {getRoleLabel(r)}
+              </Option>
+            ))}
+          </Dropdown>
+        </Field>
+        <Field>
+          <Checkbox
+            label={t('users.activeCheckbox')}
             checked={isActive}
-            onChange={(e) => setIsActive(e.target.checked)}
-          />{' '}
-          {t('users.activeCheckbox')}
-        </Label>
+            onChange={(_, data) => setIsActive(!!data.checked)}
+          />
+        </Field>
       </div>
       <DialogActions>
-        <Button type="button" appearance="secondary" onClick={onCancel}>
-          {t('common.cancel')}
-        </Button>
-        <Button type="submit" appearance="primary" disabled={isLoading}>
-          {t('common.save')}
-        </Button>
+        <div className={actionsStyles.wrapper}>
+          <Button type="button" appearance="secondary" onClick={onCancel}>
+            {t('common.cancel')}
+          </Button>
+          <Button type="submit" appearance="primary" disabled={isLoading}>
+            {t('common.save')}
+          </Button>
+        </div>
       </DialogActions>
     </form>
   );

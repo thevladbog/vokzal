@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@fluentui/react-components": "^9.72.9",
+    "@fluentui/react-datepicker-compat": "^0.6.23",
     "@fluentui/react-icons": "^2.0.316",
     "@tanstack/react-query": "^5.90.19",
     "@tanstack/react-table": "^8.21.3",

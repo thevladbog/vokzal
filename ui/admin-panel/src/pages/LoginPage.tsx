@@ -2,8 +2,6 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
-  FluentProvider,
-  webLightTheme,
   Input,
   Button,
   Text,
@@ -71,38 +69,36 @@ export const LoginPage: React.FC = () => {
   };
 
   return (
-    <FluentProvider theme={webLightTheme}>
-      <div className={styles.container}>
-        <Card className={styles.card}>
-          <Title2 className={styles.title}>{t('login.title')}</Title2>
-          <Text block style={{ textAlign: "center", marginBottom: "24px" }}>
-            {t('login.subtitle')}
-          </Text>
+    <div className={styles.container}>
+      <Card className={styles.card}>
+        <Title2 className={styles.title}>{t('login.title')}</Title2>
+        <Text block style={{ textAlign: "center", marginBottom: "24px" }}>
+          {t('login.subtitle')}
+        </Text>
 
-          <form onSubmit={handleSubmit} className={styles.form}>
-            <Input
-              type="text"
-              placeholder={t('login.username')}
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              required
-            />
-            <Input
-              type="password"
-              placeholder={t('login.password')}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
+        <form onSubmit={handleSubmit} className={styles.form}>
+          <Input
+            type="text"
+            placeholder={t('login.username')}
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            required
+          />
+          <Input
+            type="password"
+            placeholder={t('login.password')}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+          />
 
-            {error && <Text className={styles.error}>{error}</Text>}
+          {error && <Text className={styles.error}>{error}</Text>}
 
-            <Button appearance="primary" type="submit" disabled={loading}>
-              {loading ? t('login.submitting') : t('login.submit')}
-            </Button>
-          </form>
-        </Card>
-      </div>
-    </FluentProvider>
+          <Button appearance="primary" type="submit" disabled={loading}>
+            {loading ? t('login.submitting') : t('login.submit')}
+          </Button>
+        </form>
+      </Card>
+    </div>
   );
 };

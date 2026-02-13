@@ -50,8 +50,8 @@ coverage/
 *.crt
 
 # Logs
-logs/
-*.log
+logs/*.log
+logs/.pids/*.pid
 
 # OS
 .DS_Store
