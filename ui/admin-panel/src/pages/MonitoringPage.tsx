@@ -23,6 +23,7 @@ export const MonitoringPage: React.FC = () => {
         <Link
           href={`${grafanaUrl}/d/services-overview`}
           target="_blank"
+          rel="noopener noreferrer"
         >
           {t("monitoring.servicesOverview")}
         </Link>
@@ -31,6 +32,7 @@ export const MonitoringPage: React.FC = () => {
         <Link
           href={`${grafanaUrl}/d/database-monitoring`}
           target="_blank"
+          rel="noopener noreferrer"
         >
           {t("monitoring.databaseMonitoring")}
         </Link>

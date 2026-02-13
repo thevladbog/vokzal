@@ -23,8 +23,9 @@ import {
   DialogActions,
   DialogContent,
   Field,
+  Dropdown,
+  Option,
 } from '@fluentui/react-components';
-import { Dropdown, Option } from '@fluentui/react-combobox';
 import { Edit24Regular } from '@fluentui/react-icons';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { VokzalDatePicker } from '@/components/common/VokzalDatePicker';
@@ -74,11 +75,19 @@ export const TripsPage: React.FC = () => {
     return t(key, { defaultValue: status });
   };
 
+  // Format date to YYYY-MM-DD using local timezone to avoid UTC offset issues
+  const formatLocalDate = (date: Date): string => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   const { data: trips = [], isLoading, error } = useQuery<Trip[]>({
     queryKey: ['trips', date],
     queryFn: () => {
       if (!date) return Promise.resolve([]);
-      const dateStr = date.toISOString().split('T')[0];
+      const dateStr = formatLocalDate(date);
       return scheduleService.getTrips({ date: dateStr });
     },
   });

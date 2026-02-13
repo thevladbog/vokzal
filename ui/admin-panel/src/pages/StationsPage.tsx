@@ -87,9 +87,11 @@ export const StationsPage: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className={styles.loading}>
-        <Spinner label={t('stations.loading')} />
-      </div>
+      <AppLayout>
+        <div className={styles.loading}>
+          <Spinner label={t('stations.loading')} />
+        </div>
+      </AppLayout>
     );
   }
   if (error) {

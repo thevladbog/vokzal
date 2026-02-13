@@ -89,24 +89,63 @@ export const VokzalDatePicker: React.FC<VokzalDatePickerProps> = ({
     const ruMatch = dateStr.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
     if (ruMatch) {
       const [, day, month, year] = ruMatch;
-      const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-      if (!isNaN(date.getTime())) return date;
+      const parsedDay = parseInt(day);
+      const parsedMonth = parseInt(month);
+      const parsedYear = parseInt(year);
+      
+      const date = new Date(parsedYear, parsedMonth - 1, parsedDay);
+      
+      // Валидация: проверяем, что Date не нормализовал невалидные значения
+      if (
+        !isNaN(date.getTime()) &&
+        date.getFullYear() === parsedYear &&
+        date.getMonth() === parsedMonth - 1 &&
+        date.getDate() === parsedDay
+      ) {
+        return date;
+      }
     }
 
     // Пробуем распарсить американский формат MM/DD/YYYY
     const usMatch = dateStr.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
     if (usMatch) {
       const [, month, day, year] = usMatch;
-      const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-      if (!isNaN(date.getTime())) return date;
+      const parsedDay = parseInt(day);
+      const parsedMonth = parseInt(month);
+      const parsedYear = parseInt(year);
+      
+      const date = new Date(parsedYear, parsedMonth - 1, parsedDay);
+      
+      // Валидация: проверяем, что Date не нормализовал невалидные значения
+      if (
+        !isNaN(date.getTime()) &&
+        date.getFullYear() === parsedYear &&
+        date.getMonth() === parsedMonth - 1 &&
+        date.getDate() === parsedDay
+      ) {
+        return date;
+      }
     }
 
     // Пробуем стандартный ISO формат YYYY-MM-DD
     const isoMatch = dateStr.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
     if (isoMatch) {
       const [, year, month, day] = isoMatch;
-      const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-      if (!isNaN(date.getTime())) return date;
+      const parsedDay = parseInt(day);
+      const parsedMonth = parseInt(month);
+      const parsedYear = parseInt(year);
+      
+      const date = new Date(parsedYear, parsedMonth - 1, parsedDay);
+      
+      // Валидация: проверяем, что Date не нормализовал невалидные значения
+      if (
+        !isNaN(date.getTime()) &&
+        date.getFullYear() === parsedYear &&
+        date.getMonth() === parsedMonth - 1 &&
+        date.getDate() === parsedDay
+      ) {
+        return date;
+      }
     }
 
     return null;

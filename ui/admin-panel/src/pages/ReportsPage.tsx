@@ -23,6 +23,7 @@ export const ReportsPage: React.FC = () => {
         <Link
           href={`${grafanaUrl}/d/business-metrics`}
           target="_blank"
+          rel="noopener noreferrer"
         >
           {t("reports.openBusinessMetrics")}
         </Link>

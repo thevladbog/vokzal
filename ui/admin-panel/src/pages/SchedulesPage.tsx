@@ -25,8 +25,9 @@ import {
   Input,
   Checkbox,
   Field,
+  Dropdown,
+  Option,
 } from '@fluentui/react-components';
-import { Dropdown, Option } from '@fluentui/react-combobox';
 import { Add24Regular, CalendarLtr24Regular, Edit24Regular } from '@fluentui/react-icons';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { VokzalDatePicker } from '@/components/common/VokzalDatePicker';
@@ -236,11 +237,19 @@ export const SchedulesPage: React.FC = () => {
 
   const isGenerateRangeInvalid = !generateFromDate || !generateToDate || generateFromDate > generateToDate;
 
+  // Format date to YYYY-MM-DD using local timezone to avoid UTC offset issues
+  const formatLocalDate = (date: Date): string => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   const handleGenerateSubmit = () => {
     if (!generateScheduleId || !generateFromDate || !generateToDate) return;
     if (isGenerateRangeInvalid) return;
-    const fromStr = generateFromDate.toISOString().split('T')[0];
-    const toStr = generateToDate.toISOString().split('T')[0];
+    const fromStr = formatLocalDate(generateFromDate);
+    const toStr = formatLocalDate(generateToDate);
     generateMutation.mutate({
       scheduleId: generateScheduleId,
       fromDate: fromStr,

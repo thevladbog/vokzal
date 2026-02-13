@@ -14,7 +14,7 @@ import {
   Spinner,
   Text,
   Input,
-  Label,
+  Field,
   Button,
 } from '@fluentui/react-components';
 import { AppLayout } from '@/components/layout/AppLayout';
@@ -68,8 +68,16 @@ export const AuditPage: React.FC = () => {
     queryKey: ['audit', applyFilters, from, to, entityType, entityId, userId],
     queryFn: async () => {
       if (applyFilters && from && to) {
-        const fromStr = from.toISOString().split('T')[0];
-        const toStr = to.toISOString().split('T')[0];
+        // Convert to local YYYY-MM-DD to avoid UTC timezone shifts
+        const formatLocalDate = (date: Date): string => {
+          const year = date.getFullYear();
+          const month = String(date.getMonth() + 1).padStart(2, '0');
+          const day = String(date.getDate()).padStart(2, '0');
+          return `${year}-${month}-${day}`;
+        };
+        
+        const fromStr = formatLocalDate(from);
+        const toStr = formatLocalDate(to);
         return auditService.getLogsByDateRange(fromStr, toStr);
       }
       if (applyFilters && entityType && entityId) {
@@ -109,63 +117,65 @@ export const AuditPage: React.FC = () => {
       </Text>
       <div className={styles.filters}>
         <div className={styles.filterRow}>
-          <Label htmlFor="audit-from">{t('auditPage.dateFrom')}</Label>
-          <VokzalDatePicker
-            value={from}
-            onSelectDate={(date) => {
-              setFrom(date ?? null);
-              setFilterError('');
-            }}
-          />
+          <Field label={t('auditPage.dateFrom')}>
+            <VokzalDatePicker
+              value={from}
+              onSelectDate={(date) => {
+                setFrom(date ?? null);
+                setFilterError('');
+              }}
+            />
+          </Field>
         </div>
         <div className={styles.filterRow}>
-          <Label htmlFor="audit-to">{t('auditPage.dateTo')}</Label>
-          <VokzalDatePicker
-            value={to}
-            onSelectDate={(date) => {
-              setTo(date ?? null);
-              setFilterError('');
-            }}
-          />
+          <Field label={t('auditPage.dateTo')}>
+            <VokzalDatePicker
+              value={to}
+              onSelectDate={(date) => {
+                setTo(date ?? null);
+                setFilterError('');
+              }}
+            />
+          </Field>
         </div>
         <div className={styles.filterRow}>
-          <Label htmlFor="audit-entity-type">{t('auditPage.entityType')}</Label>
-          <Input
-            id="audit-entity-type"
-            value={entityType}
-            onChange={(_, v) => {
-              setEntityType(v.value);
-              setFilterError('');
-            }}
-            placeholder={t('auditPage.entityTypePlaceholder')}
-            style={{ width: '120px' }}
-          />
+          <Field label={t('auditPage.entityType')}>
+            <Input
+              value={entityType}
+              onChange={(_, v) => {
+                setEntityType(v.value);
+                setFilterError('');
+              }}
+              placeholder={t('auditPage.entityTypePlaceholder')}
+              style={{ width: '120px' }}
+            />
+          </Field>
         </div>
         <div className={styles.filterRow}>
-          <Label htmlFor="audit-entity-id">{t('auditPage.entityId')}</Label>
-          <Input
-            id="audit-entity-id"
-            value={entityId}
-            onChange={(_, v) => {
-              setEntityId(v.value);
-              setFilterError('');
-            }}
-            placeholder={t('auditPage.entityIdPlaceholder')}
-            style={{ width: '200px' }}
-          />
+          <Field label={t('auditPage.entityId')}>
+            <Input
+              value={entityId}
+              onChange={(_, v) => {
+                setEntityId(v.value);
+                setFilterError('');
+              }}
+              placeholder={t('auditPage.entityIdPlaceholder')}
+              style={{ width: '200px' }}
+            />
+          </Field>
         </div>
         <div className={styles.filterRow}>
-          <Label htmlFor="audit-user">{t('auditPage.userId')}</Label>
-          <Input
-            id="audit-user"
-            value={userId}
-            onChange={(_, v) => {
-              setUserId(v.value);
-              setFilterError('');
-            }}
-            placeholder={t('auditPage.userIdPlaceholder')}
-            style={{ width: '200px' }}
-          />
+          <Field label={t('auditPage.userId')}>
+            <Input
+              value={userId}
+              onChange={(_, v) => {
+                setUserId(v.value);
+                setFilterError('');
+              }}
+              placeholder={t('auditPage.userIdPlaceholder')}
+              style={{ width: '200px' }}
+            />
+          </Field>
         </div>
         <Button
           appearance={applyFilters ? 'primary' : 'secondary'}

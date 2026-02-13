@@ -189,7 +189,7 @@ export const Sidebar: React.FC = () => {
               <Text className={styles.logoText}>Вокзал.ТЕХ</Text>
             </div>
           )}
-          <button className={styles.hamburger} onClick={toggleCollapsed} aria-label="Toggle sidebar">
+          <button className={styles.hamburger} onClick={toggleCollapsed} aria-label={t('sidebar.toggle')}>
             <Navigation20Regular />
           </button>
         </div>
@@ -214,8 +214,8 @@ export const Sidebar: React.FC = () => {
                         }`}
                         title={isCollapsed ? t(item.labelKey) : undefined}
                         onClick={() => {
-                          // Close sidebar on mobile after navigation
-                          if (window.innerWidth <= 768) {
+                          // Close sidebar on mobile after navigation (only if currently expanded)
+                          if (window.innerWidth <= 768 && !isCollapsed) {
                             toggleCollapsed();
                           }
                         }}

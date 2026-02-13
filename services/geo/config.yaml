@@ -5,12 +5,12 @@ server:
 redis:
   host: "localhost"
   port: 6379
-  password: "vokzal_redis_2026"
+  password: "${VOKZAL_REDIS_PASSWORD}"
   db: 0
 
 logger:
   level: "debug"
 
 yandex_maps:
-  api_key: "YOUR_YANDEX_MAPS_API_KEY"
+  api_key: "${VOKZAL_YANDEX_MAPS_API_KEY}"
   base_url: "https://geocode-maps.yandex.ru/1.x/"

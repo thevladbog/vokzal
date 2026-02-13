@@ -49,7 +49,7 @@ services-build:
 	done
 
 # PID файлы хранятся в logs/.pids/
-services-start:
+services-start: services-build
 	@echo "🚀 Запуск всех микросервисов Вокзал.ТЕХ..."
 	@mkdir -p logs/.pids
 	@for service in services/*; do \
@@ -57,11 +57,16 @@ services-start:
 			service_name=$$(basename $$service); \
 			pid_file="$$(pwd)/logs/.pids/$$service_name.pid"; \
 			log_file="$$(pwd)/logs/$$service_name.log"; \
+			binary="$$service/bin/service"; \
+			if [ ! -f "$$binary" ]; then \
+				echo "❌ Бинарник $$binary не найден! Запустите 'make services-build'"; \
+				exit 1; \
+			fi; \
 			if [ -f "$$pid_file" ] && kill -0 $$(cat $$pid_file) 2>/dev/null; then \
 				echo "⚠️  $$service_name уже запущен (PID: $$(cat $$pid_file))"; \
 			else \
 				echo "▶️  Запуск $$service_name..."; \
-				(cd $$service && nohup go run cmd/main.go > $$log_file 2>&1 & echo $$! > $$pid_file); \
+				(cd $$service && nohup ./bin/service > $$log_file 2>&1 & echo $$! > $$pid_file); \
 				sleep 0.5; \
 			fi \
 		fi \

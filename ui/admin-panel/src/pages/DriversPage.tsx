@@ -24,8 +24,9 @@ import {
   Input,
   Label,
   Field,
+  Dropdown,
+  Option,
 } from '@fluentui/react-components';
-import { Dropdown, Option } from '@fluentui/react-combobox';
 import { Add24Regular, Delete24Regular, Edit24Regular } from '@fluentui/react-icons';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { useDialogFormStyles } from '@/styles/dialogFormStyles';
@@ -318,7 +319,7 @@ export const DriversPage: React.FC = () => {
                 </Button>
                 <Button
                   appearance="primary"
-                disabled={!editDriver || !editFullName.trim() || !editLicense.trim()}
+                  disabled={!editDriver || !editFullName.trim() || !editLicense.trim() || updateMutation.isPending}
                 onClick={() =>
                   editDriver &&
                   updateMutation.mutate({
@@ -359,6 +360,7 @@ export const DriversPage: React.FC = () => {
                 </Button>
                 <Button
                   appearance="primary"
+                  disabled={deleteMutation.isPending}
                 onClick={() => deleteDriver && deleteMutation.mutate(deleteDriver.id)}
               >
                 {t('common.delete')}

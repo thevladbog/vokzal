@@ -28,6 +28,9 @@
     "lightMode": "Light",
     "darkMode": "Dark"
   },
+  "sidebar": {
+    "toggle": "Toggle sidebar"
+  },
   "common": {
     "loading": "Loading...",
     "error": "Error",
@@ -95,7 +98,8 @@
     "username": "Username",
     "password": "Password",
     "submit": "Sign in",
-    "submitting": "Signing in..."
+    "submitting": "Signing in...",
+    "error": "Login failed. Please check your credentials."
   },
   "users": {
     "title": "Users",

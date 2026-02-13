@@ -62,7 +62,7 @@ export const LoginPage: React.FC = () => {
           ? (err as { response?: { data?: { error?: string } } }).response?.data
               ?.error
           : null;
-      setError(msg || "Ошибка входа. Проверьте логин и пароль.");
+      setError(msg || t('login.error'));
     } finally {
       setLoading(false);
     }

@@ -124,7 +124,7 @@ services:
     environment:
       GF_SECURITY_ADMIN_USER: admin
       GF_SECURITY_ADMIN_PASSWORD: grafana_secret_2026
-      GF_SERVER_ROOT_URL: http://localhost:3000
+      GF_SERVER_ROOT_URL: http://localhost:30001
     ports:
       - "30001:3000"
     volumes:

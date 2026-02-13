@@ -31,8 +31,9 @@ import {
   Toast,
   ToastTitle,
   ToastBody,
+  Dropdown,
+  Option,
 } from '@fluentui/react-components';
-import { Dropdown, Option } from '@fluentui/react-combobox';
 import { Add24Regular, Delete24Regular, Edit24Regular } from '@fluentui/react-icons';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { useDialogFormStyles } from '@/styles/dialogFormStyles';

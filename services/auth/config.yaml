@@ -5,13 +5,13 @@ server:
 database:
   host: "localhost"
   port: 5440
-  user: "admin"
-  password: "vokzal_secret_2026"
+  user: "${VOKZAL_DB_USER}"
+  password: "${VOKZAL_DB_PASSWORD}"
   dbname: "vokzal"
   sslmode: "disable"
 
 jwt:
-  secret: "vokzal-tech-jwt-secret-change-me-in-production"
+  secret: "${VOKZAL_AUTH_JWT_SECRET}"
   issuer: "vokzal.tech"
   access_expiration: "24h"
   refresh_expiration: "168h" # 7 дней

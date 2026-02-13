@@ -6,7 +6,11 @@ import type { Schedule, Trip, Route, Station, Bus, Driver } from '@/types';
  * We unwrap to T so callers receive the entity/list directly.
  */
 function unwrap<T>(response: { data: { data?: T } }): T {
-  return (response.data as { data: T }).data;
+  const body = response.data;
+  if (body && typeof body === 'object' && 'data' in body) {
+    return body.data as T;
+  }
+  throw new Error('Unexpected API response shape: missing "data" wrapper');
 }
 
 export const scheduleService = {

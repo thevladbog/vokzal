@@ -1,5 +1,5 @@
 import React from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   makeStyles,
@@ -116,14 +116,15 @@ export const TopBar: React.FC<TopBarProps> = ({ showBreadcrumbs = true }) => {
   const styles = useStyles();
   const { t } = useTranslation();
   const location = useLocation();
+  const navigate = useNavigate();
   const { mode, toggleMode } = useTheme();
   const user = useAuthStore((state) => state.user);
-  const clearAuth = useAuthStore((state) => state.clearAuth);
   const toggleSidebar = useSidebarStore((state) => state.toggleCollapsed);
 
-  const handleLogout = () => {
-    authService.logout();
-    clearAuth();
+  const handleLogout = async () => {
+    await authService.logout();
+    // Explicit redirect to login page for immediate feedback
+    window.location.href = '/login';
   };
 
   const handleLanguageChange = () => {
@@ -164,7 +165,7 @@ export const TopBar: React.FC<TopBarProps> = ({ showBreadcrumbs = true }) => {
                 {index === breadcrumbs.length - 1 ? (
                   <BreadcrumbButton current>{crumb.label}</BreadcrumbButton>
                 ) : (
-                  <BreadcrumbButton href={crumb.path}>{crumb.label}</BreadcrumbButton>
+                  <BreadcrumbButton onClick={() => navigate(crumb.path)}>{crumb.label}</BreadcrumbButton>
                 )}
               </BreadcrumbItem>
             ))}
@@ -192,16 +193,19 @@ export const TopBar: React.FC<TopBarProps> = ({ showBreadcrumbs = true }) => {
 
         {/* User menu */}
         <Menu>
-          <MenuTrigger disableButtonEnhancement>
-            <div className={styles.userMenu}>
+          <MenuTrigger>
+            <Button
+              appearance="transparent"
+              className={styles.userMenu}
+              aria-label={`${t('layout.profile')}: ${user?.full_name || user?.fio || user?.username}`}
+            >
               <span className={styles.userName}>{user?.full_name || user?.fio || user?.username}</span>
               <Avatar
                 name={user?.full_name || user?.fio || user?.username}
                 size={32}
                 color="brand"
-                aria-label={t('layout.profile')}
               />
-            </div>
+            </Button>
           </MenuTrigger>
           <MenuPopover>
             <MenuList>
