@@ -164,7 +164,7 @@ export const DriversPage: React.FC = () => {
                       placeholder={t('drivers.licensePlaceholder')}
                     />
                   </Field>
-                  <Field label={t('drivers.experience')} required>
+                  <Field label={t('drivers.experience')}>
                     <Input
                       type="number"
                       min={0}
@@ -296,7 +296,7 @@ export const DriversPage: React.FC = () => {
                   <Field label={t('drivers.licenseNumber')} required>
                     <Input value={editLicense} onChange={(_, v) => setEditLicense(v.value)} />
                   </Field>
-                  <Field label={t('drivers.experience')} required>
+                  <Field label={t('drivers.experience')}>
                     <Input
                       type="number"
                       min={0}

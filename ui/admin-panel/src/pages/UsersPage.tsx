@@ -219,7 +219,10 @@ export const UsersPage: React.FC = () => {
           placeholder={t('users.allRoles')}
           value={roleFilter ? getRoleLabel(roleFilter as UserRole) : t('users.allRoles')}
           selectedOptions={[roleFilter]}
-          onOptionSelect={(_, data) => setRoleFilter(data.optionValue ?? '')}
+          onOptionSelect={(_, data) => {
+            setRoleFilter(data.optionValue ?? '');
+            setPage(1);
+          }}
           style={{ minWidth: '180px' }}
         >
           <Option value="">{t('users.allRoles')}</Option>
@@ -362,11 +365,18 @@ const CreateUserForm: React.FC<{
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
   const [role, setRole] = useState<CreateUserRequest['role']>('cashier');
+  const [passwordError, setPasswordError] = useState<string | null>(null);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!username.trim() || !password.trim() || !fullName.trim()) return;
-    onSubmit({ username: username.trim(), password: password.trim(), full_name: fullName.trim(), role });
+    setPasswordError(null);
+    if (!username.trim() || !fullName.trim()) return;
+    const trimmedPassword = password.trim();
+    if (trimmedPassword.length < 8) {
+      setPasswordError(t('users.passwordMinError'));
+      return;
+    }
+    onSubmit({ username: username.trim(), password: trimmedPassword, full_name: fullName.trim(), role });
   };
 
   return (
@@ -382,12 +392,20 @@ const CreateUserForm: React.FC<{
             maxLength={50}
           />
         </Field>
-        <Field label={t('users.password')} required validationMessage={t('users.passwordMinHint')}>
+        <Field 
+          label={t('users.password')} 
+          required 
+          validationMessage={passwordError || t('users.passwordMinHint')}
+          validationState={passwordError ? 'error' : undefined}
+        >
           <Input
             id="create-password"
             type="password"
             value={password}
-            onChange={(_, v) => setPassword(v.value)}
+            onChange={(_, v) => {
+              setPassword(v.value);
+              setPasswordError(null);
+            }}
             required
             minLength={8}
           />
@@ -455,7 +473,7 @@ const EditUserForm: React.FC<{
       return;
     }
     const data: UpdateUserRequest = {
-      full_name: fullName,
+      full_name: fullName.trim(),
       role,
       is_active: isActive,
     };

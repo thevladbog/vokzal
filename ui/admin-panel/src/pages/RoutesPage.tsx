@@ -283,7 +283,7 @@ const RouteForm: React.FC<{
         is_active: isActive,
       });
     } else {
-      const sid = firstStationId || (stations[0]?.id ?? '');
+      const sid = firstStationId;
       if (!sid) {
         return;
       }
